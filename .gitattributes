@@ -1,0 +1,17 @@
+# 公开发布时自动排除的文件（git archive / GitHub Release 源码包生效）
+# 这些文件在私有仓库正常使用，但不应出现在公开版本中
+
+# 运行时状态
+/.diwu/              export-ignore
+/dtask.json          export-ignore
+
+# Session 临时文件
+/continue-here.md    export-ignore
+/recording/          export-ignore
+
+# 项目决策记录（可能含内部讨论）
+/decisions.md        export-ignore
+
+# 环境与日志
+.env                 export-ignore
+*.log                export-ignore
