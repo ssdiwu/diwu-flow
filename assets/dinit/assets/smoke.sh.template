@@ -1,0 +1,20 @@
+#!/bin/bash
+# 基线验证脚本
+# 此脚本检查基本的环境配置
+
+echo "🔍 运行基线验证..."
+
+# 检查依赖
+echo "📦 检查依赖..."
+# TODO: 根据项目自定义（例如检查 node_modules, venv 等）
+
+# 检查构建
+echo "🏗️  检查构建..."
+# TODO: 添加构建命令（例如 npm run build, cargo build 等）
+
+# 检查代码规范
+echo "✨ 检查代码规范..."
+# TODO: 添加 lint 命令（例如 npm run lint, flake8 等）
+
+echo "✅ 基线验证通过"
+exit 0

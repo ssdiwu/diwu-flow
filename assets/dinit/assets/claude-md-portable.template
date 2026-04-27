@@ -1,0 +1,100 @@
+# [项目名称]
+
+## 核心原则
+
+- 少即是多，克制且清晰：偏好简洁的设计和输出，排斥冗余
+- 关注点分离原则：不同层次的问题应在各自的边界内解决
+- 具体胜于抽象：示例是规则的执行锚点
+- 程序性规则使用列表定义；判断性规则必须提供示例锚点
+
+## 上位心智层
+
+### 三唯一框架
+进入任务前确认：唯一主线目录、唯一运行入口、canonical。未确认前不默认当前目录就是主线。
+
+### 不确定性门控
+| 路径 | 条件 |
+|------|------|
+| 直接做 | 改动小 + 结果可预期 + 差异一句话说清 |
+| 先写最小规格 | 结果不能说清 / 依赖外部 / 需稳定格式 |
+| 先探索验证 | 外部依赖多 / 落点不清 / 回滚成本高 |
+
+### 证据优先级摘要
+L1 运行态 > L2 调用链 > L3 自动化断言 > L4 表面观察 > L5 间接推断。默认 L1-3 主判。
+
+## Skill 索引（按需加载）
+
+| Skill | 触发场景 |
+|-------|---------|
+| dtask | 创建任务、管理 dtask、规划分解 |
+| dsess | Session 启动/结束、任务选择、续跑 |
+| dcorr | 退化信号检测、纠偏恢复、误判排查 |
+| dverify | InReview/Done 判定、证据等级选择 |
+| djudge | 阶段边界决策、幅度判定、并行vs串行 |
+| drecord | 写 session 记录、踩坑经验记录 |
+
+> 参考文件（Read on demand）：rules/exceptions.md、rules/templates.md、rules/constraints.md、rules/file-layout.md
+
+---
+
+## 项目上下文
+
+- **用途**：[1-2 句话描述项目是什么、做什么]
+- **功能摘要**：[一句话描述项目核心功能]
+
+> 详细功能说明见 README.md。任务定义见 .diwu/dtask.json
+
+## 技术栈
+
+- 语言：[TypeScript / Python / ...]
+- 框架：[Next.js / FastAPI / ...]
+- 样式：[Tailwind CSS / ...]
+- 数据库：[PostgreSQL / Supabase / ...]
+
+## 常用命令
+
+```bash
+# 开发
+[npm run dev / python manage.py runserver / ...]
+# 构建
+[npm run build / ...
+# 检查
+[npm run lint / ...
+# 测试
+[npm run test / pytest / ...]
+```
+
+## 项目结构
+
+```
+/
+├── .claude/
+│   ├── CLAUDE.md          # 本文件（精简版，含核心不变量+Skill索引）
+│   └── rules/
+│       └── constraints.md # 项目特定架构约束（可选）
+├── .diwu/
+│   ├── dtask          # 任务定义（source of truth）
+│   ├── recording/         # Session 进度记录
+│   ├── checks/
+│   │   └── smoke.sh       # 基线验证脚本
+│   ├── archive/           # 归档目录
+│   ├── continue-here.md   # 会话续接（可选）
+│   └── decisions.md       # 设计决策记录（可选）
+├── AGENTS.md              # 跨 AI 工具入口
+├── init.sh                # 环境初始化脚本
+└── [项目目录]/
+    ├── src/
+    └── ...
+```
+
+## 行为铁律
+
+**recording 更新**：每次 session 结束前必须主动写入 `.diwu/recording/`。
+**时间戳规则**：写入 Session 标题前必须先运行 `date '+%Y-%m-%d %H:%M:%S'` 获取真实时间戳。
+**禁止推送目录**：`.claude/`、`.diwu/` 绝对禁止 commit/push。
+
+## 编码约定
+
+- [约定1]
+- [约定2]
+- [约定3]
