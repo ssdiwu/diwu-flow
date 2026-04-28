@@ -2,7 +2,7 @@
 
 All notable changes to diwu-flow will be documented in this file.
 
-## [0.0.1] - 2026-04-28
+## [0.0.1] - 2026-04-29
 
 ### 新增（从 diwu-workflow v0.10.x 迁移重构）
 
@@ -10,31 +10,72 @@ All notable changes to diwu-flow will be documented in this file.
 - **10 个 Skill**：drun, dtask, dvfy, djug, dcorr, dprd, drec, darc, ddoc, ddemo
 - **10 个 Agent**：explorer, implementer, verifier + 7 个领域专家
 - **8 个 Command**：/drun, /dtask, /dinit, /dprd, /dadr, /ddoc, /ddemo, /dcorr
-- **6 个核心 Hook**：TaskCompleted, TaskCreated, PreToolExecution, Stop, PreCompaction, SessionStart
+- **8 个 Hook 事件**：TaskCompleted, TaskCreated, PreToolUse(Bash), Stop, PreCompact, SessionStart + context_monitor + stop_archive(内联)
 - **install.sh**：全平台安装脚本（claude-code / codex / opencode / all）
-- **drelease.sh**：发布脚本
+- **drelease.sh**：发布脚本（私有→公开仓库自动排除敏感文件）
 - **dsess → drun 重命名**：合并 Session 管理与自动执行引擎为统一 Skill
+- **README 迁移指引**：以 Curio 为实际示例，两步迁移（安装插件 + /dinit 刷新）
+- **rules/ 目录**：顶层规则集（exceptions/templates/file-layout/constraints/judgments 等）
 
-### 变更
+### Round 3 审查修复（5 commits）
+
+#### 插件格式对齐
+- **hooks.json 重写为 CC 插件官方格式**：
+  - 顶层 `hooks` 包裹（原为裸事件对象）
+  - `PreToolExecution` → `PreToolUse`（CC 官方事件名）
+  - `${CLAUDE_PROJECT_DIR}` → `${CLAUDE_PLUGIN_ROOT}`（插件路径变量）
+  - `PreCompaction` → `PreCompact`（CC 官方事件名）
+- **plugin.json author**: string → object（通过 `claude plugin validate`）
+- **marketplace.json**: 移除非法根级 description（通过 `claude plugin validate`）
+
+#### Agent 字段恢复
+- explorer/implementer/verifier 恢复 `memory` + `maxTurns` 字段
+  - Round 2 误删（官方仅不支持 `permissionMode`，非 memory/maxTurns）
+  - 测试从"验证不存在"反转为"验证存在且类型正确"
+
+#### Stub 脚本清理
+- 删除 5 个遗留/stub 脚本：stop_snapshot.py, stop_integrity.py, stop_archive_agg.py, stop_blocking.py, pre_tool_use_bash.py
+- 删除 2 个关联测试：test_stop_blocking.py, test_pre_tool_use_bash.py
+- L3 测试清单更新（EXPECTED_DIWU_FILES 对齐当前 hooks.json 注册表）
+
+#### 失真引用修正
+- `inject_errors_decisions.py`: rules/session.md + pitfalls.md + assets 副本（4 处）从"已实现"改为"待实现"（文件不存在）
+
+#### 真实 Hook 运行形态修复（4 轮迭代）
+- **context_monitor.py**:
+  - 补全 `main()` 入口 + cache 持久化 + tool 分类计数 + warning(30)/checkpoint(60) 两级输出
+  - `_classify_tool()` 从 stdin JSON 读 `tool_name`（CC PreToolUse 真实格式），回退环境变量（手动测试兼容）
+  - 接入 hooks.json PreToolUse 事件（matcher: Bash）
+- **stop_archive.py**:
+  - 最终方案：从 hooks.json Stop 事件移除，整合进 `stop_decision.py` 内部 import 调用
+  - 归档建议合并到 `decision:"block"` 的 reason 中（带 ℹ 前缀标识 advisory）
+  - 无活跃任务时返回 `{}` 允许停止（纯建议不阻塞停止行为）
+
+#### 其他修复
+- README 兼容性表 OpenCode: "Custom Tools (Zod)" → "声明式索引（Plugin + Command 映射）"
+- `.diwu/archive/.gitkeep`: 新增占位文件（修复 clean clone 下测试断言失败）
+
+### 变更（从 diwu-workflow v0.10.x）
 
 - **Rules 精简重构**（13 → 12 文件）：
   - 删除 `correction.md`（内容 100% 被 dcorr Skill 覆盖）
   - 重写 session.md / workflow.md / pitfalls.md / judgments.md / mindset.md（消除内容重叠）
-  - 精简 templates.md（迁移 Checkpoint 格式模板）
-  - 增强 constraints.md（版本号升级判定表）+ task.md（Commit 语言规范 + 分支命名规范）
   - 所有 rules 文件控制在 200 行以内
 - **drun SKILL.md 增强**：执行验证循环改为显式四问框架 + 状态文件映射表
-- **Rules 目录提升**：从 `assets/dinit/assets/rules/` 模板提升为顶层 `rules/` 目录
-- **plugin.json agents 字段移除**：使用默认路径自动发现，修复安装验证错误
-- **Hooks 精简**：22 → 6 个核心 hook（PostToolUse/Stop 系列/Subagent 系列有意精简）
+- **plugin.json agents 字段移除**：使用默认路径自动发现
+- **Hooks 精简**：22 → 8 个（精选核心 + unwired 脚本接线）
 
 ### 移除
 
 - `rules/correction.md`（→ dcorr Skill 完全覆盖）
-- 16 个非核心 Hook 脚本（有意精简，不影响核心工作流）
+- 5 个 stub/legacy hook 脚本（Round 3 清理）
+- 2 个废弃测试文件
 
 ### 修复
 
-- `stop_decision.py` 第 98 行 f-string 语法错误（多余右括号）
-- `test_doc_consistency.py` RULES_DIR 路径修正（`.claude/rules` → `rules`）
-- `test_doc_consistency.py` hooks.json 数组格式兼容（新旧 CC hooks 格式）
+- `stop_decision.py` f-string 语法错误
+- `test_doc_consistency.py` 路径修正
+- inject_errors_decisions.py 事实错误引用（4 处）
+- CC 插件 hook 格式全面对齐（settings 格式 → 插件官方格式）
+- Stop hook 输出字段合法性（自定义 key → decision/reason 顶层字段）
+- clean clone 测试缺失 .diwu/archive 目录
