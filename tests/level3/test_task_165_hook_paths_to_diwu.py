@@ -14,16 +14,18 @@ RUNTIME_TARGETS = [
     "archive",
 ]
 
-# Round 3 清理后：hooks.json 正式注册的全部脚本
+# Round 4: hooks.json 注册的脚本 + 被调度器调用的库模块
 EXPECTED_DIWU_FILES = {
+    # hooks.json 直接注册的入口脚本
     "task_completed.py": [".diwu/dsettings.json", ".diwu/dtask.json", ".diwu/recording/", ".diwu/decisions.md"],
     "drift_detect_pre.py": [".diwu/dtask.json", ".diwu/dsettings.json"],
     "context_monitor.py": [".diwu/dsettings.json", ".diwu/.context_monitor_cache.json"],
     "stop_decision.py": [".diwu/dtask.json", ".diwu/dsettings.json"],
-    "stop_archive.py": [".diwu/dtask.json", ".diwu/dsettings.json", ".diwu/recording"],
     "pre_compact.py": [".diwu/dtask.json", ".diwu/recording"],
     "session_start.py": [],
     "task_created_validate.py": [".diwu/dtask.json"],
+    # 库模块（被 stop_decision.py 内部 import 调用，非独立 hook 入口）
+    "stop_archive.py": [".diwu/dtask.json", ".diwu/dsettings.json", ".diwu/recording"],
     # 以下为规划中/未实现：
     # inject_errors_decisions.py, stop_background.py,
     # post_tool_use_failure.py, post_tool_reminder.py, subagent_stop.py

@@ -134,7 +134,9 @@ def decide(tasks, settings, data, task_json_path, additional_prompts):
         base = format_task('继续执行下一个任务：', nx[0]) + extra
         return True, {'decision': 'block', 'reason': base}
 
-    # Truly nothing to do
+    # Truly nothing to do — but still emit archive/prompts if present
+    if extra:
+        return True, {"decision": "info", "reason": extra.strip()}
     return False, {}
 
 
@@ -177,7 +179,19 @@ if __name__ == "__main__":
     settings = _load_json(args.settings_json)
     tasks = data.get("tasks", [])
 
-    should_continue, output = decide(tasks, settings, data, args.task_json, [])
+    # Run archive checks and merge into decision prompts
+    additional_prompts = []
+    try:
+        SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+        if SCRIPTS_DIR not in sys.path:
+            sys.path.insert(0, SCRIPTS_DIR)
+        import stop_archive
+        archive_results = stop_archive.check(settings=settings, tasks=tasks)
+        additional_prompts = archive_results  # list of (level, message) tuples
+    except Exception:
+        pass  # archive check failure must not block decision
+
+    should_continue, output = decide(tasks, settings, data, args.task_json, additional_prompts)
     if output:
         print(json.dumps(output, ensure_ascii=False))
     sys.exit(0 if should_continue else 1)
