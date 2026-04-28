@@ -111,16 +111,18 @@ def checkpoint(task_info=None):
             except (json.JSONDecodeError, OSError):
                 pass
 
+    # 无 InProgress 任务时不创建 checkpoint
+    if not task_info:
+        return None
+
     ts = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-    filename = f"session-{ts}.md"
+    filename = f"checkpoint-{ts}.md"
     filepath = os.path.join(rec_dir, filename)
 
-    task_line = ""
-    if task_info:
-        task_line = f"**Task#{task_info['id']}: {task_info.get('title', '')} → {task_info.get('status', '')}**\n"
+    task_line = f"**Task#{task_info['id']}: {task_info.get('title', '')} → {task_info.get('status', '')}**\n"
 
     content = (
-        f"## Session {ts}\n"
+        f"## Checkpoint {ts}\n"
         f"### [Auto Checkpoint]\n"
         f"{task_line}"
         f"自动检查点：上下文监控触发（写工具调用达 CRITICAL+DELAY 阈值）\n"
@@ -151,12 +153,20 @@ def main():
         cache["checkpoint_written"] = True
 
         # Output structured info for Claude to pick up
-        result = {
-            "level": "checkpoint",
-            "message": f"上下文监控：写工具调用 ({wr_count}) 达到阈值 ({critical}+{delay})，已写入自动检查点 {cp_path}",
-            "wr_count": wr_count,
-            "threshold": critical + delay,
-        }
+        if cp_path:
+            result = {
+                "level": "checkpoint",
+                "message": f"上下文监控：写工具调用 ({wr_count}) 达到阈值 ({critical}+{delay})，已写入自动检查点 {cp_path}",
+                "wr_count": wr_count,
+                "threshold": critical + delay,
+            }
+        else:
+            result = {
+                "level": "checkpoint",
+                "message": f"上下文监控：写工具调用 ({wr_count}) 达到阈值 ({critical}+{delay})，无 InProgress 任务，跳过 checkpoint",
+                "wr_count": wr_count,
+                "threshold": critical + delay,
+            }
         print(json.dumps(result, ensure_ascii=False))
 
     elif wr_count >= cfg["warning"] and not cache.get("warning_emitted"):

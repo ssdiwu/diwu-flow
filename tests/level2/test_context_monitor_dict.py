@@ -100,16 +100,28 @@ class TestCheckpointFunction(unittest.TestCase):
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    def test_checkpoint_creates_session_file(self):
+    def test_checkpoint_creates_checkpoint_file(self):
         cm.checkpoint()
-        sessions = [f for f in os.listdir('.diwu/recording')
-                    if f.startswith('session-') and f.endswith('.md')]
-        self.assertTrue(len(sessions) > 0)
-        with open(os.path.join('.diwu/recording', sessions[0])) as f:
+        checkpoints = [f for f in os.listdir('.diwu/recording')
+                       if f.startswith('checkpoint-') and f.endswith('.md')]
+        self.assertTrue(len(checkpoints) > 0)
+        with open(os.path.join('.diwu/recording', checkpoints[0])) as f:
             content = f.read()
         self.assertIn('[Auto Checkpoint]', content)
         self.assertIn('Task#7', content)
         self.assertIn('InProgress', content)
+
+    def test_checkpoint_returns_none_without_inprogress_task(self):
+        """No InProgress task → checkpoint() returns None, no file created."""
+        with open('.diwu/dtask.json', 'w') as f:
+            json.dump({'tasks': [
+                {'id': 8, 'title': 'Done Task', 'status': 'Done'}
+            ]}, f)
+        result = cm.checkpoint()
+        self.assertIsNone(result)
+        checkpoints = [f for f in os.listdir('.diwu/recording')
+                       if f.startswith('checkpoint-')]
+        self.assertEqual(len(checkpoints), 0)
 
 
 class TestReadonlyToolSets(unittest.TestCase):
