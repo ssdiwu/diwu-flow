@@ -55,3 +55,14 @@ git remote add public git@github.com:ssdiwu/diwu-flow.git
 ./drelease.sh v{version} --push-public
 # → 创建 release 分支 → 排除 .diwu/ 等敏感文件 → 打 tag → 推送私有+公开仓库 → 切回 main
 ```
+
+## 项目结构
+
+- `commands/` — 用户命令封装
+- `skills/` — 技能文件（dtask, drun, dcorr, dvfy, djug, drec, darc, dprd, ddoc, ddemo）
+- `rules/` — 方法论规则文件
+- `agents/` — 子代理定义
+- `assets/` — 模板资产
+- `tests/` — 测试用例
+- `hooks/` — 钩子脚本
+- `drelease.sh` — 公开版本发布脚本
