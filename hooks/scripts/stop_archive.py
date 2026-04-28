@@ -137,6 +137,13 @@ if __name__ == "__main__":
     import sys
 
     results = check()
-    for level, msg in results:
-        print(f"[{level}] {msg}")
+    if results:
+        # Output JSON for Stop hook consumption (not plain text)
+        messages = [msg for _, msg in results]
+        output = {
+            "archive_check": True,
+            "messages": messages,
+            "suggestion": "建议执行 /darc 归档",
+        }
+        print(json.dumps(output, ensure_ascii=False))
     sys.exit(0)

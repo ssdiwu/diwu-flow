@@ -100,7 +100,7 @@ Skills 通过 symlink 映射到 `~/.codex/skills/`，Agent 映射到 `~/.codex/a
 |------|------------|-----------|----------|
 | 10 Skills（完整方法论） | plugin.json | symlink | symlink + Plugin |
 | 10 Agents | plugin.json | symlink | symlink |
-| 8 Commands | Slash Commands | ❌ | Custom Tools (Zod) |
+| 8 Commands | Slash Commands | ❌ | 声明式索引（Plugin + Command 映射） |
 | Hooks | 6 核心 | ❌ | v1 不移植 |
 
 ## 版本
