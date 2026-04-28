@@ -39,7 +39,7 @@ effort: high
 - 行为铁律段（recording 更新 + 时间戳 + 禁止推送目录）
 - 项目上下文和项目结构（保留用户自定义内容）
 
-> **v2 格式特征**：无任何 `@rules/` 引用、总行数 ≤ 120 行、包含 Skill 索引表。
+> **v2 格式特征**：无任何 `@rules/` 引用、总行数 ≤ 200 行、包含 Skill 索引表。
 
 如已是 v2 格式（无 `@rules/` 且含 Skill 索引），跳过此步。
 
@@ -256,7 +256,7 @@ effort: high
     - `<!-- SCAN_RESULT_PLACEHOLDER -->` → 替换为 `scan-result` 的结构化描述
     - `<!-- RULES_PLACEHOLDER -->` ~ `<!-- END_RULES_PLACEHOLDER -->` → 根据 `rules-manifest.json` 动态生成规则索引
   - 写入 `.claude/CLAUDE.md`
-  - **约束**：不得创建 `.claude/assets/rules/` 或其他子目录；总行数 ≤ 120 行
+  - **约束**：不得创建 `.claude/assets/rules/` 或其他子目录；总行数 ≤ 200 行
 
   **4.2 .diwu/dtask.json**
   - 读取 `${PLUGIN_ROOT}/assets/dinit/assets/task.json.template`
@@ -325,7 +325,7 @@ effort: high
 **基础文件（v2 格式验证）**：
 - [ ] `.claude/CLAUDE.md` 已填充项目信息，包含核心原则 + Skill 索引表
 - [ ] `.claude/CLAUDE.md` **不包含任何 `@rules/` 引用**（grep 零匹配）
-- [ ] `.claude/CLAUDE.md` 总行数 ≤ 120 行
+- [ ] `.claude/CLAUDE.md` 总行数 ≤ 200 行
 - [ ] `.claude/CLAUDE.md` 包含 `## Skill 索引` 或等效 skill 列表
 - [ ] `.claude/CLAUDE.md` 的「项目结构」章节包含扫描结果（非默认占位符）
 - [ ] `.diwu/dtask.json` 是有效 JSON
