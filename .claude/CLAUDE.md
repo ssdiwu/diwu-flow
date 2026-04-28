@@ -49,7 +49,7 @@
 
 ```bash
 # 前置配置（只需一次）
-git remote add public git@github.com:ssdiwu/diwu-flow-public.git
+git remote add public git@github.com:ssdiwu/diwu-flow.git
 
 # 每次发布（确保 main 干净后）
 ./drelease.sh v{version} --push-public
