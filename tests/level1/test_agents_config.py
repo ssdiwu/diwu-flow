@@ -305,7 +305,7 @@ class TestPluginJsonAgentsDeclaration:
 
         known_top_level_fields = {
             "name", "version", "description", "commands", "skills",
-            "author", "license", "keywords",
+            "author", "license", "keywords", "repository",
         }
         unknown = set(data.keys()) - known_top_level_fields
         assert not unknown, f"plugin.json 包含未知顶层字段: {unknown}"

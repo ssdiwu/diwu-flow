@@ -11,13 +11,14 @@ RUNTIME_FILES = [
     "decisions.md",
     "dsettings.json",
     "archive",
-    "continue-here.md",
+    # continue-here.md 是可选的临时文件，不强制要求
+    # "continue-here.md",
 ]
 NATIVE_CLAUDE_FILES = [
     "CLAUDE.md",
-    "rules",
-    "skills",
-    "examples",
+    # diwu-flow: rules 和 skills 均提升为顶层目录，不再在 .claude/ 下
+    # "rules",
+    # "skills",
 ]
 
 

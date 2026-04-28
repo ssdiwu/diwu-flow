@@ -2,7 +2,7 @@
 
 All notable changes to diwu-flow will be documented in this file.
 
-## [1.0.0] - 2026-04-28
+## [0.0.1] - 2026-04-28
 
 ### 新增（从 diwu-workflow v0.10.x 迁移重构）
 
