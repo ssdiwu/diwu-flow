@@ -134,9 +134,11 @@ def decide(tasks, settings, data, task_json_path, additional_prompts):
         base = format_task('继续执行下一个任务：', nx[0]) + extra
         return True, {'decision': 'block', 'reason': base}
 
-    # Truly nothing to do — but still emit archive/prompts if present
-    if extra:
-        return True, {"decision": "info", "reason": extra.strip()}
+    # Truly nothing to do — allow stop
+    # Note: archive/prompts in 'extra' are intentionally not emitted here;
+    # Stop hook only supports decision:"block"+reason (blocks stopping) or
+    # empty (allows stop). Emitting block for a pure advisory would prevent
+    # Claude from stopping when there's genuinely nothing to do.
     return False, {}
 
 
