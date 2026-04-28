@@ -1,1 +1,17 @@
-{"name": "ssdiwu", "description": "diwu 编码工作流插件集（多平台方法论体系）", "owner": {"name": "ssdiwu"}, "plugins": [{"name": "diwu-flow", "version": "0.0.1", "description": "多平台 AI 辅助开发方法论体系——Skills 为底，Commands 为壳。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 10 个核心 Skill + 10 个 Agent + 8 个 Command。", "source": "./", "category": "productivity", "homepage": "https://github.com/ssdiwu/diwu-flow"}]}
+{
+  "name": "ssdiwu",
+  "description": "diwu 编码工作流插件集（多平台方法论体系）",
+  "owner": {
+    "name": "ssdiwu"
+  },
+  "plugins": [
+    {
+      "name": "diwu-flow",
+      "version": "0.0.1",
+      "description": "多平台 AI 辅助开发方法论体系——Skills 为底，Commands 为壳。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 10 个核心 Skill + 10 个 Agent + 8 个 Command。",
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/ssdiwu/diwu-flow"
+    }
+  ]
+}

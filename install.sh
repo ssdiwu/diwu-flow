@@ -1,6 +1,6 @@
 #!/bin/bash
 # diwu-flow 多平台安装脚本
-# ./install.sh --platform cc|codex|opencode|all
+# ./install.sh --platform <cc|codex|opencode|all>
 # ./install.sh --uninstall
 
 set -euo pipefail
@@ -24,11 +24,13 @@ install_codex() {
     local DEST="$HOME/.codex"
     mkdir -p "$DEST/skills" "$DEST/agents"
 
-    # Skills: symlink SKILL.md → INSTRUCTIONS.md
+    # Skills: symlink SKILL.md (Codex discovers SKILL.md in skill dirs)
     for skill_dir in "$FLOW_ROOT"/skills/*/; do
         local name=$(basename "$skill_dir")
-        mkdir -p "$DEST/skills/$name"
-        ln -sf "$skill_dir/SKILL.md" "$DEST/skills/$name/INSTRUCTIONS.md"
+        if [ -f "$skill_dir/SKILL.md" ]; then
+            mkdir -p "$DEST/skills/$name"
+            ln -sf "$skill_dir/SKILL.md" "$DEST/skills/$name/SKILL.md"
+        fi
     done
 
     # Agents: symlink all (flat structure)
@@ -44,11 +46,13 @@ install_opencode() {
     local OC_DIR=".opencode"
     mkdir -p "$OC_DIR/plugins" "$OC_DIR/skills" "$OC_DIR/agents"
 
-    # Skills: symlink for direct reference
+    # Skills: symlink SKILL.md (OpenCode reads SKILL.md from skill dirs)
     for skill_dir in "$FLOW_ROOT"/skills/*/; do
         local name=$(basename "$skill_dir")
-        mkdir -p "$OC_DIR/skills/$name"
-        ln -sf "$skill_dir/SKILL.md" "$OC_DIR/skills/$name/SKILL.md"
+        if [ -f "$skill_dir/SKILL.md" ]; then
+            mkdir -p "$OC_DIR/skills/$name"
+            ln -sf "$skill_dir/SKILL.md" "$OC_DIR/skills/$name/SKILL.md"
+        fi
     done
 
     # Agents: symlink
@@ -57,7 +61,7 @@ install_opencode() {
         ln -sf "$agent_file" "$OC_DIR/agents/$name.md"
     done
 
-    # Plugin bootstrap: create TS plugin that registers commands as custom tools
+    # Plugin bootstrap: TS plugin that registers commands as custom tools
     cat > "$OC_DIR/plugins/diwu-flow.ts" << 'PLUGIN_EOF'
 // diwu-flow OpenCode Plugin Bootstrap
 // Registers diwu-flow commands as custom tools via Zod schema injection
@@ -65,18 +69,29 @@ install_opencode() {
 
 export const config = {
   name: "diwu-flow",
-  version: "1.0.0",
+  version: "0.0.1",
 };
 
-// Commands are registered as custom tools — thin wrappers around skills
+// Commands registered as custom tools — thin wrappers around skills
 // Each command triggers its corresponding skill from skills/{name}/SKILL.md
-const commands = ["drun", "dtask", "dprd", "ddoc", "ddemo", "dcorr", "dinit", "dadr"];
+const commands = [
+  { name: "drun", description: "Auto execution engine (auto/step mode)" },
+  { name: "dtask", description: "Task planning wizard" },
+  { name: "dinit", description: "CC-only initialization orchestrator" },
+  { name: "dprd", description: "PRD requirements analysis" },
+  { name: "dadr", description: "ADR architecture decision record" },
+  { name: "ddoc", description: "Document generator" },
+  { name: "ddemo", description: "Demo verification" },
+  { name: "dcorr", description: "Correction diagnostics" },
+];
+
+export default config;
 PLUGIN_EOF
 
     echo "✓ OpenCode: plugin + skills/agents symlink 已创建到 .opencode/"
     echo "  skills/  → 10 个 Skill（直接可用或通过 Plugin Custom Tool 触发）"
     echo "  agents/  → 10 个 Agent"
-    echo "  plugins/diwu-flow.ts → Command 注册入口"
+    echo "  plugins/diwu-flow.ts → Command 注册入口（8 个 command schema）"
 }
 
 uninstall() {
@@ -84,15 +99,19 @@ uninstall() {
     # Codex cleanup
     if [ -d "$HOME/.codex/skills" ]; then
         find "$HOME/.codex/skills" -type l -delete 2>/dev/null || true
+        # Clean empty dirs
+        find "$HOME/.codex/skills" -type d -empty -delete 2>/dev/null || true
     fi
     if [ -d "$HOME/.codex/agents" ]; then
         find "$HOME/.codex/agents" -type l -delete 2>/dev/null || true
+        find "$HOME/.codex/agents" -type d -empty -delete 2>/dev/null || true
     fi
     # OpenCode cleanup
-    if -d ".opencode" ]; then
-        rm -rf ".opencode/plugins/diwu-flow.ts" 2>/dev/null || true
+    if [ -d ".opencode" ]; then
+        rm -f ".opencode/plugins/diwu-flow.ts" 2>/dev/null || true
         find ".opencode/skills" -type l -delete 2>/dev/null || true
         find ".opencode/agents" -type l -delete 2>/dev/null || true
+        find ".opencode" -type d -empty -delete 2>/dev/null || true
     fi
     echo "✓ Uninstall complete"
 }

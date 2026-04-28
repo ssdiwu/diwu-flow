@@ -14,14 +14,18 @@ import sys
 
 
 def notify(msg):
-    """Send OS notification (macOS/Linux)."""
+    """Send OS notification (macOS/Linux). Shell-safe via subprocess."""
+    safe_msg = msg.replace("'", "'\\''").replace('"', '\\"').replace('$', '\\$').replace('`', '\\`')
     if platform.system() == 'Darwin':
-        os.system(
-            f'osascript -e \'display notification "{msg}" '
-            f'with title "diwu-workflow" sound name "Glass"\' 2>/dev/null'
+        subprocess.run(
+            ['osascript', '-e', f'display notification "{safe_msg}" with title "diwu-flow" sound name "Glass"'],
+            capture_output=True,
         )
     else:
-        os.system(f'notify-send "diwu-workflow" "{msg}" 2>/dev/null')
+        subprocess.run(
+            ['notify-send', 'diwu-flow', safe_msg],
+            capture_output=True,
+        )
     if os.path.exists('/dev/tty'):
         open('/dev/tty', 'w').write('\a')
 
@@ -132,3 +136,30 @@ def decide(tasks, settings, data, task_json_path, additional_prompts):
 
     # Truly nothing to do
     return False, {}
+
+
+def _load_json(path):
+    """Load JSON file, returning empty dict on missing/invalid."""
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Stop hook: continuous_mode decision")
+    parser.add_argument("--task-json", default=".diwu/dtask.json", help="Path to dtask.json")
+    parser.add_argument("--settings-json", default=".diwu/dsettings.json", help="Path to dsettings.json")
+    args = parser.parse_args()
+
+    data = _load_json(args.task_json)
+    settings = _load_json(args.settings_json)
+    tasks = data.get("tasks", [])
+
+    should_continue, output = decide(tasks, settings, data, args.task_json, [])
+    print(json.dumps(output, ensure_ascii=False))
+    sys.exit(0 if should_continue else 1)
