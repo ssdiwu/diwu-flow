@@ -136,14 +136,27 @@ def check(settings=None, tasks=None):
 if __name__ == "__main__":
     import sys
 
+    # Read stdin (CC Stop hook may send JSON input)
+    stdin_data = {}
+    if not sys.stdin.isatty():
+        try:
+            raw = sys.stdin.read()
+            if raw.strip():
+                stdin_data = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
     results = check()
     if results:
-        # Output JSON for Stop hook consumption (not plain text)
         messages = [msg for _, msg in results]
+        # Use hookSpecificOutput — CC-recognized field for plugin-specific advisory output
         output = {
-            "archive_check": True,
-            "messages": messages,
-            "suggestion": "建议执行 /darc 归档",
+            "hookSpecificOutput": {
+                "source": "stop_archive",
+                "level": "info",
+                "messages": messages,
+                "suggestion": "建议执行 /darc 归档",
+            }
         }
         print(json.dumps(output, ensure_ascii=False))
     sys.exit(0)

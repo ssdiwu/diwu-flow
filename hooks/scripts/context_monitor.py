@@ -60,7 +60,27 @@ def _save_cache(cache):
 
 
 def _classify_tool():
-    """Classify the current tool from CLAUDE_HOOK_TOOL_NAME env var."""
+    """Classify the current tool from stdin JSON (PreToolUse format).
+
+    CC PreToolUse hook sends JSON via stdin with 'tool_name' field.
+    Falls back to CLAUDE_HOOK_TOOL_NAME env var for manual testing.
+    """
+    # Primary: read tool_name from stdin (real hook execution)
+    try:
+        if not sys.stdin.isatty():
+            raw = sys.stdin.read()
+            if raw.strip():
+                input_data = json.loads(raw)
+                tool_name = input_data.get("tool_name", "")
+                if tool_name in RD_TOOLS:
+                    return "rd"
+                if tool_name in WR_TOOLS:
+                    return "wr"
+                return None
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Fallback: env var (for manual / pytest testing)
     tool_name = os.environ.get("CLAUDE_HOOK_TOOL_NAME", "")
     if tool_name in RD_TOOLS:
         return "rd"
