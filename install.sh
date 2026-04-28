@@ -61,37 +61,38 @@ install_opencode() {
         ln -sf "$agent_file" "$OC_DIR/agents/$name.md"
     done
 
-    # Plugin bootstrap: TS plugin that registers commands as custom tools
+    # Plugin bootstrap: OpenCode plugin manifest
+    # Note: OpenCode plugin API is evolving; this provides the declaration layer.
+    # Actual tool registration depends on the target OpenCode version's plugin SDK.
     cat > "$OC_DIR/plugins/diwu-flow.ts" << 'PLUGIN_EOF'
-// diwu-flow OpenCode Plugin Bootstrap
-// Registers diwu-flow commands as custom tools via Zod schema injection
-// Full methodology lives in skills/ — this is just the trigger layer
-
+/**
+ * diwu-flow OpenCode Plugin Declaration
+ *
+ * This file declares the diwu-flow plugin for OpenCode.
+ * The skills/ and agents/ directories are symlinked separately (see above).
+ *
+ * Command mapping (triggered via /command or agent dispatch):
+ *   drun     → skills/drun/SKILL.md      (auto execution engine)
+ *   dtask    → skills/dtask/SKILL.md     (task planning wizard)
+ *   dinit    → commands/dinit.md          (CC-only init orchestrator)
+ *   dprd     → skills/dprd/SKILL.md      (PRD requirements analysis)
+ *   dadr     → commands/dadr.md           (ADR architecture decision record)
+ *   ddoc     → skills/ddoc/SKILL.md      (document generator)
+ *   ddemo    → skills/ddemo/SKILL.md     (demo verification)
+ *   dcorr    → skills/dcorr/SKILL.md     (correction diagnostics)
+ */
 export const config = {
   name: "diwu-flow",
   version: "0.0.1",
 };
 
-// Commands registered as custom tools — thin wrappers around skills
-// Each command triggers its corresponding skill from skills/{name}/SKILL.md
-const commands = [
-  { name: "drun", description: "Auto execution engine (auto/step mode)" },
-  { name: "dtask", description: "Task planning wizard" },
-  { name: "dinit", description: "CC-only initialization orchestrator" },
-  { name: "dprd", description: "PRD requirements analysis" },
-  { name: "dadr", description: "ADR architecture decision record" },
-  { name: "ddoc", description: "Document generator" },
-  { name: "ddemo", description: "Demo verification" },
-  { name: "dcorr", description: "Correction diagnostics" },
-];
-
 export default config;
 PLUGIN_EOF
 
     echo "✓ OpenCode: plugin + skills/agents symlink 已创建到 .opencode/"
-    echo "  skills/  → 10 个 Skill（直接可用或通过 Plugin Custom Tool 触发）"
-    echo "  agents/  → 10 个 Agent"
-    echo "  plugins/diwu-flow.ts → Command 注册入口（8 个 command schema）"
+    echo "  skills/  → 10 个 Skill（SKILL.md 自动发现）"
+    echo "  agents/  → 10 个 Agent（.md 自动发现）"
+    echo "  plugins/diwu-flow.ts → 插件声明 + Command 索引（8 个 command 映射）"
 }
 
 uninstall() {

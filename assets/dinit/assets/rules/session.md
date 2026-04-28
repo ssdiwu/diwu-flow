@@ -121,7 +121,7 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 | 01:30:05 | Bash | npm install E403 | 2 | 使用镜像源 | 环境漂移 |
 ```
 
-表格是四段式的机器可读版本；两者互为补充。表格方便跨 session 聚合查询，四段式适合人类阅读和 Stop hook 验证。`inject_errors_decisions.py` 会自动扫描并注入 context，无需手动回顾历史文件。
+表格是四段式的机器可读版本；两者互为补充。表格方便跨 session 聚合查询，四段式适合人类阅读和 Stop hook 验证。跨 session 错误模式自动注入（`inject_errors_decisions.py`）**待实现**——当前需手动回顾历史文件。
 
 ---
 

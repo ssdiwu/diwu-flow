@@ -1,10 +1,9 @@
 ---
 name: verifier
 description: "独立验证专家。当需要从 acceptance 反推可观测事实进行独立验收时使用。不信任实现者的自述，遇不确定输出 HUMAN_NEEDED。"
-permissionMode: plan
-memory: project
-maxTurns: 30
 tools: [Read, Grep, Glob, Bash]
+memory: true
+maxTurns: 25
 ---
 
 # Verifier Agent

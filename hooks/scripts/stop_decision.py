@@ -156,10 +156,28 @@ if __name__ == "__main__":
     parser.add_argument("--settings-json", default=".diwu/dsettings.json", help="Path to dsettings.json")
     args = parser.parse_args()
 
+    # Read stdin for stop_hook_active (CC Stop hook injects this field)
+    stdin_data = {}
+    if not sys.stdin.isatty():
+        try:
+            raw = sys.stdin.read()
+            if raw.strip():
+                stdin_data = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    stop_hook_active = stdin_data.get("stop_hook_active", False)
+
+    # Anti-loop: if CC already set stop_hook_active, don't re-inject
+    if stop_hook_active:
+        print(json.dumps({"continue": False}, ensure_ascii=False))
+        sys.exit(0)
+
     data = _load_json(args.task_json)
     settings = _load_json(args.settings_json)
     tasks = data.get("tasks", [])
 
     should_continue, output = decide(tasks, settings, data, args.task_json, [])
-    print(json.dumps(output, ensure_ascii=False))
+    if output:
+        print(json.dumps(output, ensure_ascii=False))
     sys.exit(0 if should_continue else 1)

@@ -14,22 +14,18 @@ RUNTIME_TARGETS = [
     "archive",
 ]
 
-# #178 重构后 stop_blocking.py 是调度器，运行时路径委托给子模块
-# 因此 stop_blocking.py 仅需包含 .diwu/dtask.json 和 .diwu/dsettings.json
+# Round 3 清理后：hooks.json 正式注册的全部脚本
 EXPECTED_DIWU_FILES = {
     "task_completed.py": [".diwu/dsettings.json", ".diwu/dtask.json", ".diwu/recording/", ".diwu/decisions.md"],
-    "pre_tool_use_bash.py": [".diwu/dtask.json"],
-    "stop_blocking.py": [".diwu/dtask.json", ".diwu/dsettings.json"],  # 调度器：子模块负责 recording 等
-    "pre_compact.py": [".diwu/dtask.json", ".diwu/recording"],
     "drift_detect_pre.py": [".diwu/dtask.json", ".diwu/dsettings.json"],
+    "context_monitor.py": [".diwu/dsettings.json", ".diwu/.context_monitor_cache.json"],
+    "stop_decision.py": [".diwu/dtask.json", ".diwu/dsettings.json"],
+    "stop_archive.py": [".diwu/dtask.json", ".diwu/dsettings.json", ".diwu/recording"],
+    "pre_compact.py": [".diwu/dtask.json", ".diwu/recording"],
+    "session_start.py": [],
     "task_created_validate.py": [".diwu/dtask.json"],
-    # 子模块（被调度器导入）
-    "stop_snapshot.py": [".diwu/recording"],  # dtask.json 通过参数传入，非硬编码路径
-    "stop_integrity.py": [".diwu/recording"],  # pitfall 检查基于内容正则，非路径硬编码
-    "stop_archive_agg.py": [".diwu/recording", ".diwu/project-pitfalls.md"],  # archive 路径动态构建
-    "stop_decision.py": [],  # 所有路径通过参数传入（TASK_JSON, SETTINGS_PATH）
-    # 以下脚本在 diwu-flow 中有意精简未迁移：
-    # context_monitor.py, inject_errors_decisions.py, stop_background.py,
+    # 以下为规划中/未实现：
+    # inject_errors_decisions.py, stop_background.py,
     # post_tool_use_failure.py, post_tool_reminder.py, subagent_stop.py
 }
 

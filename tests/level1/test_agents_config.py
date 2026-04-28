@@ -48,11 +48,13 @@ CORE_AGENT_MODEL_EXPECTATIONS = {
 DOMAIN_AGENT_EXPECTED_MODEL = "sonnet"
 
 # 所有 Agent 必须包含的 frontmatter 字段（除 name/description 外）
+# 注意：permissionMode 不在 CC Agent tool schema 中（v0.10.3 确认）
+# memory / maxTurns 是合法字段（Round 3 恢复）
 AGENT_REQUIRED_FIELDS = {
-    "explorer": ["permissionMode", "memory", "maxTurns", "tools"],
-    "implementer": ["permissionMode", "memory", "maxTurns", "tools"],
-    "verifier": ["permissionMode", "memory", "maxTurns", "tools"],
-    # 领域 agent 不强制要求 permissionMode（plugin agents 不支持该字段）
+    "explorer": ["tools"],
+    "implementer": ["tools"],
+    "verifier": ["tools"],
+    # 领域 agent 使用 model + tools
     "ui-designer": ["model", "tools"],
     "frontend-architect": ["model", "tools"],
     "backend-architect": ["model", "tools"],
@@ -230,18 +232,29 @@ class TestVerifierAgentCompleteness:
         forbidden_found = tools & VERIFIER_FORBIDDEN_TOOLS
         assert not forbidden_found, f"verifier 不应有写操作工具，发现: {forbidden_found}"
 
+    # permissionMode 不在 CC Agent schema 中（v0.10.3 确认，应不存在）
+    # memory / maxTurns 是合法字段（Round 3 恢复，应存在且类型正确）
     def test_verifier_has_memory_field(self, project_root):
+        """verifier 应声明 memory 字段（布尔值）"""
         path = project_root / AGENTS_DIR / "verifier.md"
         fm = _load_agent_frontmatter(path)
-        assert "memory" in fm and fm["memory"], "verifier 缺少 memory 字段声明"
+        assert "memory" in fm, "verifier 应包含 memory 字段"
+        assert isinstance(fm["memory"], bool), f"memory 应为 bool, 实际: {type(fm['memory'])}"
 
-    def test_verifier_max_turns_is_reasonable(self, project_root):
+    def test_verifier_has_max_turns_field(self, project_root):
+        """verifier 应声明 maxTurns 字段（正整数）"""
         path = project_root / AGENTS_DIR / "verifier.md"
         fm = _load_agent_frontmatter(path)
-        max_turns = fm.get("maxTurns")
-        assert isinstance(max_turns, int) and 10 <= max_turns <= 50, (
-            f"verifier 的 maxTurns={max_turns} 不在合理范围 [10, 50] 内"
+        assert "maxTurns" in fm, "verifier 应包含 maxTurns 字段"
+        assert isinstance(fm["maxTurns"], int) and fm["maxTurns"] > 0, (
+            f"maxTurns 应为正整数, 实际: {fm.get('maxTurns')}"
         )
+
+    def test_verifier_deprecated_permission_mode_field_removed(self, project_root):
+        """verifier 不再声明 permissionMode 字段（CC Agent tool 不支持）"""
+        path = project_root / AGENTS_DIR / "verifier.md"
+        fm = _load_agent_frontmatter(path)
+        assert "permissionMode" not in fm, "verifier 不应包含不支持的 permissionMode 字段"
 
 
 # ─── plugin.json 声明 ────────────────────────────────────────────
