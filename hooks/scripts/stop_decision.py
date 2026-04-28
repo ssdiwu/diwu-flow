@@ -95,7 +95,7 @@ def decide(tasks, settings, data, task_json_path, additional_prompts):
                     f'已完成: {len(done_tasks)} 个任务\n'
                     f'下一任务: Task#{nx[0]["id"]} {nx[0].get("title", "")} (InSpec)\n'
                     f'剩余: ' + ', '.join(
-                        f'#{t["id"]}({t["status"])})' for t in remaining
+                        f'#{t["id"]}({t["status"]})' for t in remaining
                     )
                 )
                 return True, {'decision': 'block', 'reason': summary}

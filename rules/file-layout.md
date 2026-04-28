@@ -20,20 +20,19 @@
 │   ├── smoke.sh
 │   └── task_<id>_verify.sh
 ├── init.sh                        # 环境初始化脚本（可选）
-└── rules/                         # 工作流规则（13 文件）
+└── rules/                         # 工作流规则（12 文件）
     ├── README.md                  # 规则速查索引
     ├── mindset.md                 # 上位心智层（独立注入，非自动加载）
     ├── judgments.md               # 判断锚点（四段式：启动/实施/验收/纠偏）
     ├── task.md                    # 任务状态机、acceptance、dtask 结构
-    ├── workflow.md                # 任务规划、实施、验证（Session 见 session.md）
-    ├── session.md                 # Session 生命周期管理
+    ├── workflow.md                # P-J-A 框架、子代理启动仪式、测试分层
+    ├── session.md                 # Session 结束规范、3-Strike、Checkpoint、踩坑聚合
     ├── verification.md            # 证据优先级体系（L1-L5）
-    ├── correction.md              # 纠偏体系（退化信号→止损动作）
-    ├── pitfalls.md                # 误判防护（三层：泛化/项目/接口）
+    ├── pitfalls.md                # 误判防护：Layer 2 项目高频表 / Layer 3 接口预留
     ├── exceptions.md              # 异常处理与 BLOCKED 判定
-    ├── templates.md               # 格式模板与可调参数
+    ├── templates.md               # 格式模板（BLOCKED/REVIEW/Session/Checkpoint 等）
     ├── file-layout.md             # 本文件：目录结构与归档规则
-    └── constraints.md             # 架构约束（五维约束设计）
+    └── constraints.md             # 架构约束（五维约束设计 + 版本号判定）
 ```
 
 > 规则文件由插件 UserPromptSubmit hook 注入。**mindset.md 为独立注入**（由 UserPromptSubmit hook 单独读取注入，不随 rules/ 目录批量加载）。
@@ -51,17 +50,16 @@
 
 | 路径 | 用途 | 读写方 |
 |------|------|--------|
-| `rules/mindset.md` | 上位心智层：三唯一框架、五问开工、不确定性门控、三层工程论 | Agent 读（hook 独立注入） |
-| `rules/judgments.md` | 全部判断锚点：按阶段索引（启动/实施/验收/纠偏）+ 入口门控 | Agent 读 |
-| `rules/task.md` | 任务状态机、GWT acceptance 格式、dtask 结构、blocked_by 规范 | Agent 读写 |
-| `rules/workflow.md` | 任务规划、任务实施、验证要求（不含 Session 生命周期） | Agent 读 |
-| `rules/session.md` | Session 启动（Step 1-5）、任务选择、continuous_mode、Session 结束 | Agent 读 |
+| `rules/mindset.md` | 上位心智层：三唯一框架、P-J-A 骨架、不确定性门控 | Agent 读（hook 独立注入） |
+| `rules/judgments.md` | 全部判断锚点：按阶段索引（启动/实施/验收/纠偏），纯正例/反例/边界例 | Agent 读 |
+| `rules/task.md` | 任务状态机、GWT acceptance 格式、dtask 结构、blocked_by、提交规范 | Agent 读写 |
+| `rules/workflow.md` | P-J-A 框架快速参考、子代理启动仪式规格、测试分层策略 | Agent 读 |
+| `rules/session.md` | Session 结束规范（时间戳+踩坑+Stop hook 正则）、3-Strike、Checkpoint | Agent 读 |
 | `rules/verification.md` | L1-L5 证据优先级、Done 判定门槛、无法验证处理规范 | Agent 读 |
-| `rules/correction.md` | 纠偏体系：退化信号检测、四行重写、止损序列、与 BLOCKED 边界 | Agent 读 |
-| `rules/pitfalls.md` | 误判防护：Layer 1 泛化模式 / Layer 2 项目高频 / Layer 3 接口预留 | Agent 读 |
+| `rules/pitfalls.md` | 误判防护：Layer 2 项目高频误判表机制 / Layer 3 接口预留 | Agent 读 |
 | `rules/exceptions.md` | 异常处理、BLOCKED 判定锚点、阻塞恢复流程 | Agent 读 |
-| `rules/templates.md` | BLOCKED/REVIEW/DECISION TRACE 格式、最小规格模板、可调参数 | Agent 读 |
-| `rules/constraints.md` | 架构约束（五维）、版本号语义化、Degradation Paths | Agent 读 |
+| `rules/templates.md` | BLOCKED/REVIEW/DECISION TRACE/Session/Checkpoint 格式模板 | Agent 读 |
+| `rules/constraints.md` | 架构约束（五维）、版本号升级判定、Degradation Paths | Agent 读 |
 | `rules/README.md` | 规则速查索引、阅读顺序建议 | Agent 读 |
 
 ## 运行时文件说明

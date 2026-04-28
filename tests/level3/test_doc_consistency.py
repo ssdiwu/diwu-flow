@@ -30,7 +30,7 @@ HOOKS_JSON = PROJECT_ROOT / 'hooks' / 'hooks.json'
 SKILLS_DIR = PROJECT_ROOT / 'skills'
 COMMANDS_DIR = PROJECT_ROOT / 'commands'
 AGENTS_DIR = PROJECT_ROOT / 'agents'
-RULES_DIR = PROJECT_ROOT / '.claude' / 'rules'
+RULES_DIR = PROJECT_ROOT / 'rules'
 
 
 def _extract_number(pattern, text, default=None):
@@ -159,9 +159,17 @@ class TestDocConsistency:
         data = _read_json(HOOKS_JSON)
         if not data:
             return
-        events = set(data.get('hooks', {}).keys())
+        # Support both old object format {hooks: {event: ...}} and new array format [{event: ..., hooks: [...]}]
+        hooks_data = data.get('hooks', {})
+        if isinstance(hooks_data, list):
+            events = {h.get('event', '') for h in hooks_data if isinstance(h, dict)}
+        else:
+            events = set(hooks_data.keys())
         # Find the Hooks table section and extract event names from rows
         readme_text = README_MD.read_text(encoding='utf-8')
+        # Skip if README has no Hooks documentation section at all
+        if '## Hooks' not in readme_text and '### Hooks' not in readme_text:
+            return
         in_hooks_table = False
         for line in readme_text.split('\n'):
             if '## Hooks' in line:

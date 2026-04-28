@@ -123,12 +123,23 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 
 ## 执行验证循环
 
-每个任务执行时按以下顺序调用相关 Skill：
+每轮执行前必须明确回答：
 
-1. **dtask** — 任务实施（状态管理、GWT 验收、步骤执行）
-2. **dvfy** — 验证证据（L1-L5 证据收集、Done 判定门槛）
-3. **djug** — 阶段判定（幅度判断、偏差分级、并行/串行选择）
-4. **dcorr** — 纠偏恢复（退化信号检测、四行重写）
+| # | 问题 | 回答来源 |
+|---|------|---------|
+| 1 | 当前任务是什么？ | dtask 当前 InProgress 任务的 `title` + `description` |
+| 2 | 这轮准备怎么做？ | steps 中当前步骤的绝对路径和具体操作 |
+| 3 | 怎么判断这轮做成了？ | 对应 `acceptance` 条目 + dvfy 证据等级（L1-L3 主判） |
+| 4 | 结果更新到哪？ | dtask.json（状态变更）+ recording/session（进度记录） |
+
+> 状态文件映射（复用现有机制，不新建文件）：
+> - 目标+边界 → dtask.json `description` + `acceptance[]`
+> - 拆解+状态 → dtask.json `tasks[]` + `status`
+> - 每轮进度 → recording/session Checkpoint（格式见 `rules/templates.md`）
+> - 验收标准 → dtask.json `acceptance[]`
+> - 验证脚本 → `.claude/checks/smoke.sh`
+
+**调用顺序**：dtask(实施) → dvfy(验证) → djug(判定) → dcorr(纠偏)
 
 循环条件：continuous_mode=true 且任务 Done 后自动选下一个。
 

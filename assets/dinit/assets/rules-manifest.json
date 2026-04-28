@@ -1,1 +1,1 @@
-{"description": "规则文件清单，dinit 按此列表复制到项目 .claude/rules/ 目录", "version": 2, "rules": ["README.md", "mindset.md", "judgments.md", "workflow.md", "verification.md", "correction.md", "pitfalls.md", "session.md", "task.md", "exceptions.md", "templates.md", "constraints.md", "file-layout.md"]}
+{"description": "规则文件清单，dinit 按此列表复制到项目 .claude/rules/ 目录", "version": 3, "rules": ["README.md", "mindset.md", "judgments.md", "workflow.md", "verification.md", "pitfalls.md", "session.md", "task.md", "exceptions.md", "templates.md", "constraints.md", "file-layout.md"]}

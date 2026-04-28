@@ -162,3 +162,25 @@ Status: InReview(超前 3/5)
 回滚方式: git checkout -- src/auth.ts src/models/user.ts
          或 git reset --soft HEAD~1（如已提交）
 ```
+
+> Checkpoint 格式模板见 `rules/templates.md` §Checkpoint 格式模板。
+
+### Commit 语言规范
+
+- **标题行**：中文（与项目文档语言一致）
+- **Category / Files / Evidence / Status**：英文标准化标识符
+- **正文描述**（如有）：中文
+
+### 分支命名规范
+
+| 类型 | 格式 | 说明 |
+|------|------|------|
+| 功能开发 | `feature/{task-id}-{short-title}` | 关联 dtask 任务 ID |
+| 修复 | `fix/{task-id}-{short-title}` | bugfix 类任务 |
+| 发布 | `release/v{version}` | 对应 semver 版本号 |
+| 热修复 | `hotfix/v{version}` | 生产环境紧急修复 |
+
+## 不做的事
+
+- 不生成中间 PRD markdown 文件
+- 不自动将任务改为 InSpec
