@@ -73,6 +73,36 @@ flowchart LR
     H --> B
 ```
 
+## 任务状态机
+
+```mermaid
+stateDiagram-v2
+    [*] --> InDraft: 创建任务
+    InDraft --> InSpec: 人工确认
+    InDraft --> Cancelled: 取消
+    InSpec --> InProgress: 开始实施
+    InSpec --> InDraft: 发现问题（退回重确认）
+    InProgress --> InReview: 完成准备验证
+    InProgress --> InSpec: 遇阻塞
+    InProgress --> Cancelled: 取消
+    InReview --> Done: 验证通过
+    InReview --> InProgress: 失败返工
+    InReview --> Cancelled: 取消
+    Done --> [*]
+    Cancelled --> InSpec: 重新激活
+```
+
+| 状态 | 含义 | 修改权限 |
+|------|------|----------|
+| InDraft | 需求草稿中 | 主代理可改 title/description/acceptance/steps |
+| InSpec | 已确认锁定 | 主代理只能改 status |
+| InProgress | 实施中 | 主代理可改 status |
+| InReview | 验证中 | 主代理可改 status |
+| Done | 已完成 | 终态，忽略所有事件 |
+| Cancelled | 已取消 | 主代理可改 status |
+
+> 完整状态转移规则见 `rules/task.md`。
+
 ## 快速开始
 
 ### Claude Code（推荐）

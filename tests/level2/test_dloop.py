@@ -220,6 +220,32 @@ def test_stop_decision_no_tasks_stops_with_report(tmp_path):
     assert "无可执行任务" in result.stderr
 
 
+def test_stop_decision_loop_mode_only_inreview_stops(tmp_path):
+    """Loop mode + only InReview tasks remaining (no InSpec/InProgress) -> allow stop."""
+    tasks = [
+        {"id": 1, "title": "Done task", "status": "Done"},
+        {"id": 2, "title": "Review task", "status": "InReview"},
+    ]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(
+        tmp_path,
+        session_id="session-inreview",
+        completed_task_ids=[1],
+        current_iteration=1,
+    )
+
+    result = _run_stop_decision(
+        tmp_path,
+        session_id="session-inreview",
+        cwd=str(tmp_path),
+    )
+
+    assert result.returncode == 1  # allow stop
+    assert not (tmp_path / DLOOP_STATE_NAME).exists()
+    assert "DLOOP 阶段报告" in result.stderr
+    assert "无可执行任务" in result.stderr
+
+
 def test_loop_completion_reports_completed_tasks(tmp_path):
     """Phase report includes completed task details from dtask.json."""
     tasks = [

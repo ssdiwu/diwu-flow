@@ -106,6 +106,54 @@
       ],
       "category": "refactor",
       "status": "Done"
+    },
+    {
+      "id": 6,
+      "title": "stop_decision.py 循环模式逻辑修正：去掉 BLOCKED 死代码 + InReview 语义确认",
+      "description": "当前循环模式 _check_stop() 中「BLOCKED」停止条件描述误导——BLOCKED 不是独立 status，只是 is_unblocked 过滤的结果，实际上 not nx 已覆盖此场景。此外 rev[0] 是死代码（_check_stop 中 not nx 优先返回）。需清理代码并确保 InReview 在循环中不被自动执行（等待人工复核）。",
+      "acceptance": [
+        "Given stop_decision.py 循环模式 When _check_stop() 检查条件 Then 不包含名为「BLOCKED」的独立停止条件（L3: 代码内容确认，grep 不命中 BLOCKED 独立条件分支）",
+        "Given stop_decision.py 循环模式 When 搜索 rev[0] 则不命中独立的 rev 回退分支（L3: 代码确认 rev 不再作为循环执行目标）",
+        "Given 全量回归 When 运行 pytest tests/ Then 所有测试通过（L3: 自动化断言）"
+      ],
+      "steps": [
+        "[锁定] 阅读 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py decide_loop_mode() 函数，确认 _check_stop() 逻辑",
+        "[锁定] 去掉 _check_stop() 中对「BLOCKED」的显式描述，保留 not nx and not ip 逻辑（其已正确覆盖被阻塞任务场景）",
+        "[锁定] 清理行 248 的 rev[0] 死代码分支——当 _check_stop 通过后 nx 必非空，rev[0] 不可达",
+        "[建议] 新增测试用例验证：循环模式下剩余仅 InReview 任务时 allow stop",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 7,
+      "title": "README/SKILL.md 停止条件与任务状态机对齐 diwu-workflow",
+      "description": "当前 diwu-flow 的 README 和 dloop SKILL.md 中描述的停止条件（含 BLOCKED 列）与代码实际逻辑不符，且缺少完整任务状态机定义。需参考 diwu-workflow (github.com/ssdiwu/diwu-workflow) 的 stateDiagram 和状态表，统一修改 dloop SKILL.md、drun SKILL.md、README 的状态机描述。",
+      "acceptance": [
+        "Given dloop SKILL.md §停止条件表 When 搜索 BLOCKED 作为独立停止条件行 Then 不命中（BLOCKED 不再列为独立停止条件）",
+        "Given dloop SKILL.md §停止条件 When 检查「无可执行任务」的解释 Then 明确说明：InSpec（未被 blocked_by 阻塞）和 InProgress 为可执行任务，InReview/Done/Cancelled/InDraft 不可执行",
+        "Given README §任务状态机 When 阅读完整状态定义 Then 包含 InDraft/InSpec/InProgress/InReview/Done/Cancelled 六态定义及 stateDiagram（与 diwu-workflow 一致）",
+        "Given 全量回归 When 运行 pytest tests/ Then 所有测试通过（L3: 自动化断言）"
+      ],
+      "steps": [
+        "[锁定] 阅读 diwu-workflow README.md 提取任务状态机 stateDiagram 和状态表（六态定义）",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md §停止条件表：去掉 BLOCKED 行，修正「无可执行任务」解释",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/README.md：新增任务状态机 stateDiagram（参考 diwu-workflow 格式）",
+        "[建议] 检查 skills/drun/SKILL.md 任务选择策略章节是否需要同步更新状态术语",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md"
+      ],
+      "category": "refactor",
+      "status": "Done"
     }
   ]
 }

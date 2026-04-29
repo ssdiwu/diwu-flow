@@ -205,7 +205,7 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
 
     # Stop condition checker: returns (should_stop, reason_string) or None to continue
     def _check_stop():
-        # No executable tasks
+        # No next executable task (covers blocked tasks whose blockers aren't Done)
         if not nx and not ip:
             return True, "无可执行任务"
         # Max tasks reached
@@ -245,10 +245,7 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
     loop_state["current_iteration"] = next_iteration
     _save_loop_state(cwd, loop_state)
 
-    target = nx[0] if nx else rev[0] if rev else None
-    if not target:
-        _cleanup_loop_state(cwd)
-        return False, {}
+    target = nx[0]
 
     base = format_task(
         f'🔄 dloop iteration {next_iteration}/{f"∞" if max_tasks == 0 else max_tasks} | 继续执行下一个任务：',

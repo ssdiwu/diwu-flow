@@ -59,11 +59,10 @@ argument-hint: "[--max-tasks N]"
 
 | # | 条件 | 说明 |
 |---|------|------|
-| 1 | 无可执行任务 | dtask.json 中无 InSpec/InProgress 任务 |
+| 1 | 无可执行任务 | dtask.json 中无未阻塞的 InSpec 任务，且无 InProgress 任务（InReview/InDraft/Done/Cancelled 不算可执行） |
 | 2 | 达到 max_tasks 上限 | completed_task_ids.length >= max_tasks |
-| 3 | BLOCKED | 当前任务被阻塞且无法自动恢复 |
-| 4 | PENDING REVIEW | 超前实施达 review_limit 上限 |
-| 5 | 用户取消 | 执行 `/dend` |
+| 3 | PENDING REVIEW | 超前实施达 review_limit 上限 |
+| 4 | 用户取消 | 执行 `/dend` |
 
 ## 循环状态文件（`.diwu/dloop-state.json`）
 
@@ -148,7 +147,7 @@ argument-hint: "[--max-tasks N]"
 - `--max-tasks N`（默认 10，0=无限）：防止无限循环失控
 - `/dend` 可随时手动取消
 - session_id 隔离防止跨 session 干扰
-- BLOCKED 任务立即停止（不重试）
+- 被 blocked_by 阻塞的 InSpec 任务立即停止（不重试）
 
 ## 适用场景
 
