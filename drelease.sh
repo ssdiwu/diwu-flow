@@ -2,18 +2,18 @@
 # drelease.sh — 从私有 main 生成干净的公开版本（worktree 隔离模式）
 #
 # 用法:
-#   ./drelease.sh v0.0.5                    # 创建 release tag
+#   ./drelease.sh v0.0.5                    # 创建 release tag + 推送私有
 #   ./drelease.sh v0.0.5 --push-public      # 额外推送到公开 remote
 #
-# 设计决策:
-#   - 使用 git worktree 在隔离目录操作，main 工作树完全不被碰
-#   - .diwu/ 等运行时文件始终保留在 main 工作树中，不会因分支切换消失
-#   - public main 与 origin main 保持同步（仅 tip 过滤敏感文件）
-#
-# 安全边界:
-#   - 只 force-push 到 public main（你拥有）
-#   - 永不 force-push 到 origin（私有协作仓库）
+# 设计:
+#   - git worktree 隔离操作，main 工作树永不被碰
+#   - public main 与 origin main 保持同步（仅 tip 过滤 .diwu/ 等）
 #   - cleanup trap 确保 worktree 总是被移除
+#
+# 安全:
+#   - 只 force-push 到 public（你拥有）
+#   - 永不 force-push 到 origin（私有协作仓库）
+#   - 推送使用 commit SHA 解引用（处理 annotated tag）
 
 set -euo pipefail
 
@@ -39,7 +39,6 @@ if [ "$BRANCH" != "main" ]; then
     exit 1
 fi
 
-# 检查 tag 是否已存在
 if git tag -l "$VERSION" | grep -q "$VERSION"; then
     echo "✗ 标签 $VERSION 已存在"
     exit 1
@@ -91,7 +90,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
     RELEASE_SHA=$(git rev-parse HEAD)
 fi
 
-# 打 tag（指向 cleaned commit 或 main commit）
+# 打 annotated tag
 echo "→ 打标签: $VERSION → ${RELEASE_SHA:0:7}"
 git tag -a "$VERSION" -m "diwu-flow ${VERSION}" "$RELEASE_SHA"
 
@@ -115,6 +114,7 @@ if [ "$PUSH_PUBLIC" = "--push-public" ]; then
     echo ""
     echo "→ 推送到公开仓库 ($PUBLIC_REMOTE → main)"
     git fetch "$PUBLIC_REMOTE" 2>/dev/null || true
+    # 使用 SHA 而非 tag 引用（annotated tag 需要解引用）
     git push "$PUBLIC_REMOTE" "+${RELEASE_SHA}:refs/heads/main"
     git push "$PUBLIC_REMOTE" "+refs/tags/${VERSION}"
     echo ""
