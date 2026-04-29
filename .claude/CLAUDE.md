@@ -37,7 +37,7 @@
 
 **recording 更新**：每次 session 结束前必须写入 `.diwu/recording/`。
 
-**`.diwu/` 提交规则**：私有仓库阶段 `.diwu/` 全部提交。公开发行时由 `drelease.sh` 自动排除敏感文件推送到公开仓库。
+**`.diwu/` 提交规则**：origin/main 持续追踪 `.diwu/`（含 `.claude/`）。公开仓库通过 `drelease.sh` worktree 隔离模式发布 clean 版（自动排除 `.diwu/`、`.claude/` 等敏感文件）。
 
 - 修改 Skill 后验证 frontmatter YAML 合法性
 - plugin.json 不声明 agents 字段（默认路径自动发现）
