@@ -2,13 +2,23 @@
 
 All notable changes to diwu-flow will be documented in this file.
 
+## [0.0.4] - 2026-04-29
+
+### Agent Taxonomy v2：核心收缩
+
+- **领域 Agent 移除**：删除 ui-designer、frontend-architect、backend-architect、devops-architect、performance-optimizer、api-tester、legal-compliance 共 7 个领域 agent
+- **核心 Agent 保留**：explorer（只读探索）、implementer（代码实施）、verifier（独立验证）成为唯一执行 primitive
+- **verifier 增强**：新增 Failure Mode 和 Authority 声明，明确权限边界
+- **理由**：agent 设计从角色驱动转向能力驱动，按任务节点的能力需求派发；领域方法论内容应归 skills/rules 层，而不是自动调度执行单元
+
 ## [0.0.1] - 2026-04-29
 
 ### 新增（从 diwu-workflow v0.10.x 迁移重构）
 
 - **多平台支持**：Skills 为底 Commands 为壳架构，支持 Claude Code / Codex CLI / OpenCode
 - **10 个 Skill**：drun, dtask, dvfy, djug, dcorr, dprd, drec, darc, ddoc, ddemo
-- **10 个 Agent**：explorer, implementer, verifier + 7 个领域专家
+- **执行 Agent（初始 10 个，含 7 个领域专家）**：explorer, implementer, verifier + ui-designer / frontend-architect / backend-architect / devops-architect / api-tester / performance-optimizer / legal-compliance
+  （注：7 个领域专家在 v0.0.4 已移除，参见该版本变更）
 - **8 个 Command**：/drun, /dtask, /dinit, /dprd, /dadr, /ddoc, /ddemo, /dcorr
 - **8 个 Hook 事件**：TaskCompleted, TaskCreated, PreToolUse(Bash), Stop, PreCompact, SessionStart + context_monitor + stop_archive(内联)
 - **install.sh**：全平台安装脚本（claude-code / codex / opencode / all）

@@ -1,14 +1,11 @@
 """Layer 1: Agents 配置完整性测试 — 防止 regression 导致 agents 不加载
 
 覆盖范围：
-1. 统一 Agent（agents/）：全部 10 个 Agent（3 核心 + 7 领域）通过默认路径自动发现
-2. Verifier 专项：frontmatter 完整性（tools/model/maxTurns/memory）
-3. Model 合理性：每个 Agent 的 model 字段是否匹配其职责
+1. 统一 Agent（agents/）：仅保留 3 个核心 Agent（explorer / implementer / verifier）
+2. Verifier 专项：frontmatter 完整性（tools/memory/maxTurns）
+3. Model 合理性：每个核心 Agent 的 model 字段是否匹配其职责
 4. Description 触发词：每个 description 是否包含触发词
 5. plugin.json 声明：不声明 agents 字段（使用默认路径）、commands/skills 合法
-
-> v0.10.2 架构变更：全部 Agent 统一到插件 `agents/` 目录，
-> 使用默认路径自动发现，plugin.json 不声明 agents 字段。
 """
 import json
 import yaml
@@ -16,57 +13,23 @@ import pytest
 from pathlib import Path
 
 
-# ─── 统一 Agents（agents/）─────────────────────────────────────
-
 AGENTS_DIR = "agents"
-ALL_AGENTS = [
-    # 核心层（3 个）
-    "explorer",
-    "implementer",
-    "verifier",
-    # 领域层（7 个）
-    "ui-designer",
-    "frontend-architect",
-    "backend-architect",
-    "api-tester",
-    "devops-architect",
-    "performance-optimizer",
-    "legal-compliance",
-]
+ALL_AGENTS = ["explorer", "implementer", "verifier"]
 
-CORE_AGENTS = ["explorer", "implementer", "verifier"]
-DOMAIN_AGENTS = [a for a in ALL_AGENTS if a not in CORE_AGENTS]
-
-# 核心 Agent 的预期 model 配置（根据职责匹配）
 CORE_AGENT_MODEL_EXPECTATIONS = {
     "explorer": {"allowed_models": [None, "haiku", "sonnet"], "reason": "只读探索，快速廉价"},
     "implementer": {"allowed_models": [None, "sonnet", "inherit"], "reason": "代码实施需质量保证"},
     "verifier": {"allowed_models": [None, "haiku", "sonnet", "inherit"], "reason": "独立验收需推理与验证能力"},
 }
 
-# 领域 Agent 预期 model：均为 sonnet
-DOMAIN_AGENT_EXPECTED_MODEL = "sonnet"
-
-# 所有 Agent 必须包含的 frontmatter 字段（除 name/description 外）
-# 注意：permissionMode 不在 CC Agent tool schema 中（v0.10.3 确认）
-# memory / maxTurns 是合法字段（Round 3 恢复）
 AGENT_REQUIRED_FIELDS = {
     "explorer": ["tools"],
     "implementer": ["tools"],
     "verifier": ["tools"],
-    # 领域 agent 使用 model + tools
-    "ui-designer": ["model", "tools"],
-    "frontend-architect": ["model", "tools"],
-    "backend-architect": ["model", "tools"],
-    "api-tester": ["model", "tools"],
-    "devops-architect": ["model", "tools"],
-    "performance-optimizer": ["model", "tools"],
-    "legal-compliance": ["model", "tools"],
 }
 
-# verifier 特定的 tools 要求
 VERIFIER_REQUIRED_TOOLS = {"Read", "Grep", "Glob", "Bash"}
-VERIFIER_FORBIDDEN_TOOLS = {"Edit", "Write"}  # 独立验证者不应修改文件
+VERIFIER_FORBIDDEN_TOOLS = {"Edit", "Write"}
 
 
 def _load_agent_frontmatter(agent_path: Path) -> dict:
@@ -80,11 +43,8 @@ def _load_agent_frontmatter(agent_path: Path) -> dict:
     return {}
 
 
-# ─── 目录存在性 ──────────────────────────────────────────────
-
-
 class TestAgentsDirExists:
-    """agents 目录必须存在且包含全部 10 个 agent"""
+    """agents 目录必须存在且仅包含全部 3 个核心 agent"""
 
     def test_agents_dir_exists(self, project_root):
         assert (project_root / AGENTS_DIR).is_dir()
@@ -94,12 +54,13 @@ class TestAgentsDirExists:
         path = project_root / AGENTS_DIR / f"{agent_name}.md"
         assert path.exists(), f"agent 文件不存在: {path}"
 
-
-# ─── frontmatter 完整性 ─────────────────────────────────────────
+    def test_agents_dir_contains_only_core_agents(self, project_root):
+        actual = sorted(p.stem for p in (project_root / AGENTS_DIR).glob("*.md"))
+        assert actual == sorted(ALL_AGENTS), f"agents/ 目录应只包含核心三件套，实际: {actual}"
 
 
 class TestAgentFrontmatterCompleteness:
-    """所有 Agent 必须包含完整的 frontmatter 字段"""
+    """所有核心 Agent 必须包含完整的 frontmatter 字段"""
 
     @pytest.mark.parametrize("agent_name", ALL_AGENTS)
     def test_agent_has_required_name_field(self, project_root, agent_name):
@@ -121,18 +82,13 @@ class TestAgentFrontmatterCompleteness:
         fm = _load_agent_frontmatter(path)
         required = AGENT_REQUIRED_FIELDS.get(agent_name, [])
         for field in required:
-            assert field in fm, (
-                f"{agent_name}.md frontmatter 缺少字段 '{field}'"
-            )
-
-
-# ─── Model 合理性 ──────────────────────────────────────────────────
+            assert field in fm, f"{agent_name}.md frontmatter 缺少字段 '{field}'"
 
 
 class TestCoreAgentModelSuitability:
     """核心 Agent 的 model 选择必须与职责匹配"""
 
-    @pytest.mark.parametrize("agent_name", CORE_AGENTS)
+    @pytest.mark.parametrize("agent_name", ALL_AGENTS)
     def test_core_agent_model_suitable(self, project_root, agent_name):
         path = project_root / AGENTS_DIR / f"{agent_name}.md"
         fm = _load_agent_frontmatter(path)
@@ -141,19 +97,6 @@ class TestCoreAgentModelSuitability:
         assert actual_model in expectation["allowed_models"], (
             f"{agent_name}.md 的 model='{actual_model}' 不在允许范围内 "
             f"{expectation['allowed_models']}。{expectation['reason']}"
-        )
-
-
-class TestDomainAgentModelSuitability:
-    """领域 Agent 均应使用 sonnet 模型"""
-
-    @pytest.mark.parametrize("agent_name", DOMAIN_AGENTS)
-    def test_domain_agent_model_is_sonnet(self, project_root, agent_name):
-        path = project_root / AGENTS_DIR / f"{agent_name}.md"
-        fm = _load_agent_frontmatter(path)
-        actual_model = fm.get("model")
-        assert actual_model == DOMAIN_AGENT_EXPECTED_MODEL, (
-            f"领域 agent {agent_name}.md 的 model='{actual_model}'，预期 'sonnet'"
         )
 
 
@@ -180,9 +123,6 @@ class TestImplementerHasWriteTools:
         assert "Edit" in tools or "Write" in tools, "implementer 必须包含 Edit 或 Write 工具"
 
 
-# ─── Description 触发词 ─────────────────────────────────────────────
-
-
 class TestAgentDescriptionHasTriggerWord:
     """每个 Agent 的 description 必须包含触发词以便 Claude Code 自动调度"""
 
@@ -191,21 +131,12 @@ class TestAgentDescriptionHasTriggerWord:
         path = project_root / AGENTS_DIR / f"{agent_name}.md"
         fm = _load_agent_frontmatter(path)
         desc = fm.get("description", "")
-        trigger_patterns = [
-            "use proactively",
-            "Use proactively",
-            "当需要",
-            "当涉及",
-            "触发",
-        ]
+        trigger_patterns = ["use proactively", "Use proactively", "当需要", "当涉及", "触发"]
         has_trigger = any(p.lower() in desc.lower() for p in trigger_patterns)
         assert has_trigger, (
             f"agent {agent_name}.md 的 description 缺少触发词。"
             f"\n当前 description: {desc[:120]}..."
         )
-
-
-# ─── Verifier 专项 ──────────────────────────────────────────────────
 
 
 class TestVerifierAgentCompleteness:
@@ -232,17 +163,13 @@ class TestVerifierAgentCompleteness:
         forbidden_found = tools & VERIFIER_FORBIDDEN_TOOLS
         assert not forbidden_found, f"verifier 不应有写操作工具，发现: {forbidden_found}"
 
-    # permissionMode 不在 CC Agent schema 中（v0.10.3 确认，应不存在）
-    # memory / maxTurns 是合法字段（Round 3 恢复，应存在且类型正确）
     def test_verifier_has_memory_field(self, project_root):
-        """verifier 应声明 memory 字段（布尔值）"""
         path = project_root / AGENTS_DIR / "verifier.md"
         fm = _load_agent_frontmatter(path)
         assert "memory" in fm, "verifier 应包含 memory 字段"
         assert isinstance(fm["memory"], bool), f"memory 应为 bool, 实际: {type(fm['memory'])}"
 
     def test_verifier_has_max_turns_field(self, project_root):
-        """verifier 应声明 maxTurns 字段（正整数）"""
         path = project_root / AGENTS_DIR / "verifier.md"
         fm = _load_agent_frontmatter(path)
         assert "maxTurns" in fm, "verifier 应包含 maxTurns 字段"
@@ -251,20 +178,15 @@ class TestVerifierAgentCompleteness:
         )
 
     def test_verifier_deprecated_permission_mode_field_removed(self, project_root):
-        """verifier 不再声明 permissionMode 字段（CC Agent tool 不支持）"""
         path = project_root / AGENTS_DIR / "verifier.md"
         fm = _load_agent_frontmatter(path)
         assert "permissionMode" not in fm, "verifier 不应包含不支持的 permissionMode 字段"
-
-
-# ─── plugin.json 声明 ────────────────────────────────────────────
 
 
 class TestPluginJsonAgentsDeclaration:
     """plugin.json 的 agents 策略：使用默认路径，不声明 agents 字段"""
 
     def test_agents_field_not_declared_uses_default(self, project_root):
-        """plugin.json 不应声明 agents 字段（使用默认 agents/ 目录自动发现）"""
         plugin_json_path = project_root / ".claude-plugin" / "plugin.json"
         with open(plugin_json_path, encoding="utf-8") as f:
             data = json.load(f)
@@ -274,10 +196,8 @@ class TestPluginJsonAgentsDeclaration:
         )
 
     def test_agents_dir_at_plugin_root(self, project_root):
-        """agents 目录必须在插件根目录，不在 .claude-plugin/ 内"""
         agents_at_root = (project_root / "agents").is_dir()
         agents_in_claude_plugin = (project_root / ".claude-plugin" / "agents").exists()
-
         assert agents_at_root, "插件根目录缺少 agents/ 目录"
         assert not agents_in_claude_plugin, (
             "agents/ 错误地放在了 .claude-plugin/ 内。"
@@ -285,11 +205,9 @@ class TestPluginJsonAgentsDeclaration:
         )
 
     def test_commands_field_valid(self, project_root):
-        """plugin.json 的 commands 字段必须非空且引用存在的文件"""
         plugin_json_path = project_root / ".claude-plugin" / "plugin.json"
         with open(plugin_json_path, encoding="utf-8") as f:
             data = json.load(f)
-
         assert "commands" in data, "plugin.json 缺少 commands 字段"
         commands = data["commands"]
         assert isinstance(commands, list) and len(commands) > 0, "plugin.json 的 commands 不能为空列表"
@@ -298,11 +216,9 @@ class TestPluginJsonAgentsDeclaration:
             assert cmd_path.exists(), f"plugin.json 引用的命令文件不存在: {cmd}"
 
     def test_skills_field_valid(self, project_root):
-        """plugin.json 的 skills 字段必须非空且引用存在的目录"""
         plugin_json_path = project_root / ".claude-plugin" / "plugin.json"
         with open(plugin_json_path, encoding="utf-8") as f:
             data = json.load(f)
-
         assert "skills" in data, "plugin.json 缺少 skills 字段"
         skills = data["skills"]
         assert isinstance(skills, list) and len(skills) > 0, "plugin.json 的 skills 不能为空列表"
@@ -311,20 +227,15 @@ class TestPluginJsonAgentsDeclaration:
             assert skill_path.exists(), f"plugin.json 引用的 skill 目录不存在: {skill}"
 
     def test_no_invalid_fields_in_plugin_json(self, project_root):
-        """plugin.json 不应包含未知顶层字段（防止误配置）"""
         plugin_json_path = project_root / ".claude-plugin" / "plugin.json"
         with open(plugin_json_path, encoding="utf-8") as f:
             data = json.load(f)
-
         known_top_level_fields = {
             "name", "version", "description", "commands", "skills",
             "author", "license", "keywords", "repository",
         }
         unknown = set(data.keys()) - known_top_level_fields
         assert not unknown, f"plugin.json 包含未知顶层字段: {unknown}"
-
-
-# ─── 版本同步 ──────────────────────────────────────────────────────
 
 
 class TestVersionSync:

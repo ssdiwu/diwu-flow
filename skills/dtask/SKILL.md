@@ -248,6 +248,17 @@ Status: InReview(超前 3/5)
 | 超前计数器 | 主代理内存维护，session 重启后统计恢复 |
 | 交接清单 | acceptance PASS/FAIL 逐条 + 代码变更摘要 + 遗留阻塞点 + 下一步前置条件 |
 
+### 派发规则（核心三件套）
+
+| 需求 | 派发 | 说明 |
+|------|------|------|
+| 读代码 / 搜文件 / 架构分析 / 技术调研 | `explorer` | 只读，不改文件 |
+| 改文件 / 写代码 / 跑命令 / bug 修复 | `implementer` | 唯一写入点 |
+| 独立验收 / stub 检测 / acceptance 反向验证 | `verifier` | 只读，不信自述 |
+| 无匹配能力 | 标记「能力缺口」 | 不在 task 内临时发明新 agent |
+
+> 完整的 agent 设计原则与判断锚点见 `rules/mindset.md` §Agent 设计约束 和 `rules/judgments.md` §五、Agent Dispatch 判断
+
 ---
 
 ## 验证要求

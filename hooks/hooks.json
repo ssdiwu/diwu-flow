@@ -1,1 +1,88 @@
-{"description": "diwu-flow 插件 hook 集合：任务生命周期、漂移检测、上下文监控、停止决策（含归档检查）、压缩检查点、会话初始化", "hooks": {"TaskCompleted": [{"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/task_completed.py 2>/dev/null || true"}]}], "TaskCreated": [{"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/task_created_validate.py 2>/dev/null || true"}]}], "PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/drift_detect_pre.py 2>/dev/null || true"}, {"type": "command", "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/context_monitor.py 2>/dev/null || true"}]}], "Stop": [{"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/stop_decision.py 2>/dev/null || true"}]}], "PreCompact": [{"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/pre_compact.py 2>/dev/null || true"}]}], "SessionStart": [{"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session_start.py 2>/dev/null || true"}]}]}}
+{
+  "description": "diwu-flow 插件 hook 集合：任务生命周期、漂移检测、上下文监控、Plan→Dtask 门控、停止决策（含归档检查）、压缩检查点、会话初始化",
+  "hooks": {
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/task_completed.py 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "TaskCreated": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/task_created_validate.py 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/drift_detect_pre.py 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/context_monitor.py 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/plan_exit_hint.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/task_entry_guard.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/stop_decision.py 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/pre_compact.py 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session_start.py 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

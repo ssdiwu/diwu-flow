@@ -15,6 +15,7 @@ graph TB
         C6["/ddoc"]
         C7["/ddemo"]
         C8["/dcorr"]
+        C9["/dstat"]
     end
 
     subgraph CORE["方法论层 — Skills（唯一真相源）"]
@@ -34,13 +35,6 @@ graph TB
         A1["explorer<br/>只读探索"]
         A2["implementer<br/>代码实施"]
         A3["verifier<br/>独立验证"]
-        A4["backend-arch"]
-        A5["frontend-arch"]
-        A6["devops-arch"]
-        A7["ui-designer"]
-        A8["api-tester"]
-        A9["performance-opt"]
-        A10["legal-compliance"]
     end
 
     subgraph CC["平台增强层（CC 专属）"]
@@ -81,7 +75,7 @@ flowchart LR
 
 ### Claude Code（推荐）
 
-本项目即标准 CC 插件。安装后 10 Skill、10 Agent、8 Command 自动可用。
+本项目即标准 CC 插件。安装后 11 Skill、3 核心执行 Agent、9 Command 自动可用。
 
 ### Codex CLI / OpenCode / 全平台
 
@@ -94,8 +88,8 @@ flowchart LR
 ## 资产总览
 
 ```mermindmap
-  root((diwu-flow v0.0.1))
-    Skills (10)
+  root((diwu-flow v0.0.4))
+    Skills (11)
       drun 执行引擎
       dtask 任务管理
       dvfy 验证证据
@@ -106,23 +100,14 @@ flowchart LR
       darc 归档管理
       ddoc 文档生成
       ddemo Demo验证
-    Agents (10)
-      核心 (3)
-        explorer
-        implementer
-        verifier
-      领域 (7)
-        backend-arch
-        frontend-arch
-        devops-arch
-        ui-designer
-        api-tester
-        performance-opt
-        legal-compliance
-    Commands (8)
+      dstat 状态快照
+    Agents (3 执行层)
+      explorer 只读探索 | implementer 代码实施 | verifier 独立验收
+      注：使用默认路径自动发现，不在 plugin.json 中声明
+    Commands (9)
       /drun /dtask /dinit
       /dprd /dadr /ddoc
-      /ddemo /dcorr
+      /ddemo /dcorr /dstat
     Hooks (8事件)
       TaskCompleted / TaskCreated
       PreToolUse(Bash) ×2
@@ -134,9 +119,9 @@ flowchart LR
 
 | 能力 | Claude Code | Codex CLI | OpenCode |
 |------|------------|-----------|----------|
-| 10 Skills | plugin.json | symlink | symlink + Plugin |
-| 10 Agents | plugin.json | symlink | symlink |
-| 8 Commands | Slash Commands | ❌ | 声明式索引 |
+| 11 Skills | plugin.json 声明 | symlink | symlink + Plugin |
+| 3 Agents | 默认路径自动发现 | symlink | symlink |
+| 9 Commands | Slash Commands | ❌ | 声明式索引 |
 | Hooks | 8 事件 | ❌ | v1 不移植 |
 
 ## 从 diwu-workflow 迁移到 diwu-flow
@@ -201,7 +186,7 @@ git remote -v # 哪个 remote？
 
 ## 版本
 
-v0.0.1 — 从 diwu-workflow v0.10.x 迁移重构为 CC 插件架构。
+v0.0.4 — Agent Taxonomy v2 核心收缩 + /dstat 新功能。
 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License

@@ -47,3 +47,15 @@ Stub 扫描：
 建议：
 - [如有 gap，建议修复方向]
 ```
+
+## Failure Mode
+
+- `BLOCKED`：无法获取 `.diwu/dtask.json` 或 acceptance 条目缺失
+- `NEEDS_CLARIFICATION`：acceptance 描述模糊，无法反推可观测事实
+- `HUMAN_NEEDED`：遇到不确定的 stub pattern，或需要业务判断的场景
+
+## Authority
+
+- 不允许修改任何文件（tools 白名单不含 `Edit` / `Write`）
+- 不允许判定任务 `Done`（只输出 `PASSED` / `GAPS_FOUND` / `HUMAN_NEEDED`）
+- 最终 `Done` 裁决权属于 `dvfy` 体系或人工确认

@@ -15,9 +15,9 @@ usage() {
 
 install_cc() {
     echo "✓ Claude Code: plugin.json 已就绪"
-    echo "  skills/  → 10 个 Skill（可直接调用或通过 /command 触发）"
-    echo "  agents/  → 10 个 Agent"
-    echo "  commands/ → 8 个薄壳命令"
+    echo "  skills/  → 11 个 Skill（可直接调用或通过 /command 触发）"
+    echo "  agents/  → 3 个核心执行 Agent（默认路径自动发现）"
+    echo "  commands/ → 9 个薄壳命令"
 }
 
 install_codex() {
@@ -80,19 +80,21 @@ install_opencode() {
  *   ddoc     → skills/ddoc/SKILL.md      (document generator)
  *   ddemo    → skills/ddemo/SKILL.md     (demo verification)
  *   dcorr    → skills/dcorr/SKILL.md     (correction diagnostics)
+ *   dstat    → skills/dstat/SKILL.md     (project status snapshot)
  */
 export const config = {
   name: "diwu-flow",
-  version: "0.0.1",
+  version: "0.0.4",
 };
 
 export default config;
 PLUGIN_EOF
 
     echo "✓ OpenCode: plugin + skills/agents symlink 已创建到 .opencode/"
-    echo "  skills/  → 10 个 Skill（SKILL.md 自动发现）"
-    echo "  agents/  → 10 个 Agent（.md 自动发现）"
-    echo "  plugins/diwu-flow.ts → 插件声明 + Command 索引（8 个 command 映射）"
+    echo "  skills/  → 11 个 Skill（SKILL.md 自动发现）"
+    echo "  agents/  → 3 个核心执行 Agent（.md 自动发现）"
+    echo "  commands/ → 9 个 command（.md 自动发现）"
+    echo "  plugins/diwu-flow.ts → 插件声明 + Command 索引（9 个 command 映射）"
 }
 
 uninstall() {

@@ -1,12 +1,12 @@
 # diwu-flow
 
-**插件版本**：0.0.3
+**插件版本**：0.0.4
 
 ## 核心原则
 
 - Skills 为底，Commands 为壳：所有方法论在 Skills 中，Commands 是薄封装
 - 零平台耦合：Skill frontmatter 无平台专属字段（无 context/agent/model/allowed-tools/hooks）
-- 扁平结构：agents/ 和 skills/ 均为单层目录，最大化平台兼容性
+- 扁平结构：agents/（默认路径自动发现，plugin.json 不声明）和 skills/ 均为单层目录，最大化平台兼容性
 - 少即是多，克制且清晰；具体胜于抽象；引导顺序即优先级
 
 ## 上位心智层
@@ -24,7 +24,7 @@
 | 名称 | 类型 | 触发场景 |
 |------|------|---------|
 | `dtask` `drun` `dcorr` `dvfy` `djug` `drec` `darc` | rule | 任务/执行/纠偏/验证/判断/记录/归档 |
-| `dprd` `ddoc` `ddemo` | product/tool | PRD/文档/Demo |
+| `dprd` `ddoc` `ddemo` `dstat` | product/tool | PRD/文档/Demo/状态 |
 | `rules/*` | 参考 | exceptions/templates/file-layout/constraints |
 
 ## 行为铁律
@@ -58,10 +58,10 @@ git remote add public git@github.com:ssdiwu/diwu-flow.git
 
 ## 项目结构
 
-- `commands/` — 用户命令封装
-- `skills/` — 技能文件（dtask, drun, dcorr, dvfy, djug, drec, darc, dprd, ddoc, ddemo）
+- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, dadr, ddoc, ddemo, dcorr, dstat）
+- `skills/` — 技能文件（dtask, drun, dcorr, dvfy, djug, drec, darc, dprd, ddoc, ddemo, dstat）
 - `rules/` — 方法论规则文件
-- `agents/` — 子代理定义
+- `agents/` — 核心执行 Agent（explorer/implementer/verifier，默认路径自动发现）
 - `assets/` — 模板资产
 - `tests/` — 测试用例
 - `hooks/` — 钩子脚本
