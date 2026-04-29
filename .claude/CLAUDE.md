@@ -53,7 +53,7 @@ git remote add public git@github.com:ssdiwu/diwu-flow.git
 
 # 每次发布（确保 main 干净后）
 ./drelease.sh v{version} --push-public
-# → 创建 release 分支 → 排除 .diwu/ 等敏感文件 → 打 tag → 推送私有+公开仓库 → 切回 main
+# → 先推 origin/main（含 .diwu/）→ 创建临时 worktree 清理敏感文件 → 推送 clean 版到 public/main
 ```
 
 ## 项目结构
