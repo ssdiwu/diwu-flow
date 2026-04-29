@@ -1,4 +1,11 @@
-# /dstat
+---
+description: 项目状态只读聚合——一键展示任务进度、最近 Session、近期决策、Git 状态
+argument-hint: "[--deep（可选）]"
+allowed-tools: Read, Bash, Glob
+effort: low
+---
+
+# /dstat — 项目状态快照
 
 > 项目状态只读聚合。触发 `skills/dstat/SKILL.md`。
 
