@@ -1,28 +1,33 @@
 #!/bin/bash
-# release.sh — 从私有 main 生成干净的公开版本
+# drelease.sh — 从私有 main 生成干净的公开版本（worktree 隔离模式）
 #
 # 用法:
-#   ./release.sh v0.0.1                    # 创建 release 分支 + tag
-#   ./release.sh v0.0.1 --push-public      # 额外推送到公开 remote
+#   ./drelease.sh v0.0.5                    # 创建 release tag
+#   ./drelease.sh v0.0.5 --push-public      # 额外推送到公开 remote
 #
-# 前提:
-#   - 当前在 main 分支，工作区干净
-#   - 公开 remote 已配置: git remote add public <公开仓库-url>
+# 设计决策:
+#   - 使用 git worktree 在隔离目录操作，main 工作树完全不被碰
+#   - .diwu/ 等运行时文件始终保留在 main 工作树中，不会因分支切换消失
+#   - public main 与 origin main 保持同步（仅 tip 过滤敏感文件）
+#
+# 安全边界:
+#   - 只 force-push 到 public main（你拥有）
+#   - 永不 force-push 到 origin（私有协作仓库）
+#   - cleanup trap 确保 worktree 总是被移除
 
 set -euo pipefail
 
-VERSION="${1:?用法: $0 <版本号> 如 v0.0.1}"
+VERSION="${1:?用法: $0 <版本号> 如 v0.0.5}"
 PUSH_PUBLIC="${2:-}"
 
 PRIVATE_REPO="origin"
 PUBLIC_REMOTE="public"
-RELEASE_BRANCH="release/${VERSION}"
 
 echo "=== diwu-flow 发布脚本 ==="
 echo "版本: $VERSION"
-echo "发布分支: $RELEASE_BRANCH"
 
-# 检查前置条件
+# --- 前置检查 ---
+
 if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
     echo "✗ 工作区有未提交变更，请先 commit"
     exit 1
@@ -34,24 +39,47 @@ if [ "$BRANCH" != "main" ]; then
     exit 1
 fi
 
-# 从 main 创建发布分支
-echo ""
-echo "→ 创建发布分支: $RELEASE_BRANCH"
-git checkout -b "$RELEASE_BRANCH" main
+# 检查 tag 是否已存在
+if git tag -l "$VERSION" | grep -q "$VERSION"; then
+    echo "✗ 标签 $VERSION 已存在"
+    exit 1
+fi
 
-# 排除不应公开的文件（git rm --cached 不删本地文件，只从分支移除）
-echo "→ 清理敏感文件..."
+MAIN_SHA=$(git rev-parse HEAD)
+
+# --- 创建隔离 worktree ---
+
+WORKTREE_DIR=$(mktemp -d -t diwu-release-XXXXXX)
+
+cleanup() {
+    echo "→ 清理 worktree: $WORKTREE_DIR"
+    git worktree remove "$WORKTREE_DIR" --force 2>/dev/null || true
+    git worktree prune 2>/dev/null || true
+    rm -rf "$WORKTREE_DIR" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+echo ""
+echo "→ 创建 worktree: $WORKTREE_DIR"
+git worktree add "$WORKTREE_DIR" --detach HEAD > /dev/null
+
+# --- 在 worktree 中清理敏感文件 ---
+
+echo "→ 清理敏感文件（仅在 worktree 中）..."
+pushd "$WORKTREE_DIR" > /dev/null
+
 git rm -r --cached .diwu/ 2>/dev/null || true
 git rm --cached dtask.json 2>/dev/null || true
 git rm -r --cached recording/ 2>/dev/null || true
 git rm --cached continue-here.md 2>/dev/null || true
 git rm --cached decisions.md 2>/dev/null || true
-
-# 确保 .gitattributes 存在（控制 git archive 行为）
 git add .gitattributes 2>/dev/null || true
 
-# 提交清理结果
-git commit -m "release: ${VERSION} (cleaned for public)
+if git diff --cached --quiet 2>/dev/null; then
+    echo "ℹ 无需清理的文件，复用 main commit"
+    RELEASE_SHA="$MAIN_SHA"
+else
+    git commit -m "release: ${VERSION} (cleaned for public)
 
 排除内容:
 - .diwu/ (运行时状态)
@@ -59,22 +87,25 @@ git commit -m "release: ${VERSION} (cleaned for public)
 - recording/ (session 记录)
 - continue-here.md, decisions.md (临时/内部文件)
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>" || {
-    echo "ℹ 无需清理的文件，跳过 commit"
-}
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+    RELEASE_SHA=$(git rev-parse HEAD)
+fi
 
-# 打 tag
-echo ""
-echo "→ 打标签: $VERSION"
-git tag -a "$VERSION" -m "diwu-flow ${VERSION}"
+# 打 tag（指向 cleaned commit 或 main commit）
+echo "→ 打标签: $VERSION → ${RELEASE_SHA:0:7}"
+git tag -a "$VERSION" -m "diwu-flow ${VERSION}" "$RELEASE_SHA"
 
-# 推送私有仓库的发布分支和 tag
+popd > /dev/null
+
+# --- 推送到私有仓库 ---
+
 echo ""
 echo "→ 推送到私有仓库 ($PRIVATE_REPO)"
-git push "$PRIVATE_REPO" "$RELEASE_BRANCH"
-git push "$PRIVATE_REPO" "$VERSION"
+git push "$PRIVATE_REPO" "${RELEASE_SHA}:refs/heads/release/${VERSION}"
+git push "$PRIVATE_REPO" "refs/tags/${VERSION}"
 
-# 可选：推送到公开仓库
+# --- 推送到公开仓库 ---
+
 if [ "$PUSH_PUBLIC" = "--push-public" ]; then
     if ! git remote get-url "$PUBLIC_REMOTE" >/dev/null 2>&1; then
         echo "✗ 公开 remote '$PUBLIC_REMOTE' 未配置"
@@ -83,21 +114,20 @@ if [ "$PUSH_PUBLIC" = "--push-public" ]; then
     fi
     echo ""
     echo "→ 推送到公开仓库 ($PUBLIC_REMOTE → main)"
-    git push "$PUBLIC_REMOTE" "${RELEASE_BRANCH}:main"
-    git push "$PUBLIC_REMOTE" "$VERSION"
+    git fetch "$PUBLIC_REMOTE" 2>/dev/null || true
+    git push "$PUBLIC_REMOTE" "+${RELEASE_SHA}:refs/heads/main"
+    git push "$PUBLIC_REMOTE" "+refs/tags/${VERSION}"
     echo ""
     echo "✓ 公开版本已推送"
 fi
 
-# 切回 main
-echo ""
-echo "→ 切回 main 分支"
-git checkout main
+# --- 完成 ---
 
 echo ""
 echo "=== 发布完成 ==="
-echo "  私有分支: $RELEASE_BRANCH (已推送到 origin)"
-echo "  标签: $VERSION (已推送)"
+echo "  本地 main: ${MAIN_SHA:0:7}（未受影响）"
+echo "  私有分支: release/$VERSION → ${RELEASE_SHA:0:7}"
+echo "  标签: $VERSION"
 if [ "$PUSH_PUBLIC" = "--push-public" ]; then
-    echo "  公开仓库: main (已推送)"
+    echo "  公开仓库: main → ${RELEASE_SHA:0:7}"
 fi
