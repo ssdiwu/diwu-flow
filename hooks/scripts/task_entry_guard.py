@@ -10,6 +10,9 @@ ACTIVE_STATUSES = {"InSpec", "InProgress", "InReview"}
 WORKFLOW_DECISIONS = ".diwu/decisions.md"
 WORKFLOW_DTASK = ".diwu/dtask.json"
 WORKFLOW_RECORDING = ".diwu/recording"
+WORKFLOW_DLOOP_STATE = ".diwu/dloop-state.json"
+# Plan mode writes plan files to ~/.claude/plans/ — always allow
+_PLAN_DIR = os.path.normpath(os.path.expanduser("~/.claude/plans"))
 BLOCK_MESSAGE = (
     "[diwu-task-guard] ⛔ 检测到文件写入操作，但未发现可执行的 dtask 任务。\n"
     "请先运行 /dtask 将计划派生为任务条目（含 GWT acceptance），或确认 .diwu/dtask.json "
@@ -38,6 +41,7 @@ def _workflow_targets(cwd):
         "dtask": _norm(os.path.join(base, WORKFLOW_DTASK)),
         "decisions": _norm(os.path.join(base, WORKFLOW_DECISIONS)),
         "recording": _norm(os.path.join(base, WORKFLOW_RECORDING)),
+        "dloop_state": _norm(os.path.join(base, WORKFLOW_DLOOP_STATE)),
     }
 
 
@@ -47,10 +51,25 @@ def _is_workflow_file(target_path, cwd):
         return False
     target = _norm(target_path)
     paths = _workflow_targets(cwd)
-    if target in {paths["dtask"], paths["decisions"]}:
+    if target in {paths["dtask"], paths["decisions"], paths["dloop_state"]}:
         return True
     recording_prefix = paths["recording"] + os.sep
     return target.startswith(recording_prefix)
+
+
+def _is_plan_file(target_path):
+    """Allow Plan mode plan files regardless of dtask state."""
+    if not target_path:
+        return False
+    target = _norm(target_path)
+    return target.startswith(_PLAN_DIR + os.sep)
+
+
+def _is_doc_file(target_path):
+    """Allow .md documentation files regardless of dtask state."""
+    if not target_path:
+        return False
+    return target_path.endswith('.md')
 
 
 def _has_active_task(task_json_path):
@@ -83,11 +102,17 @@ def main():
     if _is_workflow_file(file_path, cwd):
         sys.exit(0)
 
+    if _is_plan_file(file_path):
+        sys.exit(0)
+
+    if _is_doc_file(file_path):
+        sys.exit(0)
+
     if _has_active_task(task_json_path):
         sys.exit(0)
 
     print(BLOCK_MESSAGE, file=sys.stderr)
-    sys.exit(2)
+    sys.exit(0)  # Soft warning: advise but don't block
 
 
 if __name__ == "__main__":

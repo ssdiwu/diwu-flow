@@ -2,22 +2,20 @@
 name: drun
 version: "1.0"
 type: rule
-description: "Session 生命周期管理——启动（Preflight 5 步）、上下文恢复、归档检查、任务选择、持续运行模式、Session 结束协议、执行验证循环、Auto vs Step 模式"
+description: "单任务执行器——启动（Preflight 5 步）、上下文恢复、归档检查、任务选择、Session 结束协议、执行验证循环"
 triggers:
   - "Session 启动或结束"
   - "选择下一个任务"
   - "判断是否续跑"
   - "归档旧任务"
   - "用户说 session、启动、下一步、续跑、归档"
-  - "需要执行验证循环或切换 Auto/Step 模式"
+  - "需要执行验证循环"
 keywords:
   - "session"
   - "启动"
   - "Preflight"
-  - "continuous_mode"
-  - "执行循环"
-  - "auto模式"
-  - "step模式"
+  - "单任务执行"
+  - "执行验证"
 depends:
   - dtask
   - dvfy
@@ -25,12 +23,12 @@ depends:
   - dcorr
   - drec
 effort: high
-argument-hint: "[--mode auto|step] [功能描述] [category] [blocked_by]"
+argument-hint: "[功能描述] [category] [blocked_by]"
 ---
 
 # diwu-run
 
-Session 生命周期管理：从启动到结束的完整协议，含执行验证循环与模式切换。
+Session 生命周期管理：从启动到结束的完整协议，含执行验证循环。单任务执行器——做一件事，做完就停。
 
 ---
 
@@ -83,21 +81,6 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 
 ---
 
-## 持续运行模式（continuous_mode）
-
-| 模式 | 行为 |
-|------|------|
-| `true`（默认） | 任务 Done 后自动选择下一个可执行任务继续 |
-| `false` | 每完成一个任务即停止，输出完成摘要等待人工介入 |
-
-**关闭时仍续跑的例外**：当前任务 InProgress（断点恢复优先） / 存在未提交变更（防丢失）
-
-**关闭时停止边界**：Done（小幅度）→ 停止+摘要；Done（大幅度）→ REVIEW；PENDING REVIEW；BLOCKED；无更多任务 → CONTINUOUS_MODE_COMPLETE
-
-**超前实施回退方式**：revert（已 push）/ reset --soft（仅本地）/ 修改（代码仍有效）
-
----
-
 ## Session 结束
 
 在 session 结束前（含 context window 接近上限时）：
@@ -108,11 +91,6 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 4. 确保 task.json 反映最新状态
 
 > **详细 recording 格式和踩坑记录格式见 drec skill**
-
-### continuous_mode=false 时的 Session 结束变体
-
-**正常停止**（Done 且无 InProgress）：执行标准步骤 1-4，不自动选下一任务，输出摘要。
-**开启后恢复**（false→true）：下次 Stop hook 触发时恢复自动续跑，无需重启 session。
 
 ### Context Window 管理
 - context window 接近上限时会自动压缩，允许无限期继续工作
@@ -141,15 +119,13 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 
 **调用顺序**：dtask(实施) → dvfy(验证) → djug(判定) → dcorr(纠偏)
 
-循环条件：continuous_mode=true 且任务 Done 后自动选下一个。
+执行完毕后停止，输出完成摘要。如需连续执行多个任务，使用 `/dloop`。
 
 ---
 
-## Auto vs Step 模式
+## 约束
 
-| 模式 | 行为 |
-|------|------|
-| `auto`（默认） | 全自动循环：Preflight → 选任务 → 实施 → 验证 → 判定 → 选下一个 → ... |
-| `step` | 每完成一个任务后暂停，输出摘要等待确认后再继续 |
+**stop hook 注入行为**：当 stop hook 注入 InSpec 任务信息到上下文时，Agent 必须**暂停并等待用户明确指示**（将任务改为 InProgress 或给出新指令），**禁止假设沉默=授权而自动执行步骤**。
 
-模式通过 argument-hint 的 `[--mode auto|step]` 参数指定。
+> 连续循环功能已拆分至 `/dloop`。/drun 是单任务执行器——做一件事，做完就停。
+

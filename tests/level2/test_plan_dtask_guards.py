@@ -33,9 +33,12 @@ def test_plan_exit_hint_emits_additional_context(tmp_path):
     assert "additionalContext" in hook_output
     assert "permissionDecision" not in hook_output
     assert "/dtask" in hook_output["additionalContext"]
+    assert "已批准" not in hook_output["additionalContext"]
+    assert "门控提醒" in hook_output["additionalContext"]
 
 
-def test_task_entry_guard_blocks_without_dtask(tmp_path):
+def test_task_entry_guard_soft_warns_without_dtask(tmp_path):
+    """Non-doc files without active task: soft warning (exit 0) with stderr message."""
     payload = {
         "hook_event_name": "PreToolUse",
         "tool_name": "Write",
@@ -44,8 +47,22 @@ def test_task_entry_guard_blocks_without_dtask(tmp_path):
     }
     result = _run_script(TASK_GUARD_SCRIPT, payload, tmp_path)
 
-    assert result.returncode == 2
+    assert result.returncode == 0  # Soft warning, not hard block
     assert "diwu-task-guard" in result.stderr
+
+
+def test_task_entry_guard_allows_md_without_dtask(tmp_path):
+    """.md files are whitelisted regardless of dtask state."""
+    payload = {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Edit",
+        "cwd": str(tmp_path),
+        "tool_input": {"file_path": str(tmp_path / "README.md")},
+    }
+    result = _run_script(TASK_GUARD_SCRIPT, payload, tmp_path)
+
+    assert result.returncode == 0
+    assert result.stderr == ""
 
 
 def test_task_entry_guard_allows_when_active_task_exists(tmp_path):

@@ -1,6 +1,6 @@
 # diwu-flow
 
-**插件版本**：0.0.4
+**插件版本：0.0.5
 
 ## 核心原则
 
@@ -25,6 +25,7 @@
 |------|------|---------|
 | `dtask` `drun` `dcorr` `dvfy` `djug` `drec` `darc` | rule | 任务/执行/纠偏/验证/判断/记录/归档 |
 | `dprd` `ddoc` `ddemo` `dstat` | product/tool | PRD/文档/Demo/状态 |
+| `dloop` `dend` | command | 连续循环/结束循环 |
 | `rules/*` | 参考 | exceptions/templates/file-layout/constraints |
 
 ## 行为铁律
@@ -58,8 +59,8 @@ git remote add public git@github.com:ssdiwu/diwu-flow.git
 
 ## 项目结构
 
-- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, dadr, ddoc, ddemo, dcorr, dstat）
-- `skills/` — 技能文件（dtask, drun, dcorr, dvfy, djug, drec, darc, dprd, ddoc, ddemo, dstat）
+- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, dadr, ddoc, ddemo, dcorr, dstat, dloop, dend）
+- `skills/` — 技能文件（dtask, drun, dcorr, dvfy, djug, drec, darc, dprd, ddoc, ddemo, dstat, dloop）
 - `rules/` — 方法论规则文件
 - `agents/` — 核心执行 Agent（explorer/implementer/verifier，默认路径自动发现）
 - `assets/` — 模板资产

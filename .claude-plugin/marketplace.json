@@ -6,8 +6,8 @@
   "plugins": [
     {
       "name": "diwu-flow",
-      "version": "0.0.4",
-      "description": "多平台 AI 辅助开发方法论体系——Skills 为底，Commands 为壳。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 11 个核心 Skill + 3 个核心执行 Agent + 9 个 Command。",
+      "version": "0.0.5",
+      "description": "多平台 AI 辅助开发方法论体系——Skills 为底，Commands 为壳。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 12 个核心 Skill + 3 个核心执行 Agent + 11 个 Command。",
       "source": "./",
       "category": "productivity",
       "homepage": "https://github.com/ssdiwu/diwu-flow"

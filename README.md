@@ -16,10 +16,12 @@ graph TB
         C7["/ddemo"]
         C8["/dcorr"]
         C9["/dstat"]
+        C10["/dloop"]
+        C11["/dend"]
     end
 
     subgraph CORE["方法论层 — Skills（唯一真相源）"]
-        S1["drun<br/>自动执行引擎"]
+        S1["drun<br/>单任务执行"]
         S2["dtask<br/>任务管理"]
         S3["dvfy<br/>验证证据"]
         S4["djug<br/>判断锚点"]
@@ -75,7 +77,7 @@ flowchart LR
 
 ### Claude Code（推荐）
 
-本项目即标准 CC 插件。安装后 11 Skill、3 核心执行 Agent、9 Command 自动可用。
+本项目即标准 CC 插件。安装后 **12 Skill**、3 核心执行 Agent、**11 Command** 自动可用。
 
 ### Codex CLI / OpenCode / 全平台
 
@@ -85,10 +87,26 @@ flowchart LR
 ./install.sh --platform all        # 全部安装
 ```
 
+## 配置（dsettings）
+
+运行时配置文件：`.diwu/dsettings.json`。修改后立即生效。完整说明见 [`.diwu/dsettings-guide.md`](.diwu/dsettings-guide.md)。
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `continuous_mode` | `true` | 任务完成后是否自动续跑下一个 |
+| `review_limit` | `5` | 最大超前实施任务数 |
+| `context_monitor_critical` | `50` | 写工具调用达此值自动存 checkpoint |
+| `drift_detection.enabled` | `true` | 退化信号检测（走神/死循环/越界编辑） |
+| `error_tracking.enabled` | `true` | 3-Strike 重试机制（工具连续失败时分级处理） |
+| `error_injection.enabled` | `true` | 跨 session 错误模式学习（历史踩坑注入预防提示） |
+| `subagent_concurrency` | `3` | 并行子代理最大数量 |
+
+> **常用调整**：不想自动续跑 → `"continuous_mode": false`
+
 ## 资产总览
 
 ```mermindmap
-  root((diwu-flow v0.0.4))
+  root((diwu-flow v0.0.5))
     Skills (11)
       drun 执行引擎
       dtask 任务管理
@@ -104,7 +122,7 @@ flowchart LR
     Agents (3 执行层)
       explorer 只读探索 | implementer 代码实施 | verifier 独立验收
       注：使用默认路径自动发现，不在 plugin.json 中声明
-    Commands (9)
+    Commands (11)
       /drun /dtask /dinit
       /dprd /dadr /ddoc
       /ddemo /dcorr /dstat
@@ -186,7 +204,7 @@ git remote -v # 哪个 remote？
 
 ## 版本
 
-v0.0.4 — Agent Taxonomy v2 核心收缩 + /dstat 新功能。
+v0.0.5 — /dloop 连续循环拆分 + stop_decision 双模式重构 + drun 纯单任务化。
 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License

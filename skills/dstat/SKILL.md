@@ -40,7 +40,7 @@ argument-hint: "[--deep]"
 Blocked: N | Cancelled: N
 
 ### 最近 Session
-- **session-YYYY-MM-DD-HHMMSS** (N 小时前)
+- **session-YYYY-MM-DD-HHMMSS** (N 分钟/小时/天前)
   - 处理: Task#X → [status], Task#Y → [status]
   - 下一步: [从 session 摘要提取]
 
@@ -76,11 +76,13 @@ Blocked: N | Cancelled: N
 | 序号 | 数据源 | 读取方式 | 容错 |
 |------|--------|---------|------|
 | 1 | `.diwu/dtask.json` | JSON 解析 | 不存在则输出"无任务数据" |
-| 2 | `.diwu/recording/` | 列目录取最新 1-2 个 .md | 不存在则输出"无 session 记录" |
+| 2a | `.diwu/recording/` | 列目录取最新 1-2 个 .md（用于「最近 Session」展示） | 不存在则输出"无 session 记录" |
+| 2b | `.diwu/recording/` | 统计全部 .md 文件数（用于「归档状态」计数） | 同上 |
 | 3 | `.diwu/decisions.md` | 读最后 20 行 | 不存在则跳过 |
-| 4 | `git status --short` | Bash 执行 | 始终执行 |
-| 5 | `git log --oneline -5` | Bash 执行 | 始终执行 |
-| 6 | `.diwu/archive/` | 统计文件数 | 不存在则跳过 |
+| 4 | `date '+%Y-%m-%d %H:%M:%S'` | Bash 执行（用于计算相对时间差） | 始终执行 |
+| 5 | `git status --short` | Bash 执行 | 始终执行 |
+| 6 | `git log --oneline -5` | Bash 执行 | 始终执行 |
+| 7 | `.diwu/archive/` | 统计文件数 | 不存在则跳过 |
 
 ---
 
@@ -90,3 +92,4 @@ Blocked: N | Cancelled: N
 - **快速**：目标 <2 秒完成全部聚合
 - **不触发执行**：这是状态查看，不是启动 drun 循环
 - **优雅降级**：任何数据源缺失时输出该模块为"不可用"而非报错退出
+- **精确时间**：涉及相对时间的输出必须先执行 `date` 获取当前时间再与文件名/commit 时间戳做差值计算，**禁止凭记忆或目测估算**。格式规则：< 60min 显示「N 分钟前」；< 24h 显示「N 小时前」；≥ 24h 显示「N 天前」

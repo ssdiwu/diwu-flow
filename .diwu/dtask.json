@@ -1,1 +1,111 @@
-{"tasks": []}
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "修复 dstat SKILL.md 三个设计缺陷",
+      "description": "/dstat 执行时出现两个可复现错误：①相对时间被估算而非精确计算（41min→2h）②归档Session计数错误（3→7）③时间格式未定义。根因：数据源表缺少date命令、recording数据源描述歧义、输出格式无约束。",
+      "acceptance": [
+        "Given 数据源表含 date 命令项 When Agent 执行 /dstat Then 相对时间通过 date 计算差值，误差 <1 分钟",
+        "Given recording 数据源拆为 2a+2b When Agent 执行 /dstat Then 归档 Session 计数与 ls 实际文件数一致",
+        "Given 输出规格定义时间格式规则 When 时间差 <60min Then 显示 N 分钟前；<24h 显示 N 小时前；≥24h 显示 N 天前"
+      ],
+      "steps": [
+        "[锁定] 修改 skills/dstat/SKILL.md「数据源与读取顺序」表格：原 #2 拆为 #2a(取最新1-2个) + #2b(全量统计)，新增 #4 为 `date '+%Y-%m-%d %H:%M:%S'`",
+        "[锁定] 修改 skills/dstat/SKILL.md「标准模式」输出模板时间行：(N 小时前) → (N 分钟/小时/天前)",
+        "[建议] 在 skills/dstat/SKILL.md「约束」章节追加防估算规则和时间格式切换定义"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dstat/SKILL.md"
+      ],
+      "category": "refactor",
+      "status": "Done"
+    },
+    {
+      "id": 2,
+      "title": "修复 task_entry_guard 对 Plan mode 计划文件的误拦截",
+      "description": "当 dtask.json 无活跃任务时，task_entry_guard 阻断所有 Write 操作，包括 Plan mode 写计划文件到 ~/.claude/plans/ 路径。导致死锁：无法建任务→无法写任何文件→无法解除封锁。",
+      "acceptance": [
+        "Given Plan mode 激活且目标路径匹配 ~/.claude/plans/*.md When Agent 调用 Write 工具 Then task_entry_guard 放行，不检查 dtask 任务",
+        "Given 非 Plan mode 且 dtask.json 无活跃任务 When Agent 调用 Write 工具写入项目内文件 Then task_entry_guard 正常拦截并提示",
+        "Given task_entry_guard 修改完成 When 运行 pytest tests/ Then 全量通过"
+      ],
+      "steps": [
+        "[锁定] 阅读 hooks/scripts/task_entry_guard.py 理解当前拦截逻辑",
+        "[锁定] 在拦截判断中加入 Plan mode 路径白名单：~/.claude/plans/*.md 或检测环境变量/上下文标识 Plan mode",
+        "[建议] 补充测试用例覆盖 Plan mode 放行场景",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 3,
+      "title": "task_entry_guard 改为软提醒 + .md 文件白名单",
+      "description": "当前 task_entry_guard 对无活跃 dtask 任务时的所有 Write/Edit 执行硬拦截（exit 2），导致写 README、改 skill、编辑配置等正常操作被阻断。需改为：①.md 文件直接放行（白名单）②非白名单文件从硬拦截改为软提醒（exit 0 + stderr 警告）③更新测试适配新行为。",
+      "acceptance": [
+        "Given dtask.json 无活跃任务且目标文件为 *.md When Agent 调用 Edit/Write 工具 Then task_entry_guard 直接放行（exit 0, 无 stderr）",
+        "Given dtask.json 无活跃任务且目标文件为非 .md 业务代码 When Agent 调用 Edit/Write 工具 Then task_entry_guard 输出警告到 stderr 但放行（exit 0, stderr 含 diwu-task-guard）",
+        "Given dtask.json 有 InSpec/InProgress/InReview 任务 When Agent 调用 Edit/Write 工具 Then 行为不变（exit 0, 无 stderr）",
+        "Given 修改完成后运行 pytest tests/level2/test_plan_dtask_guards.py Then test_task_entry_guard_blocks_without_dtask 的 returncode 断言为 0 且 stderr 含警告文本"
+      ],
+      "steps": [
+        "[锁定] 在 hooks/scripts/task_entry_guard.py 中新增 _is_doc_file(target_path) 函数：检测 target_path 是否以 .md 结尾",
+        "[锁定] 在 main() 函数的 _is_plan_file 判断之后加入 _is_doc_file 白名单判断",
+        "[锁定] 将 main() 末尾的硬拦截逻辑 sys.exit(2) 改为 sys.exit(0)，保留 BLOCK_MESSAGE 输出到 stderr",
+        "[锁定] 更新 tests/level2/test_plan_dtask_guards.py 中 test_task_entry_guard_blocks_without_dtask：returncode 断言改为 0，新增 assert 'diwu-task-guard' in result.stderr",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
+      ],
+      "category": "refactor",
+      "status": "Done"
+    },
+    {
+      "id": 4,
+      "title": "修复 plan_exit_hint.py 文案误导「Plan 已批准」",
+      "description": "plan_exit_hint.py 的 MESSAGE 写死「Plan 已批准」，但它只是 ExitPlanMode 事件的提醒注入器，不参与审批流程。无论用户 Approve 还是 Reject 都输出此文案，造成误导。代码已通过 sed 临时修复为「Plan→Dtask 门控提醒」，需正式纳入任务追踪并补充测试。",
+      "acceptance": [
+        "Given ExitPlanMode 事件触发 When plan_exit_hint.py 执行 Then 输出文案不含「已批准」字样（L1: 文案内容确认）",
+        "Given plan_exit_hint.py 文案更新后 When 运行 pytest tests/level2/test_plan_dtask_guards.py::test_plan_exit_hint_emits_additional_context Then 测试通过且 additionalContext 含正确文案（L3: 自动化断言）",
+        "Given 全量回归 When 运行 pytest tests/ Then 116 tests 全通过（L3: 自动化断言）"
+      ],
+      "steps": [
+        "[锁定] 确认 hooks/scripts/plan_exit_hint.py 的 MESSAGE 已改为中性文案（当前应为「Plan→Dtask 门控提醒」）",
+        "[锁定] 更新 tests/level2/test_plan_dtask_guards.py::test_plan_exit_hint_emits_additional_context 的断言：确认输出不含「已批准」且含「门控提醒」或等效中性表述",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 5,
+      "title": "规范 stop hook 注入任务后的 Agent 行为：禁止自动执行",
+      "description": "stop_decision.py 在有 InSpec 任务时输出 decision:'block'+reason（任务详情），CC 将其注入系统提示。Agent 收到后直接开始执行，跳过了用户确认环节。正确行为：Agent 收到 stop hook 注入的任务信息后应暂停并等待用户明确指示（将任务改为 InProgress 或给出新的指令），不得假设沉默=授权。",
+      "acceptance": [
+        "Given stop hook 注入 InSpec 任务信息到上下文 When Agent 读取到该信息 Then Agent 输出状态摘要并等待用户指令，而非直接执行步骤（行为判定：drun SKILL.md 有明确约束条款）",
+        "Given skills/drun/SKILL.md 新增约束条款 When 搜索「stop.*hook.*注入」或「auto.*execut」Then 能匹配到明确的禁止自动执行规则（L1: 文件内容确认）",
+        "Given 约束写入后 When 运行 pytest tests/ Then 全量通过（L3: 自动化断言）"
+      ],
+      "steps": [
+        "[锁定] 阅读 skills/drun/SKILL.md 定位 stop hook 注入任务后的行为描述段落（如有）",
+        "[锁定] 在 skills/drun/SKILL.md 中新增明确约束：stop hook 注入任务后 Agent 必须暂停等待用户确认（改 InProgress / 给出新指令），禁止自动执行",
+        "[建议] 同步检查 skills/dcorr/SKILL.md 是否有类似需要补充的行为约束",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md"
+      ],
+      "category": "refactor",
+      "status": "Done"
+    }
+  ]
+}
