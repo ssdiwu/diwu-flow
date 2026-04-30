@@ -150,7 +150,7 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py"
       ],
       "category": "bugfix",
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 39,
@@ -197,7 +197,7 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py"
       ],
       "category": "bugfix",
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 41,
@@ -223,7 +223,7 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
       ],
       "category": "bugfix",
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 42,
@@ -244,7 +244,7 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py"
       ],
       "category": "bugfix",
-      "status": "InSpec"
+      "status": "Done"
     }
   ]
 }
