@@ -133,7 +133,52 @@ def _prompt_suffix(additional_prompts):
     return extra
 
 
-def decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state, session_id):
+def _check_decision_reminder(cwd):
+    """If recent session recording mentions decisions but decisions.md is empty/missing,
+    return an info-level reminder prompt. Otherwise return empty string."""
+    if not cwd:
+        return ""
+    import glob as _glob
+
+    decisions_path = os.path.join(cwd, ".diwu", "decisions.md")
+    # If decisions.md already has content, no need to remind
+    if os.path.exists(decisions_path):
+        try:
+            with open(decisions_path, encoding="utf-8") as f:
+                content = f.read().strip()
+            if len(content) > 10:  # non-trivial content
+                return ""
+        except OSError:
+            pass
+
+    # Check latest 2 session recordings for decision-related keywords
+    recording_dir = os.path.join(cwd, ".diwu", "recording")
+    if not os.path.isdir(recording_dir):
+        return ""
+
+    sessions = sorted(
+        _glob.glob(os.path.join(recording_dir, "session-*.md")),
+        key=os.path.getmtime,
+        reverse=True,
+    )[:2]
+
+    decision_keywords = ["DECISION TRACE", "设计决策", "架构决策", "选定方案", "备选方案"]
+    for s_path in sessions:
+        try:
+            with open(s_path, encoding="utf-8") as f:
+                text = f.read()
+            if any(kw in text for kw in decision_keywords):
+                return (
+                    "ℹ 检测到本轮 Session 包含设计决策记录，"
+                    "请确认已追加到 .diwu/decisions.md"
+                    "（详见 /drec §设计决策记录）"
+                )
+        except OSError:
+            pass
+    return ""
+
+
+def decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state, session_id, cwd=None):
     extra = _prompt_suffix(additional_prompts)
     resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, session_id or "")
 
@@ -157,6 +202,12 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
             "输入 /drun 继续执行，或 /dloop 启动连续循环。"
         )
         print(summary, file=sys.stderr)
+
+    # Soft reminder: check if session had decisions that should be recorded
+    decision_hint = _check_decision_reminder(cwd)
+    if decision_hint:
+        print(f"\n{decision_hint}", file=sys.stderr)
+
     return False, {}
 
 
@@ -213,7 +264,7 @@ def decide(tasks, settings, data, task_json_path, cwd, additional_prompts, loop_
         return decide_loop_mode(
             tasks, settings, data, task_json_path, loop_state, cwd, additional_prompts, runtime_state or {}, session_id
         )
-    return decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state or {}, session_id)
+    return decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state or {}, session_id, cwd)
 
 
 if __name__ == "__main__":

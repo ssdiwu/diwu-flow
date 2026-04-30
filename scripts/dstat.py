@@ -161,7 +161,7 @@ def format_output(summary: dict, sessions: list, decisions: list,
         for i, d in enumerate(decisions, 1):
             lines.append(f"{i}. {d}")
     else:
-        lines.append("- 无决策记录")
+        lines.append("- (暂无设计决策记录)")
     lines.append("")
 
     # Git 状态
