@@ -7,10 +7,15 @@ Non-blocking: always exit(0), outputs reminder via additionalSystemPrompt.
 
 Does NOT write files — recording is handled by Stop hook.
 
-Loop tracking: independently maintains completed_task_ids in dtask-state.json.dloop
+Loop tracking: maintains completed_task_ids in dtask-state.json.dloop
 when an active dloop session matches the current event session_id.
-This runs BEFORE the recording_reminder gating so loop bookkeeping
-is never disabled by reminder settings.
+Execution order: clear_task_owner (raw load, pre-sync) -> loop track -> reminder gating.
+
+Key design: clear_task_owner MUST run before sync_runtime_state because
+sync's cleanup logic removes non-InProgress entries from task_sessions,
+which would swallow the Done task's owner before we can clear it.
+Loop tracking only fires after successful owner clearance to avoid counting
+unconfirmed completions. Reminder sys.exit(0) comes after all bookkeeping.
 """
 
 import json, os, sys
@@ -21,10 +26,16 @@ SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
 if SHARED_SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SHARED_SCRIPTS_DIR)
 
-from dtask_state import clear_task_owner, save_runtime_state, sync_runtime_state  # noqa: E402
+from dtask_state import (  # noqa: E402
+    clear_task_owner,
+    save_runtime_state,
+    sync_runtime_state,
+    load_runtime_state,
+)
 
 SETTINGS_FILE = '.diwu/dsettings.json'
 TASK_JSON_PATH = '.diwu/dtask.json'
+RUNTIME_STATE_PATH = '.diwu/dtask-state.json'
 
 
 def _load(p):
@@ -59,9 +70,12 @@ def _task_summary(task):
 def _track_loop_completion(task_id: int, session_id: str):
     """Loop 追踪：仅在精确条件满足时追加 completed_task_ids。
 
-    独立于 reminder gating —— 即使 recording_reminder 关闭，loop 计数仍需维护。
-    只认 event.task 原始精确信号（event_task），不使用 fallback heuristic 结果。
-    必须在 clear_task_owner 成功后的路径中调用（通过 main() 调用时机保证）。
+    必须在 clear_task_owner 成功后的路径中调用（由 main() 调用时机保证）。
+    即使 recording_reminder 关闭，loop 计数仍需维护（reminder 门控在追踪之后）。
+    只认 event.task 原始精确信号，不使用 fallback heuristic 结果。
+
+    此函数内部使用 sync_runtime_state（含 cleanup），此时 owner 已被清除，
+    cleanup 不再影响当前 task 的 loop 计数逻辑。
     """
     task_data = _load(TASK_JSON_PATH)
     sync_result = sync_runtime_state(".", task_data, persist=True, ensure_exists=True)
@@ -82,21 +96,9 @@ def main():
     event = _get_event_data()
     session_id = event.get("sessionId", event.get("session_id", ""))
 
-    # === Loop 追踪（独立于 reminder gating，必须在 reminder 早退之前）===
-    # 只认 event.task 原始精确信号，不使用 fallback heuristic 的结果
-    _event_task = event.get("task")
-    if (_event_task
-            and isinstance(_event_task.get("id"), int)
-            and not isinstance(_event_task["id"], bool)
-            and _event_task.get("status") == "Done"):
-        _track_loop_completion(_event_task["id"], session_id)
+    # === 阶段 1: Fallback heuristic + clear_task_owner + loop 追踪（必须在 reminder 之前完成）===
+    settings = _load(SETTINGS_FILE)  # 提前加载，后面还要用
 
-    # === Reminder 提醒（原有逻辑）===
-    settings = _load(SETTINGS_FILE)
-    if settings.get("recording_reminder", {}).get("enabled") == False:
-        sys.exit(0)
-
-    # Try to identify the completed task from event or task.json
     task_info = ''
     completed_task = event.get("task")
 
@@ -112,16 +114,30 @@ def main():
 
     if completed_task:
         task_info = _task_summary(completed_task)
+        task_id = completed_task.get("id")
 
-        task_data = _load(TASK_JSON_PATH)
-        sync_result = sync_runtime_state(".", task_data, persist=True, ensure_exists=True)
-        if sync_result.ok:
-            task_id = completed_task.get("id")
-            if isinstance(task_id, int) and not isinstance(task_id, bool):
-                if clear_task_owner(sync_result.state, task_id):
-                    save_runtime_state(".", sync_result.state, remove_legacy=True)
+        if isinstance(task_id, int) and not isinstance(task_id, bool):
+            # 关键：先用 raw load 做 clear_task_owner，
+            # 不能用 sync_runtime_state（它的 cleanup 会删除 Done 任务的 owner 条目）
+            load_result = load_runtime_state(".")
+            if load_result.ok and load_result.state is not None:
+                if clear_task_owner(load_result.state, task_id):
+                    save_runtime_state(".", load_result.state, remove_legacy=True)
 
-    # Compose reminder message
+                    # === Loop 追踪（仅在 owner 清理成功后）===
+                    _event_task = event.get("task")
+                    if (_event_task
+                            and isinstance(_event_task.get("id"), int)
+                            and not isinstance(_event_task["id"], bool)
+                            and _event_task.get("status") == "Done"
+                            and _event_task.get("id") == task_id):
+                        _track_loop_completion(task_id, session_id)
+
+    # === 阶段 2: Reminder 门控（安全地在 loop 追踪和 owner 清理之后）===
+    if settings.get("recording_reminder", {}).get("enabled") == False:
+        sys.exit(0)
+
+    # === 阶段 3: Reminder 输出 ===
     reminder_parts = []
     if task_info:
         reminder_parts.append(f"[TASK-DONE] {task_info} 已完成。")

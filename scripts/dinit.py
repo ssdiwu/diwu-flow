@@ -53,10 +53,9 @@ def cmd_scan_repo(cwd: Path) -> dict:
         if p.is_dir() and not p.name.startswith("."):
             try:
                 file_count = len(list(p.rglob("*"))) if p.is_dir() else 0
-                # 限制深度避免太慢
-                if file_count > 1000:
-                    file_count = f"{1000}+"
-                dirs.append({"name": f"{p.name}/", "purpose": "", "file_count_estimate": min(file_count, 9999)})
+                # 封顶到 9999，保持整数类型
+                file_count = min(file_count, 9999)
+                dirs.append({"name": f"{p.name}/", "purpose": "", "file_count_estimate": file_count})
             except OSError:
                 dirs.append({"name": f"{p.name}/", "purpose": "(权限限制)", "file_count_estimate": 0})
     result["directories"] = dirs

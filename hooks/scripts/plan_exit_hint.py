@@ -39,14 +39,49 @@ def main():
     }
     print(json.dumps(output, ensure_ascii=False))
 
-    # 创建 .plan-active marker 使 hard block 可达
-    cwd = event.get("cwd") or os.getcwd()
-    marker_path = os.path.join(cwd, ".claude", ".plan-active")
-    try:
-        os.makedirs(os.path.dirname(marker_path), exist_ok=True)
-        open(marker_path, "w").close()
-    except OSError:
-        pass  # marker 创建失败不阻塞原有行为
+    # 仅当本次 plan >=20 行时才创建 marker
+    _PLAN_LINE_THRESHOLD = 20
+    _PLAN_DIR = os.path.normpath(os.path.expanduser("~/.claude/plans"))
+
+    plan_path = None
+    tool_input = event.get("tool_input") or {}
+    candidate = tool_input.get("file_path", "")
+    if candidate and candidate.endswith(".md") and _PLAN_DIR in os.path.normpath(os.path.abspath(candidate)):
+        plan_path = candidate
+
+    if not plan_path and os.path.isdir(_PLAN_DIR):
+        # 回退：取最近修改的 .md
+        try:
+            plans = [
+                os.path.join(_PLAN_DIR, f) for f in os.listdir(_PLAN_DIR)
+                if f.endswith(".md")
+            ]
+            if plans:
+                plans.sort(key=os.path.getmtime, reverse=True)
+                plan_path = plans[0]
+        except OSError:
+            pass
+
+    should_create_marker = False
+    if plan_path:
+        try:
+            with open(plan_path, encoding="utf-8") as f:
+                line_count = sum(1 for _ in f)
+            if line_count >= _PLAN_LINE_THRESHOLD:
+                should_create_marker = True
+        except (OSError, UnicodeDecodeError):
+            pass
+
+    if should_create_marker:
+        cwd = event.get("cwd") or os.getcwd()
+        marker_path = os.path.join(cwd, ".claude", ".plan-active")
+        try:
+            os.makedirs(os.path.dirname(marker_path), exist_ok=True)
+            # 写入 plan 文件绝对路径（非空文件）
+            with open(marker_path, "w") as mf:
+                mf.write(plan_path + "\n")
+        except OSError:
+            pass
 
     sys.exit(0)
 

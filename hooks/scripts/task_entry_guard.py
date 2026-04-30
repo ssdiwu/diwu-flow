@@ -113,6 +113,22 @@ def _has_unlanded_plan(cwd):
     if not os.path.exists(marker_path):
         return False, 0
 
+    # 读取 marker 中记录的 plan 路径
+    recorded_plan = None
+    try:
+        with open(marker_path, "r") as f:
+            recorded_plan = f.read().strip()
+    except OSError:
+        return False, 0
+
+    if not recorded_plan or not os.path.isfile(recorded_plan):
+        # marker 过期或无效 -> 清理并跳过
+        try:
+            os.remove(marker_path)
+        except OSError:
+            pass
+        return False, 0
+
     if not os.path.isdir(_PLAN_DIR):
         return False, 0
 
@@ -132,10 +148,18 @@ def _has_unlanded_plan(cwd):
     if max_lines < _PLAN_LINE_THRESHOLD:
         return False, 0
 
-    # Plan file is substantial — check if dtask has active tasks to allow it
+    # 精确匹配：marker 记录的 plan 必须确实存在且满足阈值
+    import os.path as _op
+    if not _op.isfile(recorded_plan):
+        try:
+            os.remove(marker_path)
+        except OSError:
+            pass
+        return False, 0
+
     task_json_path = os.path.join(cwd, WORKFLOW_DTASK)
     if _has_active_task(task_json_path):
-        return False, 0  # Active tasks exist → plan considered landed
+        return False, 0  # Active tasks exist -> plan considered landed
 
     return True, max_lines
 

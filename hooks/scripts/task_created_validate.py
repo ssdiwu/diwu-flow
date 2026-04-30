@@ -66,7 +66,7 @@ def _dfs_cycle(tid, deps, visited, stack):
     for dep in deps.get(tid, []):
         if _dfs_cycle(dep, deps, visited, stack):
             return True
-        stack.pop()
+    stack.pop()
     return False
 
 

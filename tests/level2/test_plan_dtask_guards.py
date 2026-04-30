@@ -151,26 +151,74 @@ def _run_plan_exit(tmp_path):
     return result
 
 
-def test_exit_plan_mode_creates_marker(tmp_path):
-    """ExitPlanMode 事件应在 cwd 下创建 .claude/.plan-active marker。"""
-    result = _run_plan_exit(tmp_path)
+def test_exit_plan_mode_small_plan_no_marker(tmp_path):
+    """ExitPlanMode + 小 plan（<20 行）-> 不创建 marker。"""
+    plan_dir = Path.home() / ".claude" / "plans"
+    plan_dir.mkdir(parents=True, exist_ok=True)
+    plan_file = plan_dir / "test-small-plan.md"
+    plan_file.write_text("\n".join(["# Plan line"] * 10), encoding="utf-8")
+
+    payload = {
+        "tool_name": "ExitPlanMode",
+        "cwd": str(tmp_path),
+        "tool_input": {"file_path": str(plan_file)},
+    }
+    result = subprocess.run(
+        [sys.executable, str(PLAN_EXIT_SCRIPT)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        cwd=str(tmp_path),
+    )
     assert result.returncode == 0
     marker = tmp_path / ".claude" / ".plan-active"
-    assert marker.exists(), "marker 应被创建"
+    assert not marker.exists(), "小 plan 不应创建 marker"
+
+    # 清理
+    plan_file.unlink()
+
+
+def test_exit_plan_mode_big_plan_creates_marker_with_path(tmp_path):
+    """ExitPlanMode + 大 plan（>=20 行）-> 创建 marker 且内容为路径。"""
+    plan_dir = Path.home() / ".claude" / "plans"
+    plan_dir.mkdir(parents=True, exist_ok=True)
+    plan_file = plan_dir / "test-big-plan.md"
+    plan_file.write_text("\n".join(["# Plan line"] * 25), encoding="utf-8")
+
+    payload = {
+        "tool_name": "ExitPlanMode",
+        "cwd": str(tmp_path),
+        "tool_input": {"file_path": str(plan_file)},
+    }
+    result = subprocess.run(
+        [sys.executable, str(PLAN_EXIT_SCRIPT)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        cwd=str(tmp_path),
+    )
+    assert result.returncode == 0
+    marker = tmp_path / ".claude" / ".plan-active"
+    assert marker.exists(), "大 plan 应创建 marker"
+    content = marker.read_text().strip()
+    assert content == str(plan_file), f"marker 内容应为 plan 路径，实际: {content}"
+
+    # 清理
+    plan_file.unlink()
 
 
 def test_marker_with_big_plan_triggers_hard_block(tmp_path):
-    """marker + 大 plan 文件 + 无活跃任务 → hard block (exit 1)。"""
+    """marker(含有效 plan 路径) + 大 plan 文件 + 无活跃任务 → hard block (exit 1)。"""
     # 创建大 plan 文件
     plan_dir = Path.home() / ".claude" / "plans"
     plan_dir.mkdir(parents=True, exist_ok=True)
     plan_file = plan_dir / "test-big-plan.md"
     plan_file.write_text("\n".join(["# Plan line"] * 25), encoding="utf-8")
 
-    # 创建 marker
+    # 创建 marker，写入 plan 路径
     marker = tmp_path / ".claude" / ".plan-active"
     marker.parent.mkdir(exist_ok=True)
-    marker.touch()
+    marker.write_text(str(plan_file) + "\n", encoding="utf-8")
 
     # 无活跃任务的 dtask
     diwu = tmp_path / ".diwu"
@@ -185,11 +233,51 @@ def test_marker_with_big_plan_triggers_hard_block(tmp_path):
     plan_file.unlink()
 
 
-def test_active_task_bypasses_hard_block(tmp_path):
-    """有活跃任务时即使 marker 存在也不触发 hard block。"""
+def test_stale_plan_no_block(tmp_path):
+    """marker 记录的 plan 文件已不存在 → 不触发 hard block。"""
+    # 创建 marker 指向一个不存在的 plan
     marker = tmp_path / ".claude" / ".plan-active"
     marker.parent.mkdir(exist_ok=True)
-    marker.touch()
+    fake_plan = "/tmp/nonexistent-stale-plan.md"
+    marker.write_text(fake_plan + "\n", encoding="utf-8")
+    assert marker.exists()
+
+    # 无活跃任务的 dtask
+    diwu = tmp_path / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+
+    result = _run_guard(tmp_path)
+    assert result.returncode == 0, f"stale plan 不应 hard block，got {result.returncode}"
+    # marker 应被自动清理
+    assert not marker.exists(), "stale marker 应被自动清理"
+
+
+def test_stale_marker_empty_no_block(tmp_path):
+    """marker 为空文件 → 不触发 hard block（旧格式兼容）。"""
+    marker = tmp_path / ".claude" / ".plan-active"
+    marker.parent.mkdir(exist_ok=True)
+    marker.write_text("", encoding="utf-8")  # 空内容
+
+    diwu = tmp_path / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+
+    result = _run_guard(tmp_path)
+    assert result.returncode == 0, f"空 marker 不应 hard block，got {result.returncode}"
+
+
+def test_active_task_bypasses_hard_block(tmp_path):
+    """有活跃任务时即使 marker 存在也不触发 hard block。"""
+    # 创建一个真实存在的 plan 文件供 marker 引用
+    plan_dir = Path.home() / ".claude" / "plans"
+    plan_dir.mkdir(parents=True, exist_ok=True)
+    plan_file = plan_dir / "test-bypass-plan.md"
+    plan_file.write_text("\n".join(["# Plan line"] * 25), encoding="utf-8")
+
+    marker = tmp_path / ".claude" / ".plan-active"
+    marker.parent.mkdir(exist_ok=True)
+    marker.write_text(str(plan_file) + "\n", encoding="utf-8")
 
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)

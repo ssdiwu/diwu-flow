@@ -99,23 +99,34 @@ PLUGIN_EOF
 
 uninstall() {
     echo "Uninstalling diwu-flow symlinks..."
+
+    # 安全删除辅助函数：只删除指向 FLOW_ROOT 的 symlink
+    _safe_rm_symlinks() {
+        local dir="$1"
+        [ -d "$dir" ] || return 0
+        find "$dir" -type l | while read -r link; do
+            target=$(readlink "$link" 2>/dev/null) || continue
+            case "$target" in
+                *"$FLOW_ROOT"*) rm -f "$link" ;;
+                *) ;;  # 不是我们的 symlink，跳过
+            esac
+        done
+        # 清理空目录
+        find "$dir" -type d -empty -delete 2>/dev/null || true
+    }
+
     # Codex cleanup
-    if [ -d "$HOME/.codex/skills" ]; then
-        find "$HOME/.codex/skills" -type l -delete 2>/dev/null || true
-        # Clean empty dirs
-        find "$HOME/.codex/skills" -type d -empty -delete 2>/dev/null || true
-    fi
-    if [ -d "$HOME/.codex/agents" ]; then
-        find "$HOME/.codex/agents" -type l -delete 2>/dev/null || true
-        find "$HOME/.codex/agents" -type d -empty -delete 2>/dev/null || true
-    fi
+    _safe_rm_symlinks "$HOME/.codex/skills"
+    _safe_rm_symlinks "$HOME/.codex/agents"
+
     # OpenCode cleanup
     if [ -d ".opencode" ]; then
         rm -f ".opencode/plugins/diwu-flow.ts" 2>/dev/null || true
-        find ".opencode/skills" -type l -delete 2>/dev/null || true
-        find ".opencode/agents" -type l -delete 2>/dev/null || true
+        _safe_rm_symlinks ".opencode/skills"
+        _safe_rm_symlinks ".opencode/agents"
         find ".opencode" -type d -empty -delete 2>/dev/null || true
     fi
+
     echo "✓ Uninstall complete"
 }
 

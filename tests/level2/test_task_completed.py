@@ -62,6 +62,8 @@ class TestTaskCompletedLoopTracking:
             "max_tasks": 5,
             "stopped_at": None,
             "stop_reason": None,
+        }, task_sessions={
+            "5": {"session_id": "session-match", "started_at": "2026-04-30T12:00:00Z"}
         })
 
         result = _run_task_completed(tmp_path, {
@@ -149,11 +151,16 @@ class TestTaskCompletedLoopTracking:
         state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
         assert state["dloop"]["completed_task_ids"] == [1, 5]
 
-    def test_reminder_off_still_tracks(self, tmp_path):
-        """recording_reminder=false 时 loop 追踪仍生效（reminder 文案可不出但计数要更新）。"""
+    def test_reminder_off_still_counts(self, tmp_path):
+        """recording_reminder=false 时 Done 事件仍触发 loop 追踪和 owner 清理。
+
+        验证修复后行为：reminder sys.exit(0) 在所有 bookkeeping 之后，
+        所以即使 reminder 关闭，owner 清理 + loop 追踪仍正常执行。
+        """
         _make_dtask(tmp_path, [
             {"id": 5, "title": "T5", "status": "Done"},
         ])
+        # 有 owner 条目让 clear_task_owner 能成功
         _make_runtime_state(tmp_path, dloop={
             "active": True,
             "session_id": "session-match",
@@ -163,8 +170,9 @@ class TestTaskCompletedLoopTracking:
             "max_tasks": 5,
             "stopped_at": None,
             "stop_reason": None,
+        }, task_sessions={
+            "5": {"session_id": "session-match", "started_at": "2026-04-30T12:00:00Z"}
         })
-        # 关闭 reminder
         (tmp_path / ".diwu" / "dsettings.json").write_text(
             json.dumps({"recording_reminder": {"enabled": False}}, ensure_ascii=False, indent=2)
         )
@@ -175,9 +183,37 @@ class TestTaskCompletedLoopTracking:
         })
 
         assert result.returncode == 0
-        # reminder 关闭时脚本应早退（exit 0），但 loop 追踪在早退之前已完成
         state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
-        assert state["dloop"]["completed_task_ids"] == [1, 5]
+        assert state["dloop"]["completed_task_ids"] == [1, 5]  # 仍然计数！
+
+    def test_unconfirmed_done_no_append(self, tmp_path):
+        """Done 事件但 clear_task_owner 失败（无 owner 条目）→ 不追加 loop 计数。
+
+        验证修复前 bug：owner 清理失败时 task id 不应被记账。
+        """
+        _make_dtask(tmp_path, [
+            {"id": 5, "title": "T5", "status": "Done"},
+        ])
+        # task_sessions 为空 → clear_task_owner 会失败（找不到 owner）
+        _make_runtime_state(tmp_path, dloop={
+            "active": True,
+            "session_id": "session-match",
+            "started_at": "2026-04-30T12:00:00Z",
+            "completed_task_ids": [1],
+            "current_iteration": 1,
+            "max_tasks": 5,
+            "stopped_at": None,
+            "stop_reason": None,
+        }, task_sessions={})
+
+        result = _run_task_completed(tmp_path, {
+            "task": {"id": 5, "title": "T5", "status": "Done"},
+            "sessionId": "session-match",
+        })
+
+        assert result.returncode == 0
+        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        assert state["dloop"]["completed_task_ids"] == [1]  # owner 清理失败，不应追加
 
     def test_inprogress_task_no_append(self, tmp_path):
         """event.task 存在但 status=InProgress → 不追加到 completed_task_ids。"""

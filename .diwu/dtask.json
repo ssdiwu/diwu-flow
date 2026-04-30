@@ -245,6 +245,128 @@
       ],
       "category": "bugfix",
       "status": "Done"
+    },
+    {
+      "id": 43,
+      "title": "修复 plan-guard 无条件 marker + 全局 plan 扫描导致误拦",
+      "description": "plan_exit_hint.py 在每次 ExitPlanMode 时无条件创建 .plan-active marker，但 task_entry_guard.py 的 _has_unlanded_plan() 扫描的是 ~/.claude/plans/ 下所有 .md 文件（全局），不区分'本次刚退出的 plan'和'历史残留 plan'。结果：HOME 里只要有一个 >=20 行的旧 plan，一次 ExitPlanMode 后所有 Edit/Write 都会被 hard block，即使当前只是小改动。需将 marker 创建改为有条件（仅当本次 plan 内容 >= 阈值时才创建），或改用时间戳/文件名关联限定扫描范围。",
+      "acceptance": [
+        "Given ExitPlanMode 且本次 plan 文件 <20 行 When plan_exit_hint.py 执行 Then 不创建 .plan-active marker（小 plan 不触发 guard）",
+        "Given ExitPlanMode 且本次 plan 文件 >=20 行 When plan_exit_hint.py 执行 Then 创建 .plan-active marker 并在 marker 中记录对应 plan 文件名或路径",
+        "Given .plan-active marker 存在但 ~/.claude/plans/ 下只有无关的旧大 plan（与 marker 记录的 plan 名不匹配）When task_entry_guard.py 执行 Then 不触发 hard block（不误拦）",
+        "Given .plan-active marker 存在且匹配的大 plan 存在 + dtask 无活跃任务 When task_entry_guard.py 收到 Edit/Write 事件 Then 返回 exit(1) hard block",
+        "Given 已有活跃 dtask 任务 When task_entry_guard.py 执行 Then 即使 marker+匹配 plan 存在也不触发 hard block",
+        "Given 上述场景 When python3 -m py_compile hooks/scripts/ 下的变更文件 Then 通过",
+        "Given 全量回归测试 When pytest tests/level2/test_plan_dtask_guards.py -q 执行 Then 小 plan 不创建、大 plan 创建、名称不匹配 bypass、名称匹配 hard block 四类场景全部 PASS"
+      ],
+      "steps": [
+        "[锁定] 定义 plan 文件信号来源：ExitPlanMode event 的 tool_input 中包含 file_path（指向 ~/.claude/plans/ 下的 plan .md 文件）；若 event 无此字段则回退到扫描 ~/.claude/plans/ 下最近修改的 .md 文件作为'本次 plan'的候选",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py：ExitPlanMode 事件中读取信号源 plan 文件的行数；仅当行数 >= _PLAN_LINE_THRESHOLD(20) 时才创建 .plan-active marker 并将文件绝对路径写入 marker 内容",
+        "[锁定] 将 plan 文件绝对路径或 basename 写入 marker 文件内部（而非空文件），使 task_entry_guard.py 能做精确匹配",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py 的 _has_unlanded_plan()：marker 存在后，额外检查 marker 内记录的 plan 文件是否确实存在且行数仍 >= 阈值；若 marker 记录的 plan 文件不存在或不满足阈值则视为 marker 过期，返回 (False, 0) 并清理过期 marker",
+        "[锁定] 确认 dtask 活跃任务豁免逻辑不变：_has_active_task() 为 True 时直接返回 False",
+        "[建议] 更新 tests/level2/test_plan_dtask_guards.py：将现有 test_exit_plan_mode_creates_marker 改为条件化创建测试；新增 plan 名称不匹配时的 bypass 测试"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 44,
+      "title": "修复 loop 完成计数仍在 owner 确认之前执行的问题",
+      "description": "Task#40 补了 status=='Done' 守卫，但 _track_loop_completion() 仍在 main() 的 clear_task_owner() 调用之前执行。执行时序：L88-92 先追加 completed_task_ids → L111-120 后确认 owner 清理。如果 owner 清理失败（如 task_sessions 缺失、状态不一致），task id 已被记账但完成从未被真正确认。dloop 可能提前命中 max_tasks 或生成错误阶段报告。需要将 loop 追踪移到 clear_task_owner 成功后的路径中，并确保 reminder 门控不阻断此路径。",
+      "acceptance": [
+        "Given 活跃 loop + event.task.status=Done + session 匹配 + 但 task 无 owner 条目（clear_task_owner 返回 False）When task_completed.py 执行 Then completed_task_ids 不变（未确认完成不计数）",
+        "Given 活跃 loop + event.task.status=Done + session 匹配 + clear_task_owner 成功 When task_completed.py 执行 Then completed_task_ids 追加对应 task_id（确认后才计数）",
+        "Given 活跃 loop + event.task.status=Done + session 匹配 + recording_reminder.enabled=false When task_completed.py 执行 Then loop 追踪仍被执行——reminder 门控必须在 clear_task_owner+loop 追踪之后才生效（或拆分为独立阶段：先追踪+清理 owner，再决定是否输出 reminder）",
+        "Given 上述场景 When pytest tests/level2/test_task_completed.py -q 执行 Then 全部通过"
+      ],
+      "steps": [
+        "[锁定] 重排 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py main() 的执行顺序为：(1) 早期 loop 追踪（仅 status=='Done' 守卫）→ (2) fallback heuristic + clear_task_owner → (3) clear_task_owner 成功分支内的 _track_loop_completion → (4) reminder 门控 + 输出。关键是步骤(3)必须在步骤(2)的 owner 清理成功路径内，且步骤(4)不能在步骤(3)之前截断执行流",
+        "[锁定] 从 main() 中移除 L87-92 的早期 _track_loop_completion() 调用（含 status=='Done' 守卫整块）",
+        "[锁定] 在 clear_task_owner 成功分支内（if sync_result.ok and clear_task_owner 返回 True 之后）插入 _track_loop_completion 调用",
+        "[锁定] 确认 recording_reminder 的 sys.exit(0) 早退在 _track_loop_completion 和 clear_task_owner 之后（即 reminder 关闭时 owner 仍被清理、loop 仍被计数）",
+        "[锁定] 确保 _track_loop_completion 本身的四重守卫不变：(1) task_id 合法；(2) runtime_loop 存在且 active；(3) session 匹配；(4) 未重复",
+        "[建议] 更新 tests/level2/test_task_completed.py：将 test_inprogress_task_no_append 改为 test_unconfirmed_done_no_append（Done 事件但 task_sessions 为空 → 不计数）；新增 test_reminder_off_still_counts（recording_reminder=false + Done 事件 → completed_task_ids 仍追加）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 45,
+      "title": "修复 install.sh --uninstall 删除无关 symlink 的破坏性行为",
+      "description": "install.sh 的 uninstall() 函数使用 find ... -type l -delete 删除 ~/.codex/skills/ 和 ~/.codex/agents/ 下所有 symlink，不区分 diwu-flow 创建的 vs 用户自己的。用户若有其他 skill/agent 的 symlink 会被一并销毁。需改为只删除指向 FLOW_ROOT 的 symlink（通过 readlink 匹配前缀），或改用记录已安装路径的方式精确清理。",
+      "acceptance": [
+        "Given ~/.codex/skills/ 下存在 diwu-flow 创建的 symlink（指向 FLOW_ROOT）和其他工具创建的无关 symlink When 执行 install.sh --uninstall Then 仅删除指向 FLOW_ROOT 的 symlink，无关 symlink保持不变",
+        "Given ~/.codex/agents/ 下存在 diwu-flow 的 agent symlink 和其他无关 symlink When 执行 install.sh --uninstall Then 仅删除 diwu-flow 的 agent symlink",
+        "Given 未执行过 install（无任何 diwu-flow symlink）When 执行 install.sh --uninstall Then 不报错且不删除任何文件（幂等安全）",
+        "Given install 后立即 uninstall When 检查 ~/.codex/skills/ 和 ~/.codex/agents/ Then diwu-flow 创建的 symlink 全部清除、无关 symlink 仍存在",
+        "Given 上述场景 When bash -n install.sh 执行 Then 语法检查通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh 的 uninstall() 函数：将 `find ... -type l -delete` 替换为遍历 symlink 并用 `readlink` 检查目标是否包含 FLOW_ROOT 路径前缀，仅匹配时才删除",
+        "[锁定] Codex 清理（~/.codex/skills/ + ~/.codex/agents/）和 OpenCode 清理（.opencode/）两处都应用相同的精确匹配逻辑",
+        "[锁定] 确保 uninstall 对未安装状态幂等：find 无匹配时不报错（现有 || true 已覆盖，但 readlink 循环中缺失 symlink 时也不应报错）",
+        "[建议] 在安装时将已创建的 symlink 路径列表写入临时文件（如 /tmp/diwu-flow-installed-$$），uninstall 时按列表精确删除——比 readlink 前缀匹配更可靠"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 46,
+      "title": "修复 dinit.py scan-repo 大目录 file_count 字符串化导致 TypeError 崩溃",
+      "description": "scripts/dinit.py 的 scan-repo 子命令在统计子目录文件数时，超过 1000 条目会将整数转为字符串 '1000+'，随后直接传入 min(file_count, 9999) 导致 TypeError（str 与 int 比较）。大目录（如 node_modules、vendor）会触发此崩溃。",
+      "acceptance": [
+        "Given 子目录含 1001 个文件 When python3 scripts/dinit.py scan-repo 执行 Then 该目录的 file_count_estimate 为 capped 整数值（如 1001 或 9999）而非崩溃",
+        "Given 子目录含 500 个文件 When scan-repo 执行 Then file_count_estimate 为准确值 500（小目录不受影响）",
+        "Given 子目录含 20000 个文件 When scan-repo 执行 Then file_count_estimate 为 9999（上限封顶）且不崩溃",
+        "Given 权限不足无法读取某子目录 When scan-repo 执行 Then 该目录显示为 '(权限限制)' 且 file_count_estimate 为 0，整体不崩溃",
+        "Given 上述场景 When python3 -m py_compile scripts/dinit.py 执行 Then 编译通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py L55-59：移除 `f\"{1000}+\"` 字符串化逻辑，改为直接使用 min(实际计数, 9999) 得到整数值",
+        "[锁定] 确保 file_count_estimate 字段始终为 int 类型，不再出现 str 或其他类型",
+        "[建议] 如需保留'1000+'的可读提示，可在 estimate 字段之外新增 display 字段（如 file_count_display='1000+'），但 estimate 必须是 int"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py"
+      ],
+      "category": "bugfix",
+      "status": "InSpec"
+    },
+    {
+      "id": 47,
+      "title": "修复 task_created_validate.py DFS 栈操作位置错误导致合法 DAG 崩溃",
+      "description": "hooks/scripts/task_created_validate.py 的 _dfs_cycle() 将 stack.pop() 放在 for 循环内部（每个 child return 后 pop），但 stack.append(tid) 只在循环前执行一次。对于出度 >1 的节点（如 1->[2,3,4]），DFS 在处理完第一个 child 后就 pop 了父节点，后续 child 处理时 stack 为空导致 IndexError。标准 DFS 应将 pop() 放在 for 循环结束后。",
+      "acceptance": [
+        "Given 合法 DAG Task#1 blocked_by=[2,3,4] 且 Task#2 blocked_by=[3,4] When task_created_validate.py 执行 Then 返回 exit 0（检测为无循环）不崩溃",
+        "Given 真实循环依赖 A->B->C->A When task_created_validate.py 执行 Then 返回 exit 1 并输出循环依赖错误信息",
+        "Given 单依赖链 A->B->C（无分叉）When task_created_validate.py 执行 Then 返回 exit 0 不崩溃",
+        "Given 无 blocked_by 的任务 When task_created_validate.py 执行 Then 返回 exit 0 不崩溃",
+        "Given 上述场景 When python3 -m py_compile hooks/scripts/task_created_validate.py 执行 Then 编译通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_created_validate.py 的 _dfs_cycle() 函数（L59-70）：将 stack.pop() 从 for 循环内部移到 for 循环之后（标准后序 DFS 模式）",
+        "[锁定] 正确的 DFS 结构应为：visited.add → stack.append → for each dep: recurse → if cycle return True → stack.pop → return False",
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ 中创建或更新 validate hook 的单元测试文件，覆盖三种拓扑：(1) 扇出 DAG（1->[2,3,4], 2->[3,4]）→ exit 0 不崩溃；(2) 单链 A->B->C → exit 0；(3) 真实循环 A->B->C→A → exit 1 + 错误输出"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_created_validate.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/"
+      ],
+      "category": "bugfix",
+      "status": "Done"
     }
   ]
 }
