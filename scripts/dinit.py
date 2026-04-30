@@ -486,6 +486,15 @@ def cmd_validate(cwd: Path) -> dict:
     check("无旧 states.md", not (rules_dir / "states.md").exists())
     check("无旧 recording.md", not (cwd / ".claude" / "recording.md").exists())
 
+    # 清理 .dinit/ 临时工作目录
+    dinit_tmp = cwd / ".diwu" / ".dinit"
+    if dinit_tmp.is_dir():
+        try:
+            shutil.rmtree(str(dinit_tmp))
+            check(".diwu/.dinit/ 已清理", True)
+        except OSError as exc:
+            check(".diwu/.dinit/ 清理失败", False, str(exc))
+
     passed_count = sum(1 for c in checks if c["status"] == "PASS")
     fail_count = sum(1 for c in checks if c["status"] == "FAIL")
 
