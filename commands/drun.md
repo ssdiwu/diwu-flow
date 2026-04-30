@@ -14,7 +14,9 @@ argument-hint: "[task.json路径] [--mode auto|step]"
 
 输入 `/drun` 启动自动执行引擎。引擎会依次执行：Preflight 检查 → 上下文恢复 → 归档检查 → 选择任务 → 实施 → 验证 → 循环。
 
-- `auto`（默认）：全自动循环，完成一个任务后自动选下一个
+- `auto`（默认）：自动完成单任务全部步骤（Preflight → 实施 → 验证 → Session 结束），**做完即停**
 - `step`：每步完成后暂停等待确认
+
+> 连续执行多个任务请用 `/dloop
 
 需提前准备好 task.json（可用 `/dtask` 创建）。

@@ -144,10 +144,21 @@ argument-hint: "[--max-tasks N]"
 
 ## 安全限制
 
-- `--max-tasks N`（默认 10，0=无限）：防止无限循环失控
+- `--max-tasks N`（0=无限）：防止无限循环失控
 - `/dend` 可随时手动取消
 - session_id 隔离防止跨 session 干扰
 - 被 blocked_by 阻塞的 InSpec 任务立即停止（不重试）
+
+## Stale-State 自动清理
+
+`/dloop start` 和 `status` 执行时自动检测 terminal stale state 并清理：
+
+- **terminal_stale 条件**：`completed_task_ids.length >= max_tasks` 或无可执行任务
+- **start 命中**：清理旧 state → 继续正常启动（message 含清理提示）
+- **status 命中**：清理旧 state → 返回 `stale_cleaned`
+- **invalid_state**（JSON 损坏/字段矛盾）：返回 `invalid_state_file`，不自动删除
+- **/dend** 仍是活跃循环的手动取消入口，不负责 stale 检测
+- **/drun** 不承担 dloop-state 生命周期管理职责
 
 ## 适用场景
 

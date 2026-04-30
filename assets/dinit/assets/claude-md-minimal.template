@@ -46,3 +46,4 @@
 - recording 更新：session 结束前必须写入 `.diwu/recording/`
 - 时间戳：必须 `date '+%Y-%m-%d %H:%M:%S'` 获取真实时间戳
 - 禁止推送：`.claude/` `.diwu/` 禁止 commit/push
+- 文件操作安全：修改已有文件前必须先读取当前内容；写入 JSON 必须 indent=2, ensure_ascii=False；.diwu/ 和 .claude/ 下配置文件修改需谨慎确认

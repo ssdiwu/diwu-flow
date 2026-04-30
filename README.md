@@ -137,8 +137,8 @@ stateDiagram-v2
 
 ```mermindmap
   root((diwu-flow v0.0.5))
-    Skills (11)
-      drun 执行引擎
+    Skills (12)
+      drun 单任务执行器
       dtask 任务管理
       dvfy 验证证据
       djug 判断锚点
@@ -153,9 +153,10 @@ stateDiagram-v2
       explorer 只读探索 | implementer 代码实施 | verifier 独立验收
       注：使用默认路径自动发现，不在 plugin.json 中声明
     Commands (11)
-      /drun /dtask /dinit
+      /drun(单次) /dtask /dinit
       /dprd /dadr /ddoc
       /ddemo /dcorr /dstat
+      /dloop(连续) /dend
     Hooks (8事件)
       TaskCompleted / TaskCreated
       PreToolUse(Bash) ×2
@@ -169,7 +170,7 @@ stateDiagram-v2
 |------|------------|-----------|----------|
 | 11 Skills | plugin.json 声明 | symlink | symlink + Plugin |
 | 3 Agents | 默认路径自动发现 | symlink | symlink |
-| 9 Commands | Slash Commands | ❌ | 声明式索引 |
+| 11 Commands | Slash Commands | ❌ | 声明式索引 |
 | Hooks | 8 事件 | ❌ | v1 不移植 |
 
 ## 从 diwu-workflow 迁移到 diwu-flow

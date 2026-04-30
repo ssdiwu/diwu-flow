@@ -40,6 +40,14 @@
 
 **`.diwu/` 提交规则**：origin/main 持续追踪 `.diwu/`（含 `.claude/`）。公开仓库通过 `drelease.sh` worktree 隔离模式发布 clean 版（自动排除 `.diwu/`、`.claude/` 等敏感文件）。
 
+**版本号同步**：插件版本以 `.claude-plugin/plugin.json` 为真值来源；变更版本号时必须同步更新 `.claude-plugin/marketplace.json` 和 `install.sh` 中的 OpenCode stub 版本。
+
+**文件操作安全铁律**：
+- **先读后写（分层）**：修改已有文件前必须先读取将被修改的当前内容；整文件重写必须先读取完整文件；全新创建且确认不存在时可跳过读取。
+- **JSON 格式化**：写入 .json 文件时必须 indent=2, ensure_ascii=False（禁止单行压缩）。
+- **原子替换优先**：修改已有内容优先用 Edit 精确匹配替换；仅整文件重写时用 Write（须满足先读后写）。
+- **敏感目录谨慎**：.diwu/ 和 .claude/ 下配置文件修改需确认不破坏现有结构或丢失数据。
+
 - 修改 Skill 后验证 frontmatter YAML 合法性
 - plugin.json 不声明 agents 字段（默认路径自动发现）
 - CC 专属内容仅限 hooks/、.claude-plugin/、assets/
@@ -61,6 +69,7 @@ git remote add public git@github.com:ssdiwu/diwu-flow.git
 
 - `commands/` — 用户命令封装（drun, dtask, dinit, dprd, dadr, ddoc, ddemo, dcorr, dstat, dloop, dend）
 - `skills/` — 技能文件（dtask, drun, dcorr, dvfy, djug, drec, darc, dprd, ddoc, ddemo, dstat, dloop）
+- `scripts/` — 共享脚本工具库（common.py 含 plugin_root/load_json/save_json/max_task_id 等函数），新增 script-backed 执行通道
 - `rules/` — 方法论规则文件
 - `agents/` — 核心执行 Agent（explorer/implementer/verifier，默认路径自动发现）
 - `assets/` — 模板资产

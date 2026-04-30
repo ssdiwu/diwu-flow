@@ -155,6 +155,12 @@ argument-hint: "[功能描述] [category] [blocked_by]"
 ### task.json 写入规则
 状态一律 InDraft；ID 递增不复用；category: functional/ui/bugfix/refactor/infra；追加到列表末尾；必须含 acceptance（GWT）；steps 必须自包含。
 
+**格式化约束**：写入 dtask.json 时必须使用 `json.dump(data, f, indent=2, ensure_ascii=False)` 格式化为多行可读 JSON（禁止整行压缩）。新任务应**追加**到现有 tasks 数组末尾并重新序列化整个文件，保持缩进一致。
+
+> **文件操作安全（R1）**：修改已有文件前先 Read 当前内容；整文件重写先 Read 完整文件；新建文件确认不存在后再 Write。
+>
+> **（R1）写入 dtask.json 前必须先 Read 当前完整内容**（含 tasks 数组和已有任务数据），避免覆盖或结构破坏。
+
 ---
 
 ## 任务实施

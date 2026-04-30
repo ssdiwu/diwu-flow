@@ -23,6 +23,10 @@ argument-hint: "[session内容]"
 
 Session 记录写入规范：每次 session 结束前的必做事项。
 
+### 文件操作安全（R1）
+
+**（R1）**：追加 session 记录到 `.diwu/recording/` 前 **必须先 Read 当前 session 文件尾部**（如存在），确保追加位置正确不覆盖已有内容。
+
 ---
 
 ## 时间戳规则（铁律）

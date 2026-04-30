@@ -87,6 +87,9 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 
 1. 确保所有代码变更已提交
 2. 写入 recording/session 文件（必须运行 date 获取真实时间戳），记录 Session 标题、处理的任务及状态、验收验证结果、下次应该做什么
+
+> **（R1）**：写入 session 文件前必须 Read 当前 session 文件尾部，确认追加位置正确。
+
 3. 如有重大设计决策，追加到 decisions.md
 4. 确保 task.json 反映最新状态
 
@@ -109,6 +112,8 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 | 2 | 这轮准备怎么做？ | steps 中当前步骤的绝对路径和具体操作 |
 | 3 | 怎么判断这轮做成了？ | 对应 `acceptance` 条目 + dvfy 证据等级（L1-L3 主判） |
 | 4 | 结果更新到哪？ | dtask.json（状态变更）+ recording/session（进度记录） |
+
+> **（R1+R2）**：更新 dtask.json status 前 **Read 当前 status 值**；写入 JSON 必须 **indent=2, ensure_ascii=False**。
 
 > 状态文件映射（复用现有机制，不新建文件）：
 > - 目标+边界 → dtask.json `description` + `acceptance[]`

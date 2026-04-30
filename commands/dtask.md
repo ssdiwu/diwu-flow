@@ -89,15 +89,26 @@ effort: high
 
 ## Step 3：确定新任务 ID
 
-写入前必须：
-1. 读取 `.diwu/dtask` 中所有任务的最大 `id`
-2. 用 glob 匹配读取 `.claude/task_archive*.json` 中所有任务的最大 `id`
-3. 取两者最大值 + 1 作为新任务起始 id（严禁 id 复用）
+写入前必须运行脚本获取最大序号（优先使用脚本，手动读取为 fallback）：
+
+```bash
+python3 scripts/common.py --max-task-id --cwd <项目根目录>
+# → 输出: {"ok": true, "max_id": N, "source": "dtask.json|archive|empty"}
+```
+
+取返回的 `max_id` + 1 作为新任务起始 id（严禁 id 复用）。
+
+> **fallback**：若 `scripts/common.py` 尚未实现（Task#9 未完成），则手动：
+> 1. 读取 `.diwu/dtask.json` 中所有任务的最大 `id`
+> 2. 用 glob 匹配读取 `.diwu/archive/task_archive*.json` 中所有任务的最大 `id`
+> 3. 取两者最大值 + 1
 
 ## Step 4：生成并写入任务
 
-根据澄清结果生成任务列表，追加到 `.diwu/dtask`。
+根据澄清结果生成任务列表，追加到 `.diwu/dtask.json`。
 每个任务必须包含所有字段，字段粒度参照 Step 1.5 示例。
+
+> **文件操作安全（R1）**：修改已有文件前先 Read 当前内容；整文件重写先 Read 完整文件；新建文件确认不存在后再 Write。
 
 **files_modified 自动提取**：从 steps 中提取所有绝对路径（以 `/` 开头且包含文件扩展名），写入 files_modified 数组，用于并行冲突检测。
 
@@ -107,8 +118,8 @@ effort: high
 - 无标注：中性步骤（如"运行验证脚本"、"凭据见文档"）
 
 边界情况：
-- `.diwu/dtask` 不存在：创建 `{"tasks": []}` 再追加
-- `.claude/` 目录不存在：先创建目录
+- `.diwu/dtask.json` 不存在：创建 `{"tasks": []}` 再追加
+- `.diwu/` 目录不存在：先创建目录
 - 存在明显技术未知量：先生成 `category: infra` 的 Spike 任务（acceptance 为"输出调研结论文档"），再生成依赖它的实施任务
 
 ## Step 5：任务质量检查

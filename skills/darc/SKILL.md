@@ -52,6 +52,9 @@ argument-hint: "[归档类型]"
 2. Task 归档：
    a. 读取 .diwu/dtask，筛选 status=Done/Cancelled 的任务
    b. 写入 .diwu/archive/task_archive_YYYY-MM.json（当月归档文件）
+
+> **（R1+R2）**：写入 archive JSON（task_archive_*.json / .last_archive_summary.json）前 **Read 确认当前文件状态**；JSON 必须 **indent=2, ensure_ascii=False**。
+
    c. 从 dtask 中移除已归档任务（保留活跃任务）
 3. Recording 归档：
    a. 列出 .diwu/recording/ 所有 session 文件
