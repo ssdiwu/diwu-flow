@@ -11,9 +11,11 @@
 
 ## Session 结束补充规范
 
-### recording 提交规则（铁律）
+### 提交原子性铁律
 
-recording 文件**必须随同本轮代码变更一并 commit**，不得单独成 commit。正确做法：先写 recording → 再 `git add` 代码+recording 一起提交。
+**dtask.json 状态变更必须与对应代码变更同一 commit**。禁止将 status 更新（如 InSpec→Done）单独成 commit。正确顺序：实施完成 → 标记 Done → 写 recording → `git add` 全部文件（代码 + recording + dtask.json）→ 一次性 commit。
+
+**recording 必须随同本轮代码变更一并 commit**，不得单独成 commit。正确做法：先写 recording → 再 `git add` 代码+recording 一起提交。
 
 ### recording 时间戳铁律
 
