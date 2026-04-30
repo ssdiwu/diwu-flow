@@ -2,6 +2,7 @@
 """PreToolUse(ExitPlanMode): inject Plan->Dtask reminder without changing approval semantics."""
 
 import json
+import os
 import sys
 
 
@@ -37,6 +38,16 @@ def main():
         }
     }
     print(json.dumps(output, ensure_ascii=False))
+
+    # 创建 .plan-active marker 使 hard block 可达
+    cwd = event.get("cwd") or os.getcwd()
+    marker_path = os.path.join(cwd, ".claude", ".plan-active")
+    try:
+        os.makedirs(os.path.dirname(marker_path), exist_ok=True)
+        open(marker_path, "w").close()
+    except OSError:
+        pass  # marker 创建失败不阻塞原有行为
+
     sys.exit(0)
 
 

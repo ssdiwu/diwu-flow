@@ -133,34 +133,24 @@
     },
     {
       "id": 38,
-      "title": "新增 dloop 简化回归测试（3 组）",
-      "description": "覆盖 v3 方案的关键行为变更：T1 session_id 首次绑定集成、T2 缺失 SID 显式 allow stop（含 InProgress 分支）、T3 task_completed loop 追踪单元（4+1 条）。plan-guard 测试由 Task#39 自行覆盖，不在本任务范围内。",
+      "title": "清理 dloop 新增回归测试中的重复定义并恢复真实覆盖",
+      "description": "当前 staged 的 tests/level2/test_dloop.py 把 4 个新测试函数整块重复定义了一次，pytest 只会保留后半段定义，导致表面新增 8 个测试、实际只收集 4 个。需要去重并让 dloop review-closeout 的覆盖面与 diff 一致。",
       "acceptance": [
-        "Given dummy SID loop + 首次真实 SID Stop event When test_stop_decision_first_bind_replaces_dummy_id 执行 Then state 持久化为真实 SID 且后续同 SID 继续 block、异 SID 退出",
-        "Given 活跃 loop + Stop event 无 session_id + InSpec 任务 When test_stop_decision_missing_session_id_exits_loop_mode 执行 Then returncode=1（allow stop），不是 invalid_runtime_state",
-        "Given 活跃 loop + Stop event 无 session_id + InProgress 任务 When 新增测试 执行 Then returncode=1（显式 allow stop，不落入 resolve_session_inprogress_task）",
-        "Given task_completed event + 匹配 session + 合法 event.task.id When loop tracking test 执行 Then completed_task_ids 精确 append 该 id",
-        "Given task_completed event + 不匹配 session 或缺失 event.task When loop tracking test 执行 Then completed_task_ids 不变",
-        "Given recording_reminder.enabled=false + 活跃 loop + 合法 Done 事件 When loop tracking test 执行 Then completed_task_ids 仍被追加",
-        "Given 全部新旧测试 When pytest tests/ -v 执行 Then 全量通过无 regression"
+        "Given tests/level2/test_dloop.py 中新增的 4 个 dloop 回归测试 When pytest 收集 Then 每个测试名只定义一次且不会被后续同名函数覆盖",
+        "Given test_stop_decision_first_bind_replaces_dummy_id、test_stop_decision_missing_session_id_exits_loop_mode、test_stop_decision_missing_session_with_inprogress_allows_stop、test_stop_decision_loop_mode_reason_delegates_drun When pytest tests/level2/test_dloop.py -q 执行 Then 4 条测试都被真实执行",
+        "Given dloop 与 task_completed 的 review-closeout 测试清理完成 When pytest tests/level2/test_dloop.py tests/level2/test_task_completed.py -q 执行 Then 回归通过且覆盖面与代码变更一致"
       ],
       "steps": [
-        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py 追加 test_stop_decision_first_bind_replaces_dummy_id（T1：首次绑定三步验证）",
-        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py 追加 test_stop_decision_missing_session_id_exits_loop_mode（T2a：InSpec + 无 SID → allow stop）",
-        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py 追加 test_stop_decision_missing_session_with_inprogressAllows_stop（T2b：InProgress + 无 SID → 显式 allow stop，不落入 resolve_session_inprogress_task 的 invalid_runtime_state）",
-        "[锁定] 新建或追加 TestTaskCompletedLoopTracking 类到 task_completed 测试文件（5 条）：match session append once / mismatch session no append / missing event_task no append / duplicate done no double append / reminder-off 仍追踪",
-        "[建议] 运行 pytest tests/ -v 全量回归确认零破坏"
+        "[锁定] 阅读 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py，删除重复的 4 个同名测试定义，仅保留一组权威实现",
+        "[锁定] 如有必要，补一条轻量收集校验或局部说明，避免后续再次用复制粘贴覆盖测试名",
+        "[建议] 运行 pytest tests/level2/test_dloop.py tests/level2/test_task_completed.py -q，确认局部回归通过"
       ],
       "files_modified": [
-        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py"
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py"
       ],
-      "category": "infra",
-      "blocked_by": [
-        33,
-        34,
-        35
-      ],
-      "status": "InDraft"
+      "category": "bugfix",
+      "status": "InSpec"
     },
     {
       "id": 39,
@@ -187,6 +177,74 @@
       ],
       "category": "infra",
       "status": "Done"
+    },
+    {
+      "id": 40,
+      "title": "修复 task_completed 提前记录 loop 完成计数的问题",
+      "description": "review 发现 task_completed.py 在确认任务真的完成前就调用 _track_loop_completion()，会把未完成任务提前写入 dtask-state.json.dloop.completed_task_ids，进而让 dloop 提前命中 max_tasks 或生成错误阶段报告。需要把 loop 计数更新收口到真正的 Done/owner-clear 成功路径，并补充负向回归用例。",
+      "acceptance": [
+        "Given 活跃 loop 且 event.task.id 存在但当前任务仍是 InProgress 或 clear_task_owner 失败 When task_completed.py 执行 Then completed_task_ids 不变",
+        "Given 活跃 loop 且 event.task.status=Done 且 owner 清理成功 When task_completed.py 执行 Then completed_task_ids 仅追加一次对应 task_id",
+        "Given recording_reminder.enabled=false 且活跃 loop 收到合法 Done 事件 When task_completed.py 执行 Then completed_task_ids 仍在完成确认后被更新而不会提前记账"
+      ],
+      "steps": [
+        "[锁定] 调整 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py：把 loop 计数更新移到确认 completed_task 为 Done 且 clear_task_owner 成功的路径中",
+        "[锁定] 保留 event.task 作为唯一精确信号源，但增加 status/owner-clear 守卫，禁止仅凭 task_id 存在就追加 completed_task_ids",
+        "[建议] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py 增加 InProgress 误报和 owner-clear 失败场景的回归测试"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py"
+      ],
+      "category": "bugfix",
+      "status": "InSpec"
+    },
+    {
+      "id": 41,
+      "title": "补齐 .plan-active marker 生命周期使 hard block 可达",
+      "description": "决策：方案 B — 保留 .claude/.plan-active marker 机制。当前 task_entry_guard.py 的 hard-block 以 marker 存在为前置条件，但仓库无任何代码创建/清理它，导致 hard block 永远不可达。需在 ExitPlanMode 时创建 marker、dtask 落地（mark-inspec/claim）时清理 marker，形成完整闭环。",
+      "acceptance": [
+        "Given 用户退出 Plan Mode（ExitPlanMode 事件触发）When plan_exit_hint.py 执行 Then 在 cwd 下创建 .claude/.plan-active marker 文件且 exit 0 行为不变",
+        "Given .claude/.plan-active marker 存在 + ~/.claude/plans/ 下有 >=20 行 plan 文件 + dtask 无活跃任务 When task_entry_guard.py 收到 Edit/Write 事件 Then 返回 exit(1) + 输出 hard block 提示",
+        "Given dtask 已有活跃任务（InSpec/InProgress/InReview）When task_entry_guard.py 执行 Then 即使 marker 存在也不触发 hard block（已落地豁免）",
+        "Given 执行 mark-inspec 或 claim 使 dtask 产生首个活跃任务 When 对应命令执行 Then 清理 .claude/.plan-active marker 文件",
+        "Given 上述全流程 When python3 -m py_compile 编译 hooks/scripts/ 下的变更文件 Then 通过",
+        "Given temp HOME 场景 When pytest tests/level2/test_plan_dtask_guards.py -q 执行 Then 覆盖创建→block→清理三类场景"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py：在 main() 的 ExitPlanMode 分支中，输出原有 MESSAGE 后，额外在 cwd 下创建 .claude/.plan-active marker 文件（os.makedirs + open(marker, 'w').close()）",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py：在 cmd_mark_inspec() 成功路径末尾（save_json 之后、return 之前）和 cmd_claim() 成功路径末尾（_save_claim 之后），检查并删除 cwd/.claude/.plan-active marker（存在才删，忽略不存在）",
+        "[锁定] 确认 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py 的 _has_unlanded_plan() 逻辑不变——marker 检查 + plan 文件扫描 + dtask 活跃判断的三段式保持原样",
+        "[建议] 在 tests/level2/test_plan_dtask_guards.py 补充：(1) ExitPlanMode 创建 marker；(2) marker+大 plan+无活跃任务 → hard block；(3) mark-inspec 后 marker 被清理"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
+      ],
+      "category": "bugfix",
+      "status": "InSpec"
+    },
+    {
+      "id": 42,
+      "title": "修复 dtask_transition mark-inspec 的非原子写入",
+      "description": "review 复现表明 cmd_mark_inspec() 先把 dtask.json 写成 InSpec，再校验 dtask-state.json；一旦 runtime state 非法，CLI 会返回 invalid_runtime_state，但 task 状态已经落盘，形成“失败但已生效”的部分提交。需要把 mark-inspec 改成先验证后落盘，保证失败时 dtask.json 保持原状。",
+      "acceptance": [
+        "Given dtask-state.json 非法 When python3 scripts/dtask_transition.py mark-inspec --task-ids ... 执行 Then 命令返回 invalid_runtime_state 且 dtask.json 中对应任务仍保持 InDraft",
+        "Given dtask-state.json 合法且任务为 InDraft When mark-inspec 执行 Then 任务状态正常切到 InSpec 且 runtime state 同步成功",
+        "Given 上述回归场景 When pytest tests/level2_scripts/test_dtask_transition.py -q 执行 Then 同时覆盖失败不落盘与成功迁移两条路径"
+      ],
+      "steps": [
+        "[锁定] 调整 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py 中 cmd_mark_inspec() 的执行顺序：先校验 runtime state，再统一持久化 dtask.json",
+        "[锁定] 如需要，增加最小的临时副本或延后 save_json，确保 invalid_runtime_state 不会留下部分写入",
+        "[建议] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py 增加 runtime-state 非法时 dtask.json 不变的回归测试"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py"
+      ],
+      "category": "bugfix",
+      "status": "InSpec"
     }
   ]
 }

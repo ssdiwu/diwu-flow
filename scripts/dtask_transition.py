@@ -19,6 +19,8 @@ from dtask_state import (
     sync_runtime_state,
 )
 
+_PLAN_GUARD_MARKER = ".claude/.plan-active"
+
 VALID_RELEASE_TARGETS = {
     "inreview": "InReview",
     "done": "Done",
@@ -79,6 +81,16 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _cleanup_plan_marker(cwd: Path) -> None:
+    """清理 plan-guard marker 文件（存在才删）。"""
+    marker = cwd / _PLAN_GUARD_MARKER
+    if marker.exists():
+        try:
+            marker.unlink()
+        except OSError:
+            pass
+
+
 def _save_claim(cwd: Path, task_payload: dict, runtime_state: dict) -> None:
     save_runtime_state(cwd, runtime_state, remove_legacy=True)
     save_json(task_payload, _task_path(cwd))
@@ -108,11 +120,13 @@ def cmd_mark_inspec(cwd: Path, task_ids: list[int]) -> dict:
         task["status"] = "InSpec"
         changed.append(task_id)
 
-    save_json(task_payload, _task_path(cwd))
+    # 先校验 runtime state，通过后才落盘（避免"失败但已生效"）
     sync_result = sync_runtime_state(cwd, task_payload, persist=True, ensure_exists=True)
     if sync_result.is_invalid:
         return _result(False, "invalid_runtime_state", message=sync_result.reason)
 
+    save_json(task_payload, _task_path(cwd))
+    _cleanup_plan_marker(cwd)
     return _result(True, "marked_inspec", task_ids=changed)
 
 
@@ -140,6 +154,7 @@ def cmd_claim(cwd: Path, task_id: int, session_id: str) -> dict:
 
     task["status"] = "InProgress"
     _save_claim(cwd, task_payload, runtime_state)
+    _cleanup_plan_marker(cwd)
     return _result(True, "claimed", task_id=task_id, session_id=session_id)
 
 

@@ -178,3 +178,28 @@ class TestTaskCompletedLoopTracking:
         # reminder 关闭时脚本应早退（exit 0），但 loop 追踪在早退之前已完成
         state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
         assert state["dloop"]["completed_task_ids"] == [1, 5]
+
+    def test_inprogress_task_no_append(self, tmp_path):
+        """event.task 存在但 status=InProgress → 不追加到 completed_task_ids。"""
+        _make_dtask(tmp_path, [
+            {"id": 5, "title": "T5", "status": "InProgress"},  # 注意不是 Done
+        ])
+        _make_runtime_state(tmp_path, dloop={
+            "active": True,
+            "session_id": "session-match",
+            "started_at": "2026-04-30T12:00:00Z",
+            "completed_task_ids": [1],
+            "current_iteration": 1,
+            "max_tasks": 5,
+            "stopped_at": None,
+            "stop_reason": None,
+        })
+
+        result = _run_task_completed(tmp_path, {
+            "task": {"id": 5, "title": "T5", "status": "InProgress"},  # InProgress
+            "sessionId": "session-match",
+        })
+
+        assert result.returncode == 0
+        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        assert state["dloop"]["completed_task_ids"] == [1]  # 不应追加 5

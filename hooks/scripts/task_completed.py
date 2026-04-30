@@ -85,8 +85,10 @@ def main():
     # === Loop 追踪（独立于 reminder gating，必须在 reminder 早退之前）===
     # 只认 event.task 原始精确信号，不使用 fallback heuristic 的结果
     _event_task = event.get("task")
-    if (_event_task and isinstance(_event_task.get("id"), int)
-            and not isinstance(_event_task["id"], bool)):
+    if (_event_task
+            and isinstance(_event_task.get("id"), int)
+            and not isinstance(_event_task["id"], bool)
+            and _event_task.get("status") == "Done"):
         _track_loop_completion(_event_task["id"], session_id)
 
     # === Reminder 提醒（原有逻辑）===
