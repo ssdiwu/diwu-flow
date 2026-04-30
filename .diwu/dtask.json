@@ -685,6 +685,169 @@
       ],
       "category": "bugfix",
       "status": "Done"
+    },
+    {
+      "id": 26,
+      "title": "定义 dtask-state.json 运行态真相源与迁移约束",
+      "description": "为任务 owner 与 dloop runtime state 引入统一真相源 `.diwu/dtask-state.json`。该文件只保存 `task_sessions` 和 `dloop` 元数据，不重复保存任务 status。兼容旧 `.diwu/dloop-state.json` 读取，并定义 stale owner 清理与单 session 单 InProgress 约束，为后续 transition 脚本和 hooks 整合提供稳定 schema。",
+      "acceptance": [
+        "Given 仓库存在 `.diwu/dtask.json` 与可选旧 `.diwu/dloop-state.json` When 读取新的 runtime state helper Then 能得到标准化的 `dtask-state.json` 结构（含 `version`、`task_sessions`、`dloop`），且 `task_sessions` 中不包含 `status` 字段",
+        "Given `dtask.json` 中某任务 status 不为 `InProgress` 但 `dtask-state.json.task_sessions` 仍存在对应 owner When 执行 runtime sync Then 该 owner 记录被识别为 stale 并清理",
+        "Given 同一 session 在 `task_sessions` 中持有多个任务 When 执行 runtime 校验 Then 返回 invalid runtime state，而不是默默选择其中一个继续",
+        "Given 仅存在旧 `.diwu/dloop-state.json` 且新文件缺失 `dloop` 数据 When 执行 runtime sync Then 旧 loop metadata 会迁入 `dtask-state.json.dloop`，且后续读取以新文件为准"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ 下新增 runtime state helper（如 `dtask_state.py`），定义 `dtask-state.json` schema、读写与校验函数",
+        "[锁定] 在 helper 中实现 stale owner 清理、单 session 单 InProgress 校验、旧 `.diwu/dloop-state.json` → `dtask-state.json.dloop` 兼容迁移",
+        "[建议] 为 helper 编写独立单元测试，覆盖空文件/损坏 JSON/stale owner/多 owner/旧 dloop-state 迁移"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_state.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_state.py"
+      ],
+      "category": "bugfix",
+      "status": "InDraft"
+    },
+    {
+      "id": 27,
+      "title": "实现 dtask_transition.py：批量状态迁移与显式接管",
+      "description": "新增统一状态迁移脚本 `scripts/dtask_transition.py`，作为唯一允许修改 `dtask.json.status` 与 `dtask-state.json` 的入口。支持 `InDraft -> InSpec` 批量确认、`InSpec -> InProgress` claim、`InProgress -> InReview/Done/InSpec/Cancelled` release、以及跨 session 的显式 adopt。禁止未进入 `InProgress` 就开始任务，也禁止 `InSpec -> Done` 直跳。",
+      "acceptance": [
+        "Given 一组 `InDraft` 任务 When 执行 `python3 scripts/dtask_transition.py mark-inspec --task-ids 1,2 --cwd <proj>` Then 这些任务的 `dtask.json.status` 变为 `InSpec`，且 `dtask-state.json.task_sessions` 不新增 owner",
+        "Given 一个 `InSpec` 任务且当前 session 未持有其他 `InProgress` When 执行 `claim --task-id N --session-id SID` Then 该任务先变为 `InProgress`，并在 `dtask-state.json.task_sessions[N]` 写入 `{session_id, started_at}`",
+        "Given 一个 `InProgress` 任务且 owner 匹配当前 session When 执行 `release --task-id N --to inreview|done|inspec|cancelled --session-id SID` Then `dtask.json.status` 更新为目标状态，且对应 owner 记录被删除",
+        "Given 一个 `InProgress` 任务 owner 属于其他 session When 执行普通 release Then 返回 owner mismatch；When 执行 `adopt --task-id N --session-id NEW_SID` Then owner 被显式更新后才允许继续 release 或恢复",
+        "Given 同一 session 已持有一个 `InProgress` 任务 When 再对另一个 `InSpec` 执行 claim Then 返回 invalid runtime state，而不是让该 session 同时持有两个 `InProgress`"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ 新增 `dtask_transition.py`，提供 `mark-inspec/claim/release/adopt/sync-runtime` 子命令",
+        "[锁定] 用统一 helper 同时更新 `dtask.json` 与 `dtask-state.json`，保证成功/失败路径一致，不留下 `InProgress` 无 owner 或 owner 对应非 InProgress 的半完成状态",
+        "[建议] 为脚本编写 CLI-first 测试，覆盖批量确认、claim、release、adopt、owner mismatch、单 session 单 InProgress 约束"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        26
+      ],
+      "status": "InDraft"
+    },
+    {
+      "id": 28,
+      "title": "整合 dloop / stop_decision 到 dtask-state，并修复 3 个 review findings",
+      "description": "将现有 `dloop-state.json` 兼容迁移到 `dtask-state.json.dloop`，让 `scripts/dloop.py`、`scripts/dloop_state.py`、`hooks/scripts/stop_decision.py` 统一以新 runtime state 为真相源。同时修复 3 个 review findings：自动快照按全部 `InSpec + InProgress` 计数、`PENDING REVIEW` 识别为 terminal stale、`session_id` / `sessionId` 双键都能正确做 loop session isolation。",
+      "acceptance": [
+        "Given 不传 `--max-tasks` 且 `dtask.json` 中存在被 blocked_by 暂时卡住的 `InSpec` When 执行 `python3 scripts/dloop.py start --cwd <proj>` Then 自动快照按全部 `InSpec + InProgress` 计数，而不是只按当前 executable 数",
+        "Given dloop 因 review_limit 命中进入 `PENDING REVIEW` 终态 When 执行 `scripts/dloop.py status` 或 `hooks/scripts/stop_decision.py` 对应测试 Then 被识别为 terminal stale，并按既有 cleanup 语义处理",
+        "Given Stop 事件只提供 `sessionId` 字段 When 当前项目存在活跃 loop owner Then `stop_decision.py` 仍能正确隔离当前会话与其他会话，不误驱动或清理 чужой loop",
+        "Given 仅存在旧 `.diwu/dloop-state.json` When 执行 `dloop.py start/status` Then loop metadata 被迁入 `dtask-state.json.dloop` 并继续正常工作"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py：读取/写入 `dtask-state.json.dloop`，并修正自动快照口径",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop_state.py：让 stale 判定基于统一 runtime helper，并补齐 `PENDING REVIEW`",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py：统一读取 `session_id/sessionId`，并以 `dtask-state.json.dloop` 做 loop session isolation",
+        "[建议] 更新 `tests/level2/test_dloop.py`、`tests/level2/test_stop_decision.py`、`tests/level2_scripts/test_dloop_crud.py` 覆盖 3 个 finding 与旧 dloop-state 迁移"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop_state.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py"
+      ],
+      "category": "bugfix",
+      "blocked_by": [
+        26,
+        27
+      ],
+      "status": "InDraft"
+    },
+    {
+      "id": 29,
+      "title": "把普通 InProgress 断点恢复也改成 session-scoped，并接入 dtask_transition",
+      "description": "将默认模式下的普通 `InProgress` 断点恢复改成 session-scoped。`stop_decision.py`、`context_monitor.py`、`pre_compact.py`、`task_completed.py`、`session_start.py` 不再假设只要存在 `InProgress` 就能直接恢复，也不再盲取 `ip[0]`；而是统一以 `dtask-state.json.task_sessions` 判断 owner。只有 owner 匹配当前 session 才能自动恢复；否则提示显式 adopt。",
+      "acceptance": [
+        "Given 存在一个 `InProgress` 任务且 owner 匹配当前 session When Stop hook 触发 Then 仍然 `block` 并继续断点恢复",
+        "Given 存在一个 `InProgress` 任务但 owner 属于其他 session When Stop hook 触发 Then 不自动续做，返回明确提示要求显式 adopt 或人工介入",
+        "Given 存在 `InProgress` 任务但 `dtask-state.json.task_sessions` 中无 owner 记录 When Stop hook 触发 Then 返回 invalid runtime state，而不是默默恢复",
+        "Given `context_monitor` 或 `pre_compact` 需要为当前任务写 checkpoint When 当前 session 没有 owner 匹配的 `InProgress` Then 不会误取 `ip[0]` 或误写 чужой 任务的 checkpoint",
+        "Given 一个 `InProgress` 任务转为 `Done` When `task_completed.py` 运行 Then 对应 owner 记录被清理"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py：默认模式下恢复 `InProgress` 前先校验 owner",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/context_monitor.py 与 `pre_compact.py`：不再盲取第一个 `InProgress`，改为选择 owner 匹配当前 session 的任务",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py 与 `session_start.py`：同步清理 owner / 初始化并校验 `dtask-state.json`",
+        "[建议] 为这些 hooks 补测试，覆盖 owner 匹配、不匹配、缺失、checkpoint 误选防护"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/context_monitor.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/pre_compact.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/session_start.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_context_monitor_dict.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py"
+      ],
+      "category": "bugfix",
+      "blocked_by": [
+        26,
+        27
+      ],
+      "status": "InDraft"
+    },
+    {
+      "id": 30,
+      "title": "同步 commands / skills / rules 到新的状态迁移脚本与 runtime 契约",
+      "description": "将新的 `dtask_transition.py`、`dtask-state.json`、session-scoped `InProgress` 恢复规则，完整同步到用户可见与下发链路：`commands/*`、`skills/*`、`rules/*`、`.claude/rules/*`、`assets/dinit/assets/rules/*`、`README.md`。目标是让脚本的用法、状态机的真实流转、以及 runtime owner 契约在所有入口都一致，不再出现“脚本有了但没人知道怎么用”的割裂。",
+      "acceptance": [
+        "Given 用户阅读 `commands/drun.md` 与 `skills/drun/SKILL.md` When 查阅如何开始任务 Then 明确看到 `/drun` 会先通过状态迁移脚本执行 `InSpec -> InProgress`，未进入 `InProgress` 不得开始实施",
+        "Given 用户阅读 `commands/dloop.md` 与 `skills/dloop/SKILL.md` When 查阅循环状态 Then 明确看到 loop owner 已迁入 `dtask-state.json`，且 session 不匹配时不会自动续跑",
+        "Given 用户阅读 `rules/task.md`、`rules/session.md`、`rules/file-layout.md` When 查阅状态机与运行态结构 Then 能明确区分 `dtask.json`（任务状态真相源）与 `dtask-state.json`（runtime owner/loop 真相源）",
+        "Given `/dinit` 下发 rules 到其他项目 When 检查 `assets/dinit/assets/rules/*` 与 `.claude/rules/*` Then 内容与 `rules/*` 的新契约一致，不存在副本漂移",
+        "Given 完成后 When 运行 pytest tests -q Then 全量回归通过，且 docs/rules smoke 检查通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md、commands/dloop.md、commands/dtask.md：补充 `dtask_transition.py` 的调用语义与 `dtask-state.json` 的职责",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md、skills/dloop/SKILL.md、skills/dtask/SKILL.md：同步状态机真实落地方式",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md、rules/session.md、rules/workflow.md、rules/judgments.md、rules/file-layout.md：补充新的 runtime 契约与判断锚点",
+        "[锁定] 同步 `.claude/rules/*` 与 `assets/dinit/assets/rules/*` 对应文件，确保 repo-local 副本和 `/dinit` 下发模板一致",
+        "[建议] 更新 README.md 里的运行态文件说明和状态迁移示意，必要时补一段 `dtask_transition.py` 用法示例"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        26,
+        27,
+        28,
+        29
+      ],
+      "status": "InDraft"
     }
   ]
 }

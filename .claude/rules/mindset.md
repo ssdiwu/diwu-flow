@@ -70,3 +70,30 @@
 | 回滚成本高 | 方向错了代价大 |
 
 > 判断锚点（正例/反例/边界例）见 `rules/judgments.md`。
+
+---
+
+## Agent 设计约束
+
+- **能力驱动**：先编排任务节点→识别能力需求→有对应 agent 就派发→无则标记能力缺口
+- **不强塞职责**：agent 是能力容器不是岗位标签；不要把完整 workflow SOP 塞进 agent prompt
+- **负面清单优先**：每个 agent 必须明确"不做什么"；没有负面清单的 agent 必然越界
+- **新 agent 门槛**：某类能力缺口需在 ≥3 个不同任务中重复出现、且边界清晰可独立，才值得设计
+- **故障隔离**：任何非核心 agent 失败时，必须能退化回 explorer→implementer→verifier 闭环
+
+## 命名规范
+
+- **Command 名称 ≤5 字符**：所有 `/command` 不超过 5 字符（如 `/dstat`、`/dinit`、`/dcorr`、`/dtask`、`/dprd`、`/dadr`、`/ddoc`、`/ddemo`）
+- **Skill 名称 ≤5 字符**：同上（如 `drun`、`dvfy`、`djug` 等）
+
+---
+
+## Plan→Dtask 门控
+
+> 守卫实现：`plan_exit_hint.py`（ExitPlanMode 强提示）+ `task_entry_guard.py`（Edit|Write 实施入口守卫）
+
+- **Plan 不是执行契约**：Plan 输出是架构设计方案，不是可直接实施的任务定义
+- **大计划先落任务**：≥3 步的实施工作必须先落地为 `dtask.json` 条目（含 GWT acceptance），再进入 `/drun` 循环
+- **小改动可直做**：<3 步且结果可预期的小改动可直接执行
+- **双守卫分层**：退出 plan 时有强提示，进入 Edit/Write 写阶段有实施入口守卫
+- **覆盖范围明确**：当前守卫仅覆盖 Edit|Write 主写入路径；Bash 路径暂不拦截，后续可补
