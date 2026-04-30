@@ -11,6 +11,10 @@
 
 ## Session 结束补充规范
 
+### recording 提交规则（铁律）
+
+recording 文件**必须随同本轮代码变更一并 commit**，不得单独成 commit。正确做法：先写 recording → 再 `git add` 代码+recording 一起提交。
+
 ### recording 时间戳铁律
 
 写入 session 文件前**必须先运行** `date '+%Y-%m-%d %H:%M:%S'` 获取真实时间戳，**禁止手写日期**。

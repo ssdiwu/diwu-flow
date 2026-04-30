@@ -32,7 +32,7 @@
 
 **Push 前必跑**：`pytest tests/` 全量回归通过后才可 commit & push。
 
-**Rules 同步**：修改 `rules/` 后必须同步到 `assets/dinit/assets/rules/` 模板。
+**Rules 同步**：修改 `rules/` 后必须同步到 `.claude/rules/` 和 `assets/dinit/assets/rules/` 两处模板。
 
 **时间戳规则**：写入 Session 标题前必须先运行 `date '+%Y-%m-%d %H:%M:%S'`，禁止手写日期。
 
