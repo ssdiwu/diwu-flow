@@ -1,0 +1,10 @@
+{
+  "last_archive_time": "2026-05-01T00:50:00Z",
+  "task_archived_count": 32,
+  "recording_archived_count": 0,
+  "recording_archive_reason": "20 files < threshold 50; oldest file 4 days < retention 30 days",
+  "archive_files": ["task_archive_2026-04.json"],
+  "pitfalls_aggregated": true,
+  "pitfalls_source_count": 20,
+  "pitfalls_new_count": 30
+}
