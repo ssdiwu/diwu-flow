@@ -49,19 +49,7 @@ def main():
     if candidate and candidate.endswith(".md") and _PLAN_DIR in os.path.normpath(os.path.abspath(candidate)):
         plan_path = candidate
 
-    if not plan_path and os.path.isdir(_PLAN_DIR):
-        # 回退：取最近修改的 .md
-        try:
-            plans = [
-                os.path.join(_PLAN_DIR, f) for f in os.listdir(_PLAN_DIR)
-                if f.endswith(".md")
-            ]
-            if plans:
-                plans.sort(key=os.path.getmtime, reverse=True)
-                plan_path = plans[0]
-        except OSError:
-            pass
-
+    # 无 plan_path 信息 → 安全侧，不创建 marker（避免误用 stale plan）
     should_create_marker = False
     if plan_path:
         try:

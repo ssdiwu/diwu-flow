@@ -129,39 +129,33 @@ def _has_unlanded_plan(cwd):
             pass
         return False, 0
 
-    if not os.path.isdir(_PLAN_DIR):
-        return False, 0
-
-    max_lines = 0
-    for fname in os.listdir(_PLAN_DIR):
-        if not fname.endswith(".md"):
-            continue
-        fpath = os.path.join(_PLAN_DIR, fname)
-        try:
-            with open(fpath, encoding="utf-8") as f:
-                lines = sum(1 for _ in f)  # non-empty lines
-            if lines > max_lines:
-                max_lines = lines
-        except (OSError, UnicodeDecodeError):
-            continue
-
-    if max_lines < _PLAN_LINE_THRESHOLD:
-        return False, 0
-
-    # 精确匹配：marker 记录的 plan 必须确实存在且满足阈值
-    import os.path as _op
-    if not _op.isfile(recorded_plan):
+    # 只检查 marker 记录的 plan 文件是否满足阈值
+    if not os.path.isfile(recorded_plan):
+        # marker 记录的 plan 不存在 -> 过期
         try:
             os.remove(marker_path)
         except OSError:
             pass
         return False, 0
 
+    try:
+        with open(recorded_plan, encoding="utf-8") as f:
+            plan_lines = sum(1 for _ in f)
+    except (OSError, UnicodeDecodeError):
+        try:
+            os.remove(marker_path)
+        except OSError:
+            pass
+        return False, 0
+
+    if plan_lines < _PLAN_LINE_THRESHOLD:
+        return False, 0
+
     task_json_path = os.path.join(cwd, WORKFLOW_DTASK)
     if _has_active_task(task_json_path):
         return False, 0  # Active tasks exist -> plan considered landed
 
-    return True, max_lines
+    return True, plan_lines
 
 
 def main():

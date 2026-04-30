@@ -106,10 +106,10 @@ uninstall() {
         [ -d "$dir" ] || return 0
         find "$dir" -type l | while read -r link; do
             target=$(readlink "$link" 2>/dev/null) || continue
-            case "$target" in
-                *"$FLOW_ROOT"*) rm -f "$link" ;;
-                *) ;;  # 不是我们的 symlink，跳过
-            esac
+            # 前缀匹配：target 必须以 FLOW_ROOT 开头
+            if [[ "$target" == "$FLOW_ROOT"* ]]; then
+                rm -f "$link"
+            fi
         done
         # 清理空目录
         find "$dir" -type d -empty -delete 2>/dev/null || true
