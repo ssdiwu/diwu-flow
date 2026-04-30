@@ -100,14 +100,23 @@ PLUGIN_EOF
 uninstall() {
     echo "Uninstalling diwu-flow symlinks..."
 
-    # 安全删除辅助函数：只删除指向 FLOW_ROOT 的 symlink
+    # 安全删除辅助函数：只删除指向 FLOW_ROOT 规范化路径下的 symlink
     _safe_rm_symlinks() {
         local dir="$1"
         [ -d "$dir" ] || return 0
+        # 预计算 FLOW_ROOT 的真实路径（解析 symlink 和 ..）
+        local normalized_root
+        normalized_root=$(realpath "$FLOW_ROOT" 2>/dev/null) || echo "$FLOW_ROOT"
+
         find "$dir" -type l | while read -r link; do
             target=$(readlink "$link" 2>/dev/null) || continue
-            # 前缀匹配：target 必须以 FLOW_ROOT 开头
-            if [[ "$target" == "$FLOW_ROOT"* ]]; then
+            # 规范化 target 路径后做精确前缀匹配（排除 sibling/backup 等非本 repo 路径）
+            local norm_target="$target"
+            if [[ "$target" = /* ]]; then
+                norm_target=$(realpath "$target" 2>/dev/null) || echo "$target"
+            fi
+            # realpath 规范化后：必须在 FLOW_ROOT 树内才算 diwu-flow 的 symlink
+            if [[ "$(realpath -q -- "$norm_target" 2>/dev/null)" == "$normalized_root"* ]]; then
                 rm -f "$link"
             fi
         done
