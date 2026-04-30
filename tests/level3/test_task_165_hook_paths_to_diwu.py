@@ -21,7 +21,7 @@ EXPECTED_DIWU_FILES = {
     "drift_detect_pre.py": [".diwu/dtask.json", ".diwu/dsettings.json"],
     "context_monitor.py": [".diwu/dsettings.json", ".diwu/.context_monitor_cache.json"],
     "plan_exit_hint.py": [],
-    "task_entry_guard.py": [".diwu/dtask.json", ".diwu/recording", ".diwu/decisions.md"],
+    "task_entry_guard.py": [".diwu/dtask.json", ".diwu/dtask-state.json", ".diwu/recording", ".diwu/decisions.md"],
     "stop_decision.py": [".diwu/dtask.json", ".diwu/dsettings.json"],
     "pre_compact.py": [".diwu/dtask.json", ".diwu/recording"],
     "session_start.py": [],

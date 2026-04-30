@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 from conftest import run_script  # noqa: E402
 
+RUNTIME_STATE_NAME = "dtask-state.json"
+
 
 class TestDendNoState:
     def test_no_state_file(self, tmp_project_dir):
@@ -25,24 +27,28 @@ class TestDendCancel:
     def _write_state(self, root: Path, **overrides):
         diwu = root / ".diwu"
         diwu.mkdir(exist_ok=True)
-        state = diwu / "dloop-state.json"
+        state = diwu / RUNTIME_STATE_NAME
         default = {
-            "active": True,
-            "session_id": "test-session",
-            "started_at": "2026-04-30T00:00:00Z",
-            "completed_task_ids": [1, 2],
-            "current_iteration": 3,
-            "max_tasks": 10,
-            "stopped_at": None,
-            "stop_reason": None,
+            "version": 1,
+            "task_sessions": {},
+            "dloop": {
+                "active": True,
+                "session_id": "test-session",
+                "started_at": "2026-04-30T00:00:00Z",
+                "completed_task_ids": [1, 2],
+                "current_iteration": 3,
+                "max_tasks": 10,
+                "stopped_at": None,
+                "stop_reason": None,
+            },
         }
-        default.update(overrides)
+        default["dloop"].update(overrides)
         state.write_text(json.dumps(default, ensure_ascii=False, indent=2))
 
     def test_cancel_with_tasks(self, tmp_project_dir):
         self._write_state(tmp_project_dir, completed_task_ids=[1, 2], current_iteration=3)
 
-        state_file = tmp_project_dir / ".diwu" / "dloop-state.json"
+        state_file = tmp_project_dir / ".diwu" / RUNTIME_STATE_NAME
         assert state_file.exists()
 
         rc, out, err = run_script("dend.py", "--cwd", str(tmp_project_dir))
@@ -53,8 +59,8 @@ class TestDendCancel:
         assert data["completed_count"] == 2
         assert data["iteration"] == 3
 
-        # 状态文件应已删除
-        assert not state_file.exists()
+        runtime_state = json.loads(state_file.read_text())
+        assert runtime_state["dloop"] is None
 
     def test_cancel_many_tasks(self, tmp_project_dir):
         self._write_state(tmp_project_dir, completed_task_ids=list(range(1, 11)), current_iteration=8)

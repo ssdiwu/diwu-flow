@@ -116,7 +116,7 @@
 |------|------|------|
 | 正例 | continuous_mode=true; Task#10 Done; 存在 Task#11 InSpec 且无阻塞 | ✅ 自动续跑，Stop hook 输出 block 继续 |
 | 反例 | continuous_mode=false; Task#10 Done（小幅度）；存在 Task#11 InSpec | ❌ 不续跑，输出完成摘要等待介入 |
-| 边界 A | continuous_mode=false; 当前任务为 InProgress（未完成） | ⚠️ 仍续跑，断点恢复优先级高于设置值 |
+| 边界 A | continuous_mode=false; 当前任务为 InProgress（未完成）且 owner 匹配当前 session | ⚠️ 仍续跑，断点恢复优先级高于设置值 |
 | 边界 B | continuous_mode=false; 存在未提交变更 | ⚠️ 仍续跑，防工作丢失优先于设置值 |
 | 边界 C | continuous_mode=true; Task#10 Done 但为大幅度修改（API 变更） | ❌ 不续跑，输出 REVIEW 等待确认 |
 | 边界 D | continuous_mode=true; 超前已达上限（PENDING REVIEW） | ❌ 不续跑，输出 PENDING REVIEW 等待验收 |
@@ -143,7 +143,7 @@
 
 ## 五、Agent Dispatch 判断
 
-> 规则见 skills/dtask/SKILL.md §Agent 能力匹配方法论
+> 规则见 skills/dtask/SKILL.md §子代理策略（派发规则）及 rules/mindset.md §Agent 设计约束
 
 ### 节点粒度判断：单节点 vs 需分解
 

@@ -2,6 +2,11 @@
 
 > 本文件仅保留 `skills/drun/SKILL.md` 未覆盖的独特内容。主体协议（启动、模式、执行循环）见 drun。
 
+## InProgress 恢复补充
+
+- 断点恢复只允许发生在 `.diwu/dtask-state.json.task_sessions` 中 owner 匹配当前 session 的 `InProgress` 任务上
+- `dtask-state.json` 缺失、损坏或 owner 缺失时，Hook 必须安全降级：不得误恢复 чужой 任务，也不得误写 checkpoint
+
 ---
 
 ## Session 结束补充规范

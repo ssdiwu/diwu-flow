@@ -123,6 +123,49 @@ class TestCheckpointFunction(unittest.TestCase):
                        if f.startswith('checkpoint-')]
         self.assertEqual(len(checkpoints), 0)
 
+    def test_checkpoint_uses_session_owned_inprogress_task(self):
+        with open('.diwu/dtask.json', 'w') as f:
+            json.dump({'tasks': [
+                {'id': 7, 'title': 'Owned Task', 'status': 'InProgress'},
+                {'id': 9, 'title': 'Foreign Task', 'status': 'InProgress'},
+            ]}, f)
+        with open('.diwu/dtask-state.json', 'w') as f:
+            json.dump({
+                'version': 1,
+                'task_sessions': {
+                    '7': {'session_id': 'sid-1', 'started_at': '2026-04-30T12:00:00Z'},
+                    '9': {'session_id': 'sid-2', 'started_at': '2026-04-30T12:05:00Z'},
+                },
+                'dloop': None,
+            }, f)
+        cm.checkpoint(session_id='sid-1', cwd='.')
+        checkpoints = [f for f in os.listdir('.diwu/recording') if f.startswith('checkpoint-')]
+        self.assertEqual(len(checkpoints), 1)
+        with open(os.path.join('.diwu/recording', checkpoints[0])) as f:
+            content = f.read()
+        self.assertIn('Task#7', content)
+        self.assertNotIn('Task#9', content)
+
+    def test_checkpoint_skips_when_session_has_no_owned_task(self):
+        with open('.diwu/dtask.json', 'w') as f:
+            json.dump({'tasks': [
+                {'id': 7, 'title': 'Owned Task', 'status': 'InProgress'},
+                {'id': 9, 'title': 'Foreign Task', 'status': 'InProgress'},
+            ]}, f)
+        with open('.diwu/dtask-state.json', 'w') as f:
+            json.dump({
+                'version': 1,
+                'task_sessions': {
+                    '7': {'session_id': 'sid-1', 'started_at': '2026-04-30T12:00:00Z'},
+                    '9': {'session_id': 'sid-2', 'started_at': '2026-04-30T12:05:00Z'},
+                },
+                'dloop': None,
+            }, f)
+        result = cm.checkpoint(session_id='sid-3', cwd='.')
+        self.assertIsNone(result)
+        checkpoints = [f for f in os.listdir('.diwu/recording') if f.startswith('checkpoint-')]
+        self.assertEqual(len(checkpoints), 0)
+
 
 class TestReadonlyToolSets(unittest.TestCase):
     """Verify RD_TOOLS and WR_TOOLS sets are non-empty and disjoint."""

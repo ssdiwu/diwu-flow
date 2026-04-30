@@ -46,6 +46,7 @@ SubagentStart Hook 必须向子代理注入以下四项：
 
 ```
 ## 当前任务: Task#N [title]
+Owner Session: [session_id from .diwu/dtask-state.json.task_sessions]
 Acceptance:
 - [ ] GWT-1: Given ... When ... Then ...
 - [ ] GWT-2: ...

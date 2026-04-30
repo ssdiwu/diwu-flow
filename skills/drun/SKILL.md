@@ -68,12 +68,13 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 - 更新 task.json 只保留活跃任务
 
 ### 4. 任务选择策略
-- **优先恢复** InProgress 任务
+- **优先恢复** 当前 session 在 `.diwu/dtask-state.json.task_sessions` 中 owner 匹配的 InProgress 任务
 - 否则选第一个 InSpec 任务，检查 blocked_by：
   - 为空/不存在 / 全部 Done → 可开始
   - 存在 InReview 且超前未达上限 → 可超前（标记 InReview + 立即 commit）
   - 达到超前上限 → 输出 PENDING REVIEW
 - **禁止**选择 InDraft 任务
+- 进入实施前必须先通过 `python3 scripts/dtask_transition.py claim --task-id N --session-id SID --cwd <proj>` 显式完成 `InSpec -> InProgress`
 
 ### 5. 环境初始化（可选）
 - 运行 init.sh（如存在）
@@ -118,9 +119,10 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 > 状态文件映射（复用现有机制，不新建文件）：
 > - 目标+边界 → dtask.json `description` + `acceptance[]`
 > - 拆解+状态 → dtask.json `tasks[]` + `status`
+> - 运行态 owner / loop → `.diwu/dtask-state.json`
 > - 每轮进度 → recording/session Checkpoint（格式见 `rules/templates.md`）
 > - 验收标准 → dtask.json `acceptance[]`
-> - 验证脚本 → `.claude/checks/smoke.sh`
+> - 验证脚本 → `.diwu/checks/smoke.sh`
 
 **调用顺序**：dtask(实施) → dvfy(验证) → djug(判定) → dcorr(纠偏)
 
@@ -133,4 +135,3 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 **stop hook 注入行为**：当 stop hook 注入 InSpec 任务信息到上下文时，Agent 必须**暂停并等待用户明确指示**（将任务改为 InProgress 或给出新指令），**禁止假设沉默=授权而自动执行步骤**。
 
 > 连续循环功能已拆分至 `/dloop`。/drun 是单任务执行器——做一件事，做完就停。
-

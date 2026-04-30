@@ -102,3 +102,16 @@ def test_task_entry_guard_allows_workflow_file_write(tmp_path):
 
     assert result.returncode == 0
     assert result.stderr == ""
+
+
+def test_task_entry_guard_allows_runtime_state_write(tmp_path):
+    payload = {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Write",
+        "cwd": str(tmp_path),
+        "tool_input": {"file_path": str(tmp_path / ".diwu" / "dtask-state.json")},
+    }
+    result = _run_script(TASK_GUARD_SCRIPT, payload, tmp_path)
+
+    assert result.returncode == 0
+    assert result.stderr == ""

@@ -33,9 +33,9 @@ argument-hint: "[--max-tasks N]"
 ## 生命周期
 
 ```
-1. 启动：/dloop 创建 .diwu/dloop-state.json
+1. 启动：/dloop 更新 .diwu/dtask-state.json.dloop
 2. 执行：每轮循环
-3. 判定：Stop hook 读取 dloop-state.json 决定继续/停止
+3. 判定：Stop hook 读取 dtask-state.json.dloop 决定继续/停止
 4. 结束：任一停止条件触发 → 最终 recording → 清理状态文件
 ```
 
@@ -48,7 +48,7 @@ argument-hint: "[--max-tasks N]"
        ↓
   drec(写 recording) ← 每轮必做，记录本轮任务结果
        ↓
-  更新 dloop-state.json (iteration++, completed_task_ids++)
+  更新 dtask-state.json.dloop (iteration++, completed_task_ids++)
        ↓
   Stop hook 判定: 继续下一轮 or 停止
 ```
@@ -64,7 +64,7 @@ argument-hint: "[--max-tasks N]"
 | 3 | PENDING REVIEW | 超前实施达 review_limit 上限 |
 | 4 | 用户取消 | 执行 `/dend` |
 
-## 循环状态文件（`.diwu/dloop-state.json`）
+## 循环状态文件（`.diwu/dtask-state.json.dloop`）
 
 ```json
 {
@@ -94,7 +94,7 @@ argument-hint: "[--max-tasks N]"
 
 ## Session 隔离
 
-- 状态文件含 `session_id`，确保只有启动循环的 session 能驱动它
+- `dtask-state.json.dloop` 含 `session_id`，确保只有启动循环的 session 能驱动它
 - 其他 session 的 Stop hook 检测到 session_id 不匹配时直接 allow stop
 - 防止一个项目的循环干扰同项目其他 session
 
@@ -102,11 +102,11 @@ argument-hint: "[--max-tasks N]"
 
 `/dloop` 改变了 `stop_decision.py` 的行为模式：
 
-**默认模式**（无 dloop-state.json）：
-- InProgress 任务 → block（断点恢复，防丢失）
+**默认模式**（无活跃 `dtask-state.json.dloop`）：
+- 只对 owner 匹配当前 session 的 InProgress 任务执行断点恢复
 - 其他情况 → allow stop（不驱动续跑）
 
-**循环模式**（dloop-state.json 存在且 active）：
+**循环模式**（`dtask-state.json.dloop` 存在且 active）：
 - 读取状态文件，检查停止条件
 - 未命中停止条件 → block + 注入下一任务信息（含 🔄 iteration N/M）
 - 命中停止条件 → **输出阶段报告** → 清理状态文件 → allow stop
@@ -119,7 +119,7 @@ argument-hint: "[--max-tasks N]"
    - 停止原因、启动/结束时间、总迭代次数
    - 已完成任务列表（✅ Task#N 标题）
    - 剩余任务列表（📋 InSpec / 🔄 InProgress / 👀 InReview）
-2. **删除 `.diwu/dloop-state.json`**
+2. **清空 `.diwu/dtask-state.json.dloop`**
 3. 允许 session 正常结束
 
 报告格式示例：
@@ -157,6 +157,7 @@ argument-hint: "[--max-tasks N]"
 - **start 命中**：清理旧 state → 继续正常启动（message 含清理提示）
 - **status 命中**：清理旧 state → 返回 `stale_cleaned`
 - **invalid_state**（JSON 损坏/字段矛盾）：返回 `invalid_state_file`，不自动删除
+- **legacy 兼容**：若只存在旧 `.diwu/dloop-state.json`，`start/status/stop_decision` 会先迁移到 `dtask-state.json.dloop`
 - **/dend** 仍是活跃循环的手动取消入口，不负责 stale 检测
 - **/drun** 不承担 dloop-state 生命周期管理职责
 

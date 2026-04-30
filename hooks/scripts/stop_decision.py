@@ -1,10 +1,7 @@
-"""Stop hook: dual-mode decision engine — default single-task / dloop loop mode.
+"""Stop hook: default single-task mode + dloop mode."""
 
-Mode selection:
-- Default (no .diwu/dloop-state.json): InProgress -> block (breakpoint recovery); else allow stop.
-- Loop (.diwu/dloop-state.json exists + active): read state file, iterate, check stop conditions.
-- On loop completion: auto-generate phase report + cleanup state file.
-"""
+from __future__ import annotations
+
 import json
 import os
 import platform
@@ -12,7 +9,6 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-DLOOP_STATE_PATH = ".diwu/dloop-state.json"
 HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(os.path.dirname(HOOKS_DIR))
 SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
@@ -20,57 +16,55 @@ if SHARED_SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SHARED_SCRIPTS_DIR)
 
 from dloop_state import get_executable_tasks, get_terminal_stop_reason  # noqa: E402
+from dtask_state import (  # noqa: E402
+    clear_loop_state,
+    loop_state as runtime_loop_state,
+    resolve_session_inprogress_task,
+    save_runtime_state,
+    sync_runtime_state,
+)
 
 
 def notify(msg):
-    """Send OS notification (macOS/Linux). Shell-safe via subprocess.
-
-    可通过环境变量 DIWU_SILENT=1 禁用通知（测试环境）。
-    """
+    """Send OS notification (macOS/Linux)."""
     if os.environ.get("DIWU_SILENT") == "1":
         return
     try:
-        safe_msg = msg.replace("'", "'\\''").replace('"', '\\"').replace('$', '\\$').replace('`', '\\`')
-        if platform.system() == 'Darwin':
+        safe_msg = msg.replace("'", "'\\''").replace('"', '\\"').replace("$", "\\$").replace("`", "\\`")
+        if platform.system() == "Darwin":
             subprocess.run(
-                ['osascript', '-e', f'display notification "{safe_msg}" with title "diwu-flow" sound name "Glass"'],
+                ["osascript", "-e", f'display notification "{safe_msg}" with title "diwu-flow" sound name "Glass"'],
                 capture_output=True,
             )
         else:
-            subprocess.run(
-                ['notify-send', 'diwu-flow', safe_msg],
-                capture_output=True,
-            )
+            subprocess.run(["notify-send", "diwu-flow", safe_msg], capture_output=True)
     except (OSError, FileNotFoundError):
-        pass  # Notification not available (e.g., test environment)
+        pass
     try:
-        if os.path.exists('/dev/tty'):
-            open('/dev/tty', 'w').write('\a')
+        if os.path.exists("/dev/tty"):
+            open("/dev/tty", "w").write("\a")
     except OSError:
-        pass  # No TTY available
+        pass
 
 
 def hook_session_id(event: dict) -> str:
-    """Accept both session_id and sessionId event shapes."""
     return event.get("session_id") or event.get("sessionId") or ""
 
 
-def format_task(prefix, t):
-    """Format a task dict into a readable prompt string."""
+def format_task(prefix, task):
     return (
-        prefix + '\n\n'
-        + f'Task#{t["id"]}: {t.get("title", t.get("description", ""))}\n'
-        + f'任务描述：{t.get("description", "")}\n\n'
-        + '验收条件：\n'
-        + '\n'.join(f'  - {a}' for a in t.get("acceptance", [])) + '\n\n'
-        + '实施步骤：\n'
-        + '\n'.join(f'  {i+1}. {s}' for i, s in enumerate(t.get("steps", []))) + '\n\n'
-        + '按 workflow.md 流程执行。'
+        prefix + "\n\n"
+        + f'Task#{task["id"]}: {task.get("title", task.get("description", ""))}\n'
+        + f'任务描述：{task.get("description", "")}\n\n'
+        + "验收条件：\n"
+        + "\n".join(f"  - {item}" for item in task.get("acceptance", [])) + "\n\n"
+        + "实施步骤：\n"
+        + "\n".join(f"  {i + 1}. {step}" for i, step in enumerate(task.get("steps", []))) + "\n\n"
+        + "按 workflow.md 流程执行。"
     )
 
 
 def _load_json(path):
-    """Load JSON file, returning empty dict on missing/invalid."""
     if not os.path.exists(path):
         return {}
     try:
@@ -80,55 +74,24 @@ def _load_json(path):
         return {}
 
 
-def _load_loop_state(cwd):
-    """Load dloop-state.json if it exists. Returns dict or None."""
-    path = os.path.join(cwd, DLOOP_STATE_PATH) if cwd else DLOOP_STATE_PATH
-    if not os.path.exists(path):
-        return None
+def _save_task_data(path, data):
     try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        if not isinstance(data, dict) or not data.get("active"):
-            return None
-        return data
-    except (json.JSONDecodeError, OSError, ValueError):
-        return None
-
-
-def _save_loop_state(cwd, state):
-    """Atomically save dloop-state.json."""
-    path = os.path.join(cwd, DLOOP_STATE_PATH) if cwd else DLOOP_STATE_PATH
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2, ensure_ascii=False)
-    os.replace(tmp, path)
-
-
-def _cleanup_loop_state(cwd):
-    """Remove dloop-state.json after loop ends."""
-    path = os.path.join(cwd, DLOOP_STATE_PATH) if cwd else DLOOP_STATE_PATH
-    if os.path.exists(path):
-        try:
-            os.remove(path)
-        except OSError:
-            pass
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+    except OSError:
+        pass
 
 
 def _generate_phase_report(loop_state, stop_reason, tasks):
-    """Generate a phase report from loop state data.
-
-    Returns a formatted multi-line string suitable for stdout/stderr output.
-    This report is auto-emitted when dloop completes (any stop condition).
-    """
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     completed_ids = loop_state.get("completed_task_ids", [])
     iteration = loop_state.get("current_iteration", 0)
     max_tasks = loop_state.get("max_tasks", 0)
     started_at = loop_state.get("started_at", "unknown")
 
-    # Build task summary from dtask.json
-    done_tasks = [t for t in tasks if t['status'] == 'Done' and t['id'] in set(completed_ids)]
-    remaining = [t for t in tasks if t['status'] not in ('Done', 'Cancelled')]
+    done_tasks = [task for task in tasks if task["status"] == "Done" and task["id"] in set(completed_ids)]
+    remaining = [task for task in tasks if task["status"] not in ("Done", "Cancelled")]
 
     report = []
     report.append("=" * 50)
@@ -143,136 +106,119 @@ def _generate_phase_report(loop_state, stop_reason, tasks):
     report.append("")
     report.append("--- 已完成任务 ---")
     if done_tasks:
-        for t in done_tasks:
-            report.append(f"  ✅ Task#{t['id']} {t['title']}")
+        for task in done_tasks:
+            report.append(f"  ✅ Task#{task['id']} {task['title']}")
     else:
         report.append("  （无）")
     report.append("")
     report.append("--- 剩余任务 ---")
     if remaining:
-        for t in remaining:
-            status_icon = {"InSpec": "📋", "InProgress": "🔄", "InReview": "👀"}.get(t['status'], "❓")
-            report.append(f"  {status_icon} Task#{t['id']} {t['title']} [{t['status']}]")
+        for task in remaining:
+            icon = {"InSpec": "📋", "InProgress": "🔄", "InReview": "👀"}.get(task["status"], "❓")
+            report.append(f"  {icon} Task#{task['id']} {task['title']} [{task['status']}]")
     else:
         report.append("  （全部完成）")
     report.append("")
     report.append("=" * 50)
-
     return "\n".join(report)
 
 
-def decide_default_mode(tasks, settings, data, task_json_path, additional_prompts):
-    """Default mode: no active dloop. Only block for InProgress breakpoint recovery."""
-    done_ids = {t['id'] for t in tasks if t['status'] == 'Done'}
-    is_unblocked = lambda t: all(bid in done_ids for bid in t.get('blocked_by', []))
-
-    ip = [t for t in tasks if t['status'] == 'InProgress']
-
-    extra = ''
+def _prompt_suffix(additional_prompts):
+    extra = ""
     for level, hint in additional_prompts:
-        if level == 'block':
-            extra += f'\n\n⚠ {hint}'
-        elif level in ('warning', 'info'):
-            extra += f'\n\nℹ {hint}'
+        if level == "block":
+            extra += f"\n\n⚠ {hint}"
+        elif level in ("warning", "info"):
+            extra += f"\n\nℹ {hint}"
+    return extra
 
-    if ip:
-        t = ip[0]
-        base = format_task('继续完成当前任务（断点恢复）：', t) + extra
-        return True, {'decision': 'block', 'reason': base}
 
-    nx = [t for t in tasks if t['status'] == 'InSpec' and is_unblocked(t)]
-    if nx:
+def decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state, session_id):
+    extra = _prompt_suffix(additional_prompts)
+    resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, session_id or "")
+
+    if resolution.is_match:
+        return True, {"decision": "block", "reason": format_task("继续完成当前任务（断点恢复）：", resolution.task) + extra}
+
+    if resolution.status in ("missing_owner", "owner_mismatch", "invalid_runtime_state"):
+        print(resolution.reason, file=sys.stderr)
+        return False, {"decision": resolution.status, "reason": resolution.reason}
+
+    done_ids = {task["id"] for task in tasks if task.get("status") == "Done"}
+    executable = [
+        task for task in tasks
+        if task.get("status") == "InSpec"
+        and all(blocker_id in done_ids for blocker_id in task.get("blocked_by", []))
+    ]
+    if executable:
         summary = (
-            '当前无进行中任务，Session 结束。\n'
-            f'可执行任务: Task#{nx[0]["id"]} {nx[0].get("title", "")} (InSpec)\n'
-            f'输入 /drun 继续执行，或 /dloop 启动连续循环。'
+            "当前无进行中任务，Session 结束。\n"
+            f'可执行任务: Task#{executable[0]["id"]} {executable[0].get("title", "")} (InSpec)\n'
+            "输入 /drun 继续执行，或 /dloop 启动连续循环。"
         )
         print(summary, file=sys.stderr)
-
     return False, {}
 
 
-def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, additional_prompts):
-    """Loop mode: dloop-state.json exists and active. Drive continuous execution."""
+def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, additional_prompts, runtime_state, session_id):
     max_tasks = loop_state.get("max_tasks", 0)
     iteration = loop_state.get("current_iteration", 0)
+    extra = _prompt_suffix(additional_prompts)
 
-    extra = ''
-    for level, hint in additional_prompts:
-        if level == 'block':
-            extra += f'\n\n⚠ {hint}'
-        elif level in ('warning', 'info'):
-            extra += f'\n\nℹ {hint}'
+    resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, session_id or "")
+    if resolution.is_match:
+        return True, {
+            "decision": "block",
+            "reason": format_task(f"🔄 dloop iteration {iteration + 1} | 继续当前任务（断点恢复）：", resolution.task) + extra,
+        }
+    if resolution.status in ("missing_owner", "owner_mismatch", "invalid_runtime_state"):
+        print(resolution.reason, file=sys.stderr)
+        return False, {"decision": resolution.status, "reason": resolution.reason}
 
-    ip = [t for t in tasks if t['status'] == 'InProgress']
-    nx = [task for task in get_executable_tasks(tasks) if task.get('status') == 'InSpec']
-    rev = [t for t in tasks if t['status'] == 'InReview']
+    next_tasks = [task for task in get_executable_tasks(tasks) if task.get("status") == "InSpec"]
+    in_review = [task for task in tasks if task.get("status") == "InReview"]
 
-    # --- InProgress: always block (breakpoint recovery takes priority) ---
-    if ip:
-        t = ip[0]
-        base = format_task(f'🔄 dloop iteration {iteration + 1} | 继续当前任务（断点恢复）：', t) + extra
-        return True, {'decision': 'block', 'reason': base}
-
-    stop_reason = get_terminal_stop_reason(tasks, settings=settings, data=data, loop_state=loop_state)
-    should_stop = stop_reason is not None
-
-    if should_stop:
-        # --- LOOP COMPLETE: generate phase report + cleanup ---
-        notify(f'dloop 循环结束：{stop_reason}')
-
-        # Finalize state
+    stop_reason = get_terminal_stop_reason(tasks, settings=settings, data=data, loop_state_data=loop_state)
+    if stop_reason is not None:
+        notify(f"dloop 循环结束：{stop_reason}")
         loop_state["active"] = False
         loop_state["stopped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         loop_state["stop_reason"] = stop_reason
-
-        # Generate phase report
         report = _generate_phase_report(loop_state, stop_reason, tasks)
-
-        # Cleanup state file
-        _cleanup_loop_state(cwd)
-
-        # Output report to stderr (visible to user)
+        clear_loop_state(runtime_state)
+        save_runtime_state(cwd, runtime_state, remove_legacy=True)
         print(report, file=sys.stderr)
-
         return False, {}
 
-    # --- Continue loop: increment iteration, pick next task ---
     next_iteration = iteration + 1
     loop_state["current_iteration"] = next_iteration
-    _save_loop_state(cwd, loop_state)
+    save_runtime_state(cwd, runtime_state, remove_legacy=True)
 
-    target = nx[0]
+    if in_review:
+        data["review_used"] = data.get("review_used", 0) + 1
+        _save_task_data(task_json_path, data)
 
-    base = format_task(
-        f'🔄 dloop iteration {next_iteration}/{f"∞" if max_tasks == 0 else max_tasks} | 继续执行下一个任务：',
-        target,
-    ) + extra
-
-    # Track review usage
-    if rev:
-        if 'review_used' not in data:
-            data['review_used'] = 0
-        data['review_used'] = data.get('review_used', 0) + 1
-        try:
-            with open(task_json_path, 'w') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-        except OSError:
-            pass
-
-    return True, {'decision': 'block', 'reason': base}
+    target = next_tasks[0]
+    return True, {
+        "decision": "block",
+        "reason": format_task(
+            f"🔄 dloop iteration {next_iteration}/{f'∞' if max_tasks == 0 else max_tasks} | 继续执行下一个任务：",
+            target,
+        ) + extra,
+    }
 
 
-def decide(tasks, settings, data, task_json_path, cwd, additional_prompts, loop_state):
-    """Route to default mode or loop mode based on dloop-state.json."""
+def decide(tasks, settings, data, task_json_path, cwd, additional_prompts, loop_state, runtime_state=None, session_id=""):
     if loop_state is not None:
-        return decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, additional_prompts)
-    else:
-        return decide_default_mode(tasks, settings, data, task_json_path, additional_prompts)
+        return decide_loop_mode(
+            tasks, settings, data, task_json_path, loop_state, cwd, additional_prompts, runtime_state or {}, session_id
+        )
+    return decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state or {}, session_id)
 
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Stop hook: dual-mode decision")
     parser.add_argument("--task-json", default=".diwu/dtask.json", help="Path to dtask.json")
     parser.add_argument("--settings-json", default=".diwu/dsettings.json", help="Path to dsettings.json")
@@ -287,36 +233,51 @@ if __name__ == "__main__":
         except (json.JSONDecodeError, ValueError):
             pass
 
-    stop_hook_active = stdin_data.get("stop_hook_active", False)
-    if stop_hook_active:
+    if stdin_data.get("stop_hook_active", False):
         print(json.dumps({"continue": False}, ensure_ascii=False))
         sys.exit(0)
 
     cwd = stdin_data.get("cwd") or os.getcwd()
-
     data = _load_json(args.task_json)
     settings = _load_json(args.settings_json)
     tasks = data.get("tasks", [])
 
-    loop_state = _load_loop_state(cwd)
+    sync_result = sync_runtime_state(cwd, data, persist=True)
+    if sync_result.is_invalid:
+        output = {
+            "decision": "invalid_runtime_state",
+            "reason": f"dtask-state.json 无效：{sync_result.reason}",
+        }
+        print(json.dumps(output, ensure_ascii=False))
+        sys.exit(1)
 
-    # Session isolation
+    runtime_state = sync_result.state
+    loop_state = runtime_loop_state(runtime_state)
+    session_id = hook_session_id(stdin_data)
+
     if loop_state is not None:
-        hook_session = hook_session_id(stdin_data)
-        state_session = loop_state.get("session_id", "")
-        if state_session and hook_session and state_session != hook_session:
+        loop_session_id = loop_state.get("session_id", "")
+        if loop_session_id and session_id and loop_session_id != session_id:
             loop_state = None
 
     additional_prompts = []
     try:
         import stop_archive
-        archive_results = stop_archive.check(settings=settings, tasks=tasks)
-        additional_prompts = archive_results
+
+        additional_prompts = stop_archive.check(settings=settings, tasks=tasks)
     except Exception:
         pass
 
     should_continue, output = decide(
-        tasks, settings, data, args.task_json, cwd, additional_prompts, loop_state
+        tasks,
+        settings,
+        data,
+        args.task_json,
+        cwd,
+        additional_prompts,
+        loop_state,
+        runtime_state=runtime_state,
+        session_id=session_id,
     )
     if output:
         print(json.dumps(output, ensure_ascii=False))

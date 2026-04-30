@@ -26,6 +26,12 @@
 | `blocked_by` | 数组 | (可选) 前置任务 ID |
 | `status` | 字符串 | 运行时状态 |
 
+### 运行态真相源
+
+- `.diwu/dtask.json`：任务定义与 `status` 的真相源
+- `.diwu/dtask-state.json`：runtime owner / dloop 元数据真相源，不重复保存 task status
+- `scripts/dtask_transition.py`：唯一允许同时修改 `dtask.json.status` 与 `dtask-state.json` 的入口
+
 **任务分类** `[建议]`：
 
 | 分类值 | 适用场景 |
@@ -64,6 +70,8 @@
 | InReview | 取消 | Cancelled | - |
 | Done | (终态) | — | 忽略所有事件 |
 | Cancelled | 重新激活 | InSpec | 直接锁定 |
+
+> `InSpec -> InProgress -> InReview/Done/...` 的显式迁移应通过 `dtask_transition.py` 执行，而不是由调用方分别手改两个文件。
 
 ### 状态转移判定锚点
 

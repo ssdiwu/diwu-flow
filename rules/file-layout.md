@@ -5,10 +5,11 @@
 ## .diwu/ 目录结构
 
 ```
-.diu/
+.diwu/
 ├── CLAUDE.md                      # 全局 Agent 配置入口
-├── dsettings.json                  # 可调参数配置
-├── dtask                      # 当前任务列表
+├── dsettings.json                 # 可调参数配置
+├── dtask.json                     # 当前任务列表（status 真相源）
+├── dtask-state.json               # runtime owner / dloop 元数据真相源
 ├── recording/                     # Session 进度记录目录
 │   └── session-YYYY-MM-DD-HHMMSS.md
 ├── decisions.md                   # 设计决策记录（可选）
@@ -68,7 +69,8 @@
 |------|------|--------|
 | `.diwu/CLAUDE.md` | 全局配置、个人偏好、规则索引 | 共同维护 |
 | `.diwu/dsettings.json` | 可调参数配置 | 人工设置，Agent 读取 |
-| `.diwu/dtask.json` | 当前所有任务的状态和内容 | Agent 读写 |
+| `.diwu/dtask.json` | 当前所有任务的定义与 `status` 真相源 | Agent 读写 |
+| `.diwu/dtask-state.json` | runtime owner / dloop 元数据真相源；不重复保存 task status | Agent 读写 |
 | `.diwu/recording/` | Session 进度记录，每个 session 一个文件 | Agent 写 |
 | `.diwu/decisions.md` | 重大设计决策记录（影响范围 ≥2 模块） | Agent 写 |
 | `.diwu/archive/` | 归档目录（tasks + recordings + summary） | Agent 写 |
@@ -88,5 +90,7 @@
 | 数据 | Source of Truth | 说明 |
 |------|----------------|------|
 | 插件元数据 | `.claude-plugin/plugin.json` | 版本、命令列表 |
+| 任务定义与状态 | `.diwu/dtask.json` | `title/description/acceptance/steps/status` 真相源 |
+| runtime owner / dloop | `.diwu/dtask-state.json` | `task_sessions` + `dloop`，由 `dtask_transition.py` / hooks / dloop 维护 |
 | 规则文件列表 | `assets/dinit/assets/rules-manifest.json` | `/dinit` 按 `rules` 字段复制 |
 | 模板文件 | `assets/dinit/assets/*.template` | `/dinit` 复制到用户项目 |

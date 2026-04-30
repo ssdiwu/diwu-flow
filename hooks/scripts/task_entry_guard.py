@@ -9,6 +9,7 @@ import sys
 ACTIVE_STATUSES = {"InSpec", "InProgress", "InReview"}
 WORKFLOW_DECISIONS = ".diwu/decisions.md"
 WORKFLOW_DTASK = ".diwu/dtask.json"
+WORKFLOW_DTASK_STATE = ".diwu/dtask-state.json"
 WORKFLOW_RECORDING = ".diwu/recording"
 WORKFLOW_DLOOP_STATE = ".diwu/dloop-state.json"
 # Plan mode writes plan files to ~/.claude/plans/ — always allow
@@ -39,6 +40,7 @@ def _workflow_targets(cwd):
     base = _norm(cwd)
     return {
         "dtask": _norm(os.path.join(base, WORKFLOW_DTASK)),
+        "dtask_state": _norm(os.path.join(base, WORKFLOW_DTASK_STATE)),
         "decisions": _norm(os.path.join(base, WORKFLOW_DECISIONS)),
         "recording": _norm(os.path.join(base, WORKFLOW_RECORDING)),
         "dloop_state": _norm(os.path.join(base, WORKFLOW_DLOOP_STATE)),
@@ -51,7 +53,7 @@ def _is_workflow_file(target_path, cwd):
         return False
     target = _norm(target_path)
     paths = _workflow_targets(cwd)
-    if target in {paths["dtask"], paths["decisions"], paths["dloop_state"]}:
+    if target in {paths["dtask"], paths["dtask_state"], paths["decisions"], paths["dloop_state"]}:
         return True
     recording_prefix = paths["recording"] + os.sep
     return target.startswith(recording_prefix)

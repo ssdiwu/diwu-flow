@@ -11,6 +11,20 @@ from pathlib import Path
 import pytest
 from conftest import run_script  # noqa: E402
 
+RUNTIME_STATE_NAME = "dtask-state.json"
+
+
+def _runtime_state_file(root: Path) -> Path:
+    return root / ".diwu" / RUNTIME_STATE_NAME
+
+
+def _read_runtime_state(root: Path) -> dict:
+    return json.loads(_runtime_state_file(root).read_text())
+
+
+def _read_loop_state(root: Path) -> dict | None:
+    return _read_runtime_state(root).get("dloop")
+
 
 class TestDloopStart:
     def _write_dtask_with_tasks(self, root: Path, tasks_data):
@@ -81,10 +95,7 @@ class TestDloopStart:
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is True
-        # 验证状态文件中的 max_tasks（显式指定值）
-        state_file = tmp_project_dir / ".diwu" / "dloop-state.json"
-        state = json.loads(state_file.read_text())
-        assert state["max_tasks"] == 2
+        assert _read_loop_state(tmp_project_dir)["max_tasks"] == 2
 
     def test_start_max_tasks_zero_infinite(self, tmp_project_dir):
         """--max-tasks 0 应为无限模式。"""
@@ -96,9 +107,7 @@ class TestDloopStart:
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is True
-        state_file = tmp_project_dir / ".diwu" / "dloop-state.json"
-        state = json.loads(state_file.read_text())
-        assert state["max_tasks"] == 0  # 0 = 无限
+        assert _read_loop_state(tmp_project_dir)["max_tasks"] == 0
 
     def test_start_auto_snapshot(self, tmp_project_dir):
         """不传 --max-tasks 时应自动取活跃任务数作为 max_tasks。"""
@@ -111,10 +120,7 @@ class TestDloopStart:
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is True
-        state_file = tmp_project_dir / ".diwu" / "dloop-state.json"
-        state = json.loads(state_file.read_text())
-        # 自动模式：所有 InSpec + InProgress 都应计入快照，含当前被 blocked 的 InSpec
-        assert state["max_tasks"] == 3
+        assert _read_loop_state(tmp_project_dir)["max_tasks"] == 3
 
 
 class TestDloopStatus:
@@ -212,7 +218,7 @@ class TestDloopStaleState:
         assert data["ok"] is True
         assert data["status"] == "stale_cleaned"
         assert "cleanup_reason" in data.get("data", {})
-        # 文件应已被删除
+        # legacy 文件应已被删除
         assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
 
     def test_start_terminal_stale_clean_and_continue(self, tmp_project_dir):
@@ -237,8 +243,9 @@ class TestDloopStaleState:
         assert data["status"] == "started"
         # message/formatted_text 应含清理提示
         assert "已清理残留" in data.get("message", "") or "🧹" in data.get("formatted_text", "")
-        # 新状态文件已创建（正常启动）
-        assert (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        assert _runtime_state_file(tmp_project_dir).exists()
+        assert _read_loop_state(tmp_project_dir)["active"] is True
+        assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
 
     # --- terminal_stale: 无可执行任务 ---
 
@@ -288,8 +295,9 @@ class TestDloopStaleState:
         data = json.loads(out)
         assert data["ok"] is True
         assert data["status"] == "running"
-        # 文件不应被删除
-        assert (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        assert _runtime_state_file(tmp_project_dir).exists()
+        assert _read_loop_state(tmp_project_dir)["active"] is True
+        assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
 
     def test_start_active_returns_already_running(self, tmp_project_dir):
         """start 命中 active_or_recoverable → already_running，不删文件。"""
@@ -311,8 +319,9 @@ class TestDloopStaleState:
         data = json.loads(out)
         assert data["ok"] is False
         assert data["status"] == "already_running"
-        # 文件不应被删除
-        assert (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        assert _runtime_state_file(tmp_project_dir).exists()
+        assert _read_loop_state(tmp_project_dir)["active"] is True
+        assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
 
     # --- invalid_state: JSON 损坏 ---
 
@@ -397,36 +406,40 @@ class TestDloopPathIntegrity:
     """#24: 防止 .diwu/.diwu 双重路径 bug 回归的可观测性测试。"""
 
     def test_status_running_reads_correct_state_path(self, tmp_project_dir):
-        """证明 subprocess 读的是 <cwd>/.diwu/dloop-state.json（非 .diwu/.diwu/）。"""
+        """证明 subprocess 读的是 <cwd>/.diwu/dtask-state.json。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        # 需要 dtask.json 有可执行任务，否则 classify 判为 terminal_stale
         dtask = diwu / "dtask.json"
         dtask.write_text(json.dumps({"tasks": [
             {"id": 1, "title": "t1", "status": "InProgress"},
         ]}, ensure_ascii=False, indent=2))
-        # 在正确路径创建 state
         state = {
-            "active": True,
-            "session_id": "path-test",
-            "started_at": "2026-04-30T12:00:00Z",
-            "completed_task_ids": [1],
-            "current_iteration": 1,
-            "max_tasks": 5,
+            "version": 1,
+            "task_sessions": {
+                "1": {"session_id": "path-test", "started_at": "2026-04-30T12:00:00Z"}
+            },
+            "dloop": {
+                "active": True,
+                "session_id": "path-test",
+                "started_at": "2026-04-30T12:00:00Z",
+                "completed_task_ids": [1],
+                "current_iteration": 1,
+                "max_tasks": 5,
+                "stopped_at": None,
+                "stop_reason": None,
+            },
         }
-        (diwu / "dloop-state.json").write_text(
+        (diwu / RUNTIME_STATE_NAME).write_text(
             json.dumps(state, ensure_ascii=False, indent=2)
         )
-        # 确保错误路径不存在
-        wrong_path = diwu / ".diwu" / "dloop-state.json"
+        wrong_path = diwu / ".diwu" / RUNTIME_STATE_NAME
         assert not wrong_path.exists()
 
         rc, out, _ = run_script("dloop.py", "status", "--cwd", str(tmp_project_dir))
         assert rc == 0
         data = json.loads(out)
-        # 如果存在双重路径 bug，会返回 no_loop（因为错误路径无文件）
         assert data["status"] == "running", (
-            f"Expected 'running' (reads from <cwd>/.diwu/dloop-state.json), "
+            f"Expected 'running' (reads from <cwd>/.diwu/{RUNTIME_STATE_NAME}), "
             f"got '{data['status']}' — possible .diwu/.diwu double-path bug"
         )
 

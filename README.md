@@ -103,6 +103,12 @@ stateDiagram-v2
 
 > 完整状态转移规则见 `rules/task.md`。
 
+## 运行时真相源
+
+- `.diwu/dtask.json`：任务定义与 `status` 真相源
+- `.diwu/dtask-state.json`：runtime owner / dloop 元数据真相源
+- `python3 scripts/dtask_transition.py`：显式执行 `InDraft -> InSpec -> InProgress -> InReview/Done/...` 的统一入口
+
 ## 快速开始
 
 ### Claude Code（推荐）
@@ -148,6 +154,7 @@ stateDiagram-v2
       darc 归档管理
       ddoc 文档生成
       ddemo Demo验证
+      dloop 连续循环
       dstat 状态快照
     Agents (3 执行层)
       explorer 只读探索 | implementer 代码实施 | verifier 独立验收

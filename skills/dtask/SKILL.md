@@ -110,6 +110,12 @@ argument-hint: "[功能描述] [category] [blocked_by]"
 | `blocked_by` | 数组 | (可选) 前置任务 ID |
 | `status` | 字符串 | 运行时状态 |
 
+### 运行时真相源
+
+- `dtask.json`：任务定义与 `status` 的真相源
+- `dtask-state.json`：运行态 owner / dloop 元数据真相源
+- `scripts/dtask_transition.py`：唯一允许同时修改 `dtask.json.status` 与 `dtask-state.json` 的入口
+
 **任务分类**：
 
 | 分类值 | 适用场景 |
@@ -177,12 +183,12 @@ argument-hint: "[功能描述] [category] [blocked_by]"
 **全部可预期** → 直接 InProgress；**任一不可预期** → 先验证再 InProgress。
 
 ### 实施步骤
-1. 状态改为 InProgress
+1. 通过 `python3 scripts/dtask_transition.py claim --task-id N --session-id SID --cwd <proj>` 显式完成 `InSpec -> InProgress`
 2. 阅读任务描述/验收条件/实施步骤
 3. 按项目既有模式实现；推荐顺序：验收测试框架 → 单元测试 → 实现
 4. 文件路径修改后 grep 验证无残留
 5. 逐条验证 acceptance
-6. 通过后改 InReview；小幅度自审 Done，大幅度输出 REVIEW
+6. 通过 `dtask_transition.py release` 进入 `InReview/Done/InSpec/Cancelled`；小幅度自审 Done，大幅度输出 REVIEW
 
 **大幅度修改**：API/字段变更 或 单任务 >2000 行。其余自审即可。
 

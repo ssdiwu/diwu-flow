@@ -9,7 +9,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 STOP_DECISION_SCRIPT = PROJECT_ROOT / "hooks" / "scripts" / "stop_decision.py"
 TASK_GUARD_SCRIPT = PROJECT_ROOT / "hooks" / "scripts" / "task_entry_guard.py"
-DLOOP_STATE_NAME = ".diwu/dloop-state.json"
+RUNTIME_STATE_NAME = ".diwu/dtask-state.json"
 
 
 def _run_stop_decision(tmp_path, **kwargs):
@@ -47,40 +47,51 @@ def _make_dsettings(tmp_path, **overrides):
     (diwu / "dsettings.json").write_text(json.dumps(settings), encoding="utf-8")
 
 
-def _make_dloop_state(tmp_path, **overrides):
-    """Write dloop-state.json to tmp_path."""
+def _make_runtime_state(tmp_path, *, dloop=None, task_sessions=None):
+    (tmp_path / ".diwu").mkdir(exist_ok=True)
     state = {
+        "version": 1,
+        "task_sessions": task_sessions or {},
+        "dloop": dloop,
+    }
+    (tmp_path / RUNTIME_STATE_NAME).write_text(json.dumps(state), encoding="utf-8")
+
+
+def _make_dloop_state(tmp_path, **overrides):
+    existing = {"task_sessions": {}}
+    if (tmp_path / RUNTIME_STATE_NAME).exists():
+        existing = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    dloop = {
         "active": True,
         "session_id": "test-session-123",
         "started_at": "2026-04-30T12:00:00Z",
         "completed_task_ids": [],
         "current_iteration": 0,
-        "max_tasks": 0,  # 0 = 无限（Task#22 修复后）
+        "max_tasks": 0,
         "stopped_at": None,
         "stop_reason": None,
     }
-    state.update(overrides)
-    # Ensure .diwu/ directory exists
-    (tmp_path / ".diwu").mkdir(exist_ok=True)
-    (tmp_path / DLOOP_STATE_NAME).write_text(json.dumps(state), encoding="utf-8")
+    dloop.update(overrides)
+    _make_runtime_state(tmp_path, dloop=dloop, task_sessions=existing.get("task_sessions", {}))
 
 
 def test_dloop_state_file_creation(tmp_path):
-    """Verify dloop-state.json can be created and has correct structure."""
+    """Verify dtask-state.json carries dloop structure."""
     _make_dloop_state(tmp_path, session_id="test-abc")
-    state = json.loads((tmp_path / DLOOP_STATE_NAME).read_text(encoding="utf-8"))
-    assert state["active"] is True
-    assert state["session_id"] == "test-abc"
-    assert state["completed_task_ids"] == []
-    assert state["current_iteration"] == 0
-    assert state["max_tasks"] == 0  # 默认改为无限（Task#22）
+    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert state["version"] == 1
+    assert state["dloop"]["active"] is True
+    assert state["dloop"]["session_id"] == "test-abc"
+    assert state["dloop"]["completed_task_ids"] == []
+    assert state["dloop"]["current_iteration"] == 0
+    assert state["dloop"]["max_tasks"] == 0
 
 def test_cancel_dloop_removes_state(tmp_path):
-    """Verify removing dloop-state.json cancels the loop."""
+    """Verify runtime state file can be removed."""
     _make_dloop_state(tmp_path)
-    assert (tmp_path / DLOOP_STATE_NAME).exists()
-    (tmp_path / DLOOP_STATE_NAME).unlink()
-    assert not (tmp_path / DLOOP_STATE_NAME).exists()
+    assert (tmp_path / RUNTIME_STATE_NAME).exists()
+    (tmp_path / RUNTIME_STATE_NAME).unlink()
+    assert not (tmp_path / RUNTIME_STATE_NAME).exists()
 
 
 def test_stop_decision_loop_mode_blocks_with_inSpec(tmp_path):
@@ -119,18 +130,20 @@ def test_stop_decision_inprogress_always_blocks(tmp_path):
     """InProgress task -> block regardless of dloop mode."""
     tasks = [{"id": 1, "title": "Active task", "status": "InProgress"}]
     _make_dtask(tasks, tmp_path)
+    _make_runtime_state(
+        tmp_path,
+        task_sessions={"1": {"session_id": "session-a", "started_at": "2026-04-30T12:00:00Z"}},
+    )
 
-    # Default mode: no dloop-state
-    result = _run_stop_decision(tmp_path, cwd=str(tmp_path))
+    result = _run_stop_decision(tmp_path, session_id="session-a", cwd=str(tmp_path))
     assert result.returncode == 0
     output = json.loads(result.stdout) if result.stdout.strip() else {}
     assert output.get("decision") == "block"
 
-    # Loop mode: with dloop-state
-    _make_dloop_state(tmp_path, session_id="session-b")
+    _make_dloop_state(tmp_path, session_id="session-a")
     result = _run_stop_decision(
         tmp_path,
-        session_id="session-b",
+        session_id="session-a",
         cwd=str(tmp_path),
     )
     assert result.returncode == 0
@@ -139,7 +152,7 @@ def test_stop_decision_inprogress_always_blocks(tmp_path):
 
 
 def test_stop_decision_session_isolation(tmp_path):
-    """dloop-state.json session_id mismatch -> default mode behavior."""
+    """dtask-state.json.dloop session_id mismatch -> default mode behavior."""
     tasks = [
         {"id": 1, "title": "Task A", "status": "InSpec"},
         {"id": 2, "title": "Task B", "status": "Done"},
@@ -198,20 +211,20 @@ def test_stop_decision_max_tasks_stops_with_report(tmp_path):
 
     # Should stop (exit code 1)
     assert result.returncode == 1
-    # State file MUST be cleaned up
-    assert not (tmp_path / DLOOP_STATE_NAME).exists()
+    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert runtime_state["dloop"] is None
     # Phase report should be in stderr
     assert "DLOOP 阶段报告" in result.stderr
     assert "达到任务上限" in result.stderr
 
 
 def test_task_guard_allows_loop_state_write(tmp_path):
-    """task_entry_guard should allow writes to .diwu/dloop-state.json."""
+    """task_entry_guard should allow writes to .diwu/dtask-state.json."""
     payload = {
         "hook_event_name": "PreToolUse",
         "tool_name": "Write",
         "cwd": str(tmp_path),
-        "tool_input": {"file_path": str(tmp_path / DLOOP_STATE_NAME)},
+        "tool_input": {"file_path": str(tmp_path / RUNTIME_STATE_NAME)},
     }
     result = subprocess.run(
         [sys.executable, str(TASK_GUARD_SCRIPT)],
@@ -246,7 +259,8 @@ def test_stop_decision_no_tasks_stops_with_report(tmp_path):
     )
 
     assert result.returncode == 1
-    assert not (tmp_path / DLOOP_STATE_NAME).exists()
+    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert runtime_state["dloop"] is None
     assert "DLOOP 阶段报告" in result.stderr
     assert "无可执行任务" in result.stderr
 
@@ -272,7 +286,8 @@ def test_stop_decision_loop_mode_only_inreview_stops(tmp_path):
     )
 
     assert result.returncode == 1  # allow stop
-    assert not (tmp_path / DLOOP_STATE_NAME).exists()
+    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert runtime_state["dloop"] is None
     assert "DLOOP 阶段报告" in result.stderr
     assert "无可执行任务" in result.stderr
 
@@ -330,5 +345,6 @@ def test_stop_decision_pending_review_stops_with_report(tmp_path):
     )
 
     assert result.returncode == 1
-    assert not (tmp_path / DLOOP_STATE_NAME).exists()
+    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert runtime_state["dloop"] is None
     assert "PENDING REVIEW" in result.stderr

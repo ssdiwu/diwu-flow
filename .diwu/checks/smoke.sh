@@ -43,13 +43,13 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
-# 4. Skill 结构检查（10 个 skill 各含 SKILL.md）
+# 4. Skill 结构检查（12 个 skill 各含 SKILL.md）
 echo "📚 检查 Skill 结构..."
 SKILL_COUNT=$(find "$FLOW_ROOT/skills" -maxdepth 2 -name 'SKILL.md' | wc -l | tr -d ' ')
-if [ "$SKILL_COUNT" -eq 10 ]; then
-    echo "  ✅ $SKILL_COUNT 个 Skill 结构完整"
+if [ "$SKILL_COUNT" -eq 12 ]; then
+    echo "  ✅ ${SKILL_COUNT} 个 Skill 结构完整"
 else
-    echo "  ❌ Skill 数量异常（期望 10，实际 $SKILL_COUNT）"
+    echo "  ❌ Skill 数量异常（期望 12，实际 ${SKILL_COUNT}）"
     ERRORS=$((ERRORS + 1))
 fi
 

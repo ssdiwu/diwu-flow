@@ -17,13 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from common import load_json_or_empty, save_json  # noqa: E402
 from dloop_state import classify, cleanup_state, get_active_tasks, get_executable_tasks  # noqa: E402
-
-STATE_FILE = "dloop-state.json"
-
-
-def _state_path(cwd: Path) -> Path:
-    """返回 dloop-state.json 的唯一路径：始终为 <cwd>/.diwu/dloop-state.json。"""
-    return cwd / ".diwu" / STATE_FILE
+from dtask_state import loop_state, runtime_state_path, save_runtime_state, set_loop_state, sync_runtime_state  # noqa: E402
 
 
 def _task_payload(diwu_dir: Path) -> dict:
@@ -35,38 +29,41 @@ def _task_payload(diwu_dir: Path) -> dict:
 def cmd_start(cwd: Path, max_tasks: int = None) -> dict:
     """启动 dloop 循环。"""
     diwu_dir = cwd / ".diwu"
-    state_path = _state_path(cwd)
+    state_path = runtime_state_path(cwd)
     dtask_payload = _task_payload(diwu_dir)
     tasks = [task for task in dtask_payload.get("tasks", []) if isinstance(task, dict)]
     settings = load_json_or_empty(diwu_dir / "dsettings.json")
 
     # Stale-state 兜底（#23）：检查已有 state 文件是否为 terminal_stale
     stale_cleanup_reason = None
-    if state_path.exists():
-        classification = classify(cwd, dtask_data=dtask_payload, settings=settings)
-        if classification.is_stale:
-            stale_cleanup_reason = classification.reason or "terminal_stale"
-            cleanup_state(cwd)
-            # start: 清理后继续正常启动（不提前返回）
-            # state_path 已不存在，后续冲突检查自然跳过
-        elif classification.is_invalid:
-            return {
-                "ok": False,
-                "status": "invalid_state_file",
-                "message": f"dloop-state.json 损坏或无效：{classification.reason}。请用 /dend 清理或人工检查。",
-                "formatted_text": "❌ dloop-state.json 无效，无法安全操作",
-            }
+    classification = classify(cwd, dtask_data=dtask_payload, settings=settings)
+    if classification.is_stale:
+        stale_cleanup_reason = classification.reason or "terminal_stale"
+        cleanup_state(cwd)
+    elif classification.is_invalid:
+        return {
+            "ok": False,
+            "status": "invalid_state_file",
+            "message": f"dtask-state.json 损坏或无效：{classification.reason}。请用 /dend 清理或人工检查。",
+            "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
+        }
 
-    # 冲突检查：已存在活跃状态文件？
-    if state_path.exists():
-        existing = load_json_or_empty(state_path)
-        if existing.get("active"):
-            return {
-                "ok": False,
-                "status": "already_running",
-                "message": "dloop 已在运行中。请先执行 /dend 取消当前循环。",
-                "formatted_text": "⚠️ dloop 已在运行中。请先执行 /dend 取消当前循环。",
-            }
+    runtime_sync = sync_runtime_state(cwd, dtask_payload, persist=True, ensure_exists=True)
+    if runtime_sync.is_invalid:
+        return {
+            "ok": False,
+            "status": "invalid_state_file",
+            "message": f"dtask-state.json 损坏或无效：{runtime_sync.reason}。请用 /dend 清理或人工检查。",
+            "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
+        }
+    existing_loop = loop_state(runtime_sync.state)
+    if existing_loop and existing_loop.get("active"):
+        return {
+            "ok": False,
+            "status": "already_running",
+            "message": "dloop 已在运行中。请先执行 /dend 取消当前循环。",
+            "formatted_text": "⚠️ dloop 已在运行中。请先执行 /dend 取消当前循环。",
+        }
 
     # 任务可用性检查（T17）
     executable = get_executable_tasks(tasks)
@@ -98,7 +95,8 @@ def cmd_start(cwd: Path, max_tasks: int = None) -> dict:
         "stopped_at": None,
         "stop_reason": None,
     }
-    save_json(state, state_path)
+    set_loop_state(runtime_sync.state, state)
+    save_runtime_state(cwd, runtime_sync.state, remove_legacy=True)
 
     first_task = executable[0]
     # 构建清理提示（如有）
@@ -129,15 +127,7 @@ def cmd_start(cwd: Path, max_tasks: int = None) -> dict:
 
 def cmd_status(cwd: Path) -> dict:
     """查询 dloop 状态。T19: 固定语义，始终 exit 0。"""
-    state_path = _state_path(cwd)
     diwu_dir = cwd / ".diwu"
-
-    if not state_path.exists():
-        return {
-            "ok": True,
-            "status": "no_loop",
-            "formatted_text": "✅ 无活跃的 dloop 循环",
-        }
 
     # Stale-state 兜底（#23）：与 cmd_start 相同的三分类判定
     dtask_for_classify = _task_payload(diwu_dir)
@@ -157,11 +147,26 @@ def cmd_status(cwd: Path) -> dict:
         return {
             "ok": False,
             "status": "invalid_state_file",
-            "message": f"dloop-state.json 损坏或无效：{classification.reason}。请用 /dend 清理或人工检查。",
-            "formatted_text": "❌ dloop-state.json 无效，无法安全操作",
+            "message": f"dtask-state.json 损坏或无效：{classification.reason}。请用 /dend 清理或人工检查。",
+            "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
         }
 
-    data = load_json_or_empty(state_path)
+    runtime_sync = sync_runtime_state(cwd, dtask_for_classify, persist=True)
+    if runtime_sync.is_invalid:
+        return {
+            "ok": False,
+            "status": "invalid_state_file",
+            "message": f"dtask-state.json 损坏或无效：{runtime_sync.reason}。请用 /dend 清理或人工检查。",
+            "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
+        }
+
+    data = loop_state(runtime_sync.state)
+    if data is None:
+        return {
+            "ok": True,
+            "status": "no_loop",
+            "formatted_text": "✅ 无活跃的 dloop 循环",
+        }
     if not data.get("active"):
         return {
             "ok": True,

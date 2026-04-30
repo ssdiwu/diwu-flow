@@ -10,6 +10,14 @@ Does NOT write files — recording is handled by Stop hook.
 
 import json, os, sys
 
+HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(os.path.dirname(HOOKS_DIR))
+SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
+if SHARED_SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, SHARED_SCRIPTS_DIR)
+
+from dtask_state import clear_task_owner, save_runtime_state, sync_runtime_state  # noqa: E402
+
 SETTINGS_FILE = '.diwu/dsettings.json'
 TASK_JSON_PATH = '.diwu/dtask.json'
 
@@ -67,6 +75,14 @@ def main():
 
     if completed_task:
         task_info = _task_summary(completed_task)
+
+        task_data = _load(TASK_JSON_PATH)
+        sync_result = sync_runtime_state(".", task_data, persist=True, ensure_exists=True)
+        if sync_result.ok:
+            task_id = completed_task.get("id")
+            if isinstance(task_id, int) and not isinstance(task_id, bool):
+                if clear_task_owner(sync_result.state, task_id):
+                    save_runtime_state(".", sync_result.state, remove_legacy=True)
 
     # Compose reminder message
     reminder_parts = []

@@ -58,10 +58,30 @@ class TestDecideInProgress(unittest.TestCase):
         tasks = [{'id': 1, 'title': 'Active', 'status': 'InProgress',
                   'description': '', 'acceptance': [], 'steps': []}]
         settings = {'continuous_mode': True}
-        should_continue, output = decide(tasks, settings, {}, '.diwu/dtask.json', _get_test_cwd(), [], None)
+        runtime_state = {
+            'version': 1,
+            'task_sessions': {
+                '1': {'session_id': 'session-a', 'started_at': '2026-04-30T12:00:00Z'}
+            },
+            'dloop': None,
+        }
+        should_continue, output = decide(
+            tasks, settings, {}, '.diwu/dtask.json', _get_test_cwd(), [], None,
+            runtime_state=runtime_state, session_id='session-a'
+        )
         self.assertTrue(should_continue)
         self.assertEqual(output.get('decision'), 'block')
         self.assertIn('Active', output.get('reason', ''))
+
+    def test_inprogress_without_owner_returns_invalid(self):
+        tasks = [{'id': 1, 'title': 'Active', 'status': 'InProgress',
+                  'description': '', 'acceptance': [], 'steps': []}]
+        should_continue, output = decide(
+            tasks, {'continuous_mode': True}, {}, '.diwu/dtask.json', _get_test_cwd(), [], None,
+            runtime_state={'version': 1, 'task_sessions': {}, 'dloop': None}, session_id='session-a'
+        )
+        self.assertFalse(should_continue)
+        self.assertEqual(output.get('decision'), 'missing_owner')
 
 
 class TestDecideInReview(unittest.TestCase):

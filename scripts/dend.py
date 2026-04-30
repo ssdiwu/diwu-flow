@@ -12,14 +12,22 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import load_json_or_empty  # noqa: E402
+from dtask_state import clear_loop_state, loop_state, save_runtime_state, sync_runtime_state  # noqa: E402
 
 
 def cancel(cwd: Path) -> dict:
-    """读取 dloop-state.json → 摘要 → 删除 → 返回结果。"""
-    state_file = cwd / ".diwu" / "dloop-state.json"
+    """读取 dtask-state.json.dloop → 摘要 → 删除 → 返回结果。"""
+    sync_result = sync_runtime_state(cwd, persist=True, ensure_exists=False)
+    if sync_result.is_invalid:
+        return {
+            "ok": False,
+            "status": "invalid_state_file",
+            "message": f"dtask-state.json 损坏或无效：{sync_result.reason}",
+            "formatted_text": "❌ dtask-state.json 无效，无法取消 dloop",
+        }
 
-    if not state_file.exists():
+    dloop = loop_state(sync_result.state)
+    if dloop is None:
         return {
             "ok": True,
             "status": "no_loop",
@@ -27,13 +35,12 @@ def cancel(cwd: Path) -> dict:
             "formatted_text": "✅ 无活跃的 dloop 循环",
         }
 
-    data = load_json_or_empty(state_file)
-    completed = data.get("completed_task_ids", [])
-    iteration = data.get("current_iteration", 0)
+    completed = dloop.get("completed_task_ids", [])
+    iteration = dloop.get("current_iteration", 0)
     completed_count = len(completed)
 
-    # 删除状态文件
-    state_file.unlink()
+    clear_loop_state(sync_result.state)
+    save_runtime_state(cwd, sync_result.state, remove_legacy=True)
 
     return {
         "ok": True,

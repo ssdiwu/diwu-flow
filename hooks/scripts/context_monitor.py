@@ -8,6 +8,15 @@ import os
 import sys
 from datetime import datetime
 
+_SELF_PATH = globals().get("__file__", os.path.join(os.getcwd(), "hooks", "scripts", "context_monitor.py"))
+HOOKS_DIR = os.path.dirname(os.path.abspath(_SELF_PATH))
+REPO_ROOT = os.path.dirname(os.path.dirname(HOOKS_DIR))
+SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
+if SHARED_SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, SHARED_SCRIPTS_DIR)
+
+from dtask_state import resolve_session_inprogress_task, sync_runtime_state  # noqa: E402
+
 # Configuration paths (relative to project root)
 SETTINGS = ".diwu/dsettings.json"
 CACHE = ".diwu/.context_monitor_cache.json"
@@ -59,29 +68,20 @@ def _save_cache(cache):
         json.dump(cache, f)
 
 
-def _classify_tool():
-    """Classify the current tool from stdin JSON (PreToolUse format).
-
-    CC PreToolUse hook sends JSON via stdin with 'tool_name' field.
-    Falls back to CLAUDE_HOOK_TOOL_NAME env var for manual testing.
-    """
-    # Primary: read tool_name from stdin (real hook execution)
+def _load_event():
+    """Read PreToolUse payload once; fall back to env-only testing."""
     try:
         if not sys.stdin.isatty():
             raw = sys.stdin.read()
             if raw.strip():
-                input_data = json.loads(raw)
-                tool_name = input_data.get("tool_name", "")
-                if tool_name in RD_TOOLS:
-                    return "rd"
-                if tool_name in WR_TOOLS:
-                    return "wr"
-                return None
+                return json.loads(raw)
     except (json.JSONDecodeError, ValueError):
         pass
+    return {}
 
-    # Fallback: env var (for manual / pytest testing)
-    tool_name = os.environ.get("CLAUDE_HOOK_TOOL_NAME", "")
+
+def _classify_tool(event):
+    tool_name = event.get("tool_name") or os.environ.get("CLAUDE_HOOK_TOOL_NAME", "")
     if tool_name in RD_TOOLS:
         return "rd"
     if tool_name in WR_TOOLS:
@@ -89,25 +89,46 @@ def _classify_tool():
     return None
 
 
-def checkpoint(task_info=None):
+def _current_task_for_session(cwd, session_id):
+    task_path = os.path.join(cwd, ".diwu", "dtask.json")
+    if not os.path.exists(task_path):
+        return None
+    try:
+        with open(task_path, encoding="utf-8") as f:
+            dtask = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+    sync_result = sync_runtime_state(cwd, dtask, persist=True)
+    if sync_result.is_invalid:
+        return None
+    resolution = resolve_session_inprogress_task(dtask.get("tasks", []), sync_result.state, session_id)
+    if resolution.is_match:
+        return resolution.task
+    return None
+
+
+def checkpoint(task_info=None, session_id=None, cwd="."):
     """Write an auto-checkpoint session file for the current InProgress task.
 
     If task_info is not provided, reads .diwu/dtask.json to find
     the current InProgress task (backward compatible with L2 tests).
     """
-    rec_dir = ".diwu/recording"
+    rec_dir = os.path.join(cwd, ".diwu", "recording")
     os.makedirs(rec_dir, exist_ok=True)
 
     # Auto-read task if not provided
     if task_info is None:
-        task_path = ".diwu/dtask.json"
-        if os.path.exists(task_path):
+        if session_id:
+            task_info = _current_task_for_session(cwd, session_id)
+        else:
+            task_path = os.path.join(cwd, ".diwu", "dtask.json")
             try:
-                with open(task_path, encoding="utf-8") as f:
-                    data = json.load(f)
-                tasks = [t for t in data.get("tasks", []) if t.get("status") == "InProgress"]
-                if tasks:
-                    task_info = tasks[0]
+                if os.path.exists(task_path):
+                    with open(task_path, encoding="utf-8") as f:
+                        data = json.load(f)
+                    tasks = [t for t in data.get("tasks", []) if t.get("status") == "InProgress"]
+                    if tasks:
+                        task_info = tasks[0]
             except (json.JSONDecodeError, OSError):
                 pass
 
@@ -136,8 +157,9 @@ def main():
     """Main entry point — called by PreToolUse hook on every Bash tool use."""
     cfg = _cfg()
     cache = _load_cache()
+    event = _load_event()
 
-    tool_type = _classify_tool()
+    tool_type = _classify_tool(event)
     if tool_type is None:
         # Non-tracked tool, no-op but still exit clean
         sys.exit(0)
@@ -149,7 +171,9 @@ def main():
 
     # Check if we've crossed critical + delay threshold
     if wr_count >= critical + delay and not cache.get("checkpoint_written"):
-        cp_path = checkpoint()  # auto-reads InProgress task from dtask.json
+        session_id = event.get("session_id") or event.get("sessionId") or ""
+        cwd = event.get("cwd") or os.getcwd()
+        cp_path = checkpoint(session_id=session_id or None, cwd=cwd)
         cache["checkpoint_written"] = True
 
         # Output structured info for Claude to pick up
