@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""diwu-flow 共享工具函数库
+
+T4: plugin_root() 从 __file__ 推导项目根目录
+T5: load_json_* 系列不存在返回默认值，损坏时 error_exit
+T6: error_exit() 输出 stderr JSON + exit(1)
+T7: save_json() 原子写入（write tmp + os.replace）
+T8: CLI 输出约定 stdout JSON {ok, status, data?}
+T12: 损坏 JSON 自动检测 → error_exit
+
+CLI 入口：python3 scripts/common.py --max-task-id --cwd <proj>
+"""
+
+import argparse
+import json
+import os
+import sys
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def plugin_root() -> Path:
+    """T4: 从本文件位置推导 diwu-flow 项目根目录（scripts/ 的父目录）。"""
+    return Path(__file__).resolve().parent.parent
+
+
+def _read_json(path: Path):
+    """读取 JSON 文件。返回 (data, error_msg)。
+
+    T5/T12: 不存在返回 (None, None) 供调用方决定默认值；
+    损坏返回 (None, error_msg) 供调用方 error_exit。
+    """
+    if not path.exists():
+        return None, None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f), None
+    except (json.JSONDecodeError, OSError) as e:
+        return None, f"JSON 解析失败: {e}"
+
+
+def load_json_optional(path: Path, default=None):
+    """T5: 加载可选 JSON。文件不存在返回 default；损坏则 error_exit 终止。"""
+    data, err = _read_json(Path(path))
+    if err:
+        error_exit(err)
+    return data if data is not None else default
+
+
+def load_json_or_empty(path: Path):
+    """T5: 加载 JSON。文件不存在返回 {}；损坏则 error_exit 终止。"""
+    return load_json_optional(path, default={})
+
+
+def save_json(data, path: Path):
+    """T7: 原子写入 JSON（indent=2, ensure_ascii=False）。
+
+    先写临时文件再 os.replace，保证写入原子性。
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        os.replace(tmp, str(path))
+    except BaseException:
+        os.unlink(tmp)
+        raise
+
+
+def ensure_dir(path: Path):
+    """确保目录存在（含父目录）。"""
+    Path(path).mkdir(parents=True, exist_ok=True)
+
+
+def rel_time(ts_str: str) -> str:
+    """将 ISO 时间戳转为六段相对时间格式。
+
+    返回如 "3 分钟前" / "2 小时前" / "1 天前" / "2026-04-28"。
+    """
+    try:
+        dt = datetime.fromisoformat(ts_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        delta = datetime.now(timezone.utc) - dt
+        secs = delta.total_seconds()
+    except (ValueError, TypeError):
+        return ts_str
+
+    if secs < 0:
+        return ts_str
+    if secs < 60:
+        return "刚刚"
+    mins = int(secs // 60)
+    if mins < 60:
+        return f"{mins} 分钟前"
+    hours = mins // 60
+    if hours < 24:
+        return f"{hours} 小时前"
+    days = hours // 24
+    if days < 30:
+        return f"{days} 天前"
+    # 超过 30 天返回日期
+    return dt.strftime("%Y-%m-%d")
+
+
+def error_exit(message: str):
+    """T6: 输出 stderr JSON 并以 exit code 1 终止。
+
+    格式：{"ok": false, "error": "<message>"}
+    """
+    json.dump({"ok": False, "error": message}, sys.stderr, ensure_ascii=False)
+    sys.exit(1)
+
+
+# ─── CLI 入口 ──────────────────────────────────────────────
+
+def max_task_id(cwd: Path) -> dict:
+    """扫描 dtask.json 和 archive/ 返回最大任务 ID。
+
+    T8 输出格式：
+    {"ok": true, "max_id": N, "source": "dtask.json|archive|empty"}
+    """
+    cwd = Path(cwd)
+    dtask_path = cwd / ".diwu" / "dtask.json"
+    archive_dir = cwd / ".diwu" / "archive"
+
+    max_id = 0
+    source = "empty"
+
+    # 1. 读 dtask.json
+    data, err = _read_json(dtask_path)
+    if err:
+        return {"ok": False, "error": f"dtask.json 损坏: {err}"}
+    if data and isinstance(data, dict):
+        tasks = data.get("tasks", [])
+        if tasks:
+            ids = [t.get("id", 0) for t in tasks if isinstance(t, dict)]
+            if ids:
+                max_id = max(max_id, max(ids))
+                source = "dtask.json"
+
+    # 2. 扫描归档
+    if archive_dir.is_dir():
+        for f in archive_dir.glob("task_archive_*.json"):
+            adata, aerr = _read_json(f)
+            if aerr:
+                continue
+            if adata and isinstance(adata, dict):
+                atasks = adata.get("tasks", [])
+                if atasks:
+                    aids = [t.get("id", 0) for t in atasks if isinstance(t, dict)]
+                    if aids:
+                        archive_max = max(aids)
+                        if archive_max > max_id:
+                            max_id = archive_max
+                            source = f.name
+
+    return {"ok": True, "max_id": max_id, "source": source}
+
+
+def main():
+    parser = argparse.ArgumentParser(description="diwu-flow common utilities")
+    parser.add_argument("--max-task-id", action="store_true", help="输出最大任务 ID")
+    parser.add_argument("--cwd", type=str, default=".", help="工作目录")
+    args = parser.parse_args()
+
+    cwd = Path(args.cwd).resolve()
+
+    if args.max_task_id:
+        result = max_task_id(cwd)
+        # T8: stdout JSON
+        print(json.dumps(result, ensure_ascii=False))
+        sys.exit(0 if result.get("ok") else 1)
+
+    parser.print_help()
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

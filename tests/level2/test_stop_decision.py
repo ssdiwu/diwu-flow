@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'hooks', 'scripts'))
-from stop_decision import decide, format_task
+from stop_decision import decide, format_task, hook_session_id
 import tempfile as _tmpmod
 
 _TEST_CWD = None
@@ -37,6 +37,18 @@ class TestFormatTask(unittest.TestCase):
         result = format_task('go:', t)
         self.assertIn('Given A When B Then C', result)
         self.assertIn('step one', result)
+
+
+class TestHookSessionId(unittest.TestCase):
+    """Stop hook session id normalization."""
+
+    def test_prefers_session_id(self):
+        event = {"session_id": "snake", "sessionId": "camel"}
+        self.assertEqual(hook_session_id(event), "snake")
+
+    def test_accepts_sessionId(self):
+        event = {"sessionId": "camel-only"}
+        self.assertEqual(hook_session_id(event), "camel-only")
 
 
 class TestDecideInProgress(unittest.TestCase):

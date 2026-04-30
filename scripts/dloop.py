@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""diwu-flow dloop: 启动和状态查询（CRUD 子集）。
+
+只做 start + status 两项 CRUD。
+T2: 停止逻辑真相源在 stop_decision.py，本脚本不碰停止判断。
+T3: cancel 归 dend.py 唯一入口，本脚本无 cancel 子命令。
+T17: start 的可执行任务检查只判断 InProgress 或未阻塞 InSpec 是否存在。
+T19: 固定语义 {ok, status, data?}；所有路径 exit 0。
+"""
+
+import argparse
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from common import load_json_or_empty, save_json  # noqa: E402
+from dloop_state import classify, cleanup_state, get_active_tasks, get_executable_tasks  # noqa: E402
+
+STATE_FILE = "dloop-state.json"
+
+
+def _state_path(cwd: Path) -> Path:
+    """返回 dloop-state.json 的唯一路径：始终为 <cwd>/.diwu/dloop-state.json。"""
+    return cwd / ".diwu" / STATE_FILE
+
+
+def _task_payload(diwu_dir: Path) -> dict:
+    """Load dtask payload once for start/status decisions."""
+    data = load_json_or_empty(diwu_dir / "dtask.json")
+    return data if isinstance(data, dict) else {}
+
+
+def cmd_start(cwd: Path, max_tasks: int = None) -> dict:
+    """启动 dloop 循环。"""
+    diwu_dir = cwd / ".diwu"
+    state_path = _state_path(cwd)
+    dtask_payload = _task_payload(diwu_dir)
+    tasks = [task for task in dtask_payload.get("tasks", []) if isinstance(task, dict)]
+    settings = load_json_or_empty(diwu_dir / "dsettings.json")
+
+    # Stale-state 兜底（#23）：检查已有 state 文件是否为 terminal_stale
+    stale_cleanup_reason = None
+    if state_path.exists():
+        classification = classify(cwd, dtask_data=dtask_payload, settings=settings)
+        if classification.is_stale:
+            stale_cleanup_reason = classification.reason or "terminal_stale"
+            cleanup_state(cwd)
+            # start: 清理后继续正常启动（不提前返回）
+            # state_path 已不存在，后续冲突检查自然跳过
+        elif classification.is_invalid:
+            return {
+                "ok": False,
+                "status": "invalid_state_file",
+                "message": f"dloop-state.json 损坏或无效：{classification.reason}。请用 /dend 清理或人工检查。",
+                "formatted_text": "❌ dloop-state.json 无效，无法安全操作",
+            }
+
+    # 冲突检查：已存在活跃状态文件？
+    if state_path.exists():
+        existing = load_json_or_empty(state_path)
+        if existing.get("active"):
+            return {
+                "ok": False,
+                "status": "already_running",
+                "message": "dloop 已在运行中。请先执行 /dend 取消当前循环。",
+                "formatted_text": "⚠️ dloop 已在运行中。请先执行 /dend 取消当前循环。",
+            }
+
+    # 任务可用性检查（T17）
+    executable = get_executable_tasks(tasks)
+
+    if not executable:
+        return {
+            "ok": False,
+            "status": "no_executable_tasks",
+            "message": "无可执行的任务（需要 InSpec 或 InProgress 状态的任务）。",
+            "formatted_text": "❌ 无可执行任务。请先 /dtask 规划任务并确认为 InSpec/InProgress。",
+        }
+
+    # 确定有效 max_tasks
+    # None=未传参→自动取活跃任务数; 0=显式无限; N>0=手动限制
+    active_count = len(get_active_tasks(tasks))
+    if max_tasks is not None and max_tasks >= 0:
+        effective_max = max_tasks  # 显式值（0=无限, N>0=限制N）
+    else:
+        effective_max = active_count  # 自动快照
+
+    # 创建状态文件
+    state = {
+        "active": True,
+        "session_id": f"dloop-{datetime.now(timezone.utc).strftime('%Y-%m-%d-%H%M%S')}",
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "completed_task_ids": [],
+        "current_iteration": 0,
+        "max_tasks": effective_max,
+        "stopped_at": None,
+        "stop_reason": None,
+    }
+    save_json(state, state_path)
+
+    first_task = executable[0]
+    # 构建清理提示（如有）
+    cleanup_note = ""
+    if stale_cleanup_reason:
+        cleanup_note = f"\n🧹 已清理残留 state（{stale_cleanup_reason}）\n"
+
+    return {
+        "ok": True,
+        "status": "started",
+        "data": {"state_file": str(state_path)},
+        "message": (
+            f"dloop 已启动 (max_tasks: {'∞(无限)' if effective_max == 0 else effective_max}, "
+            f"source: {'auto' if max_tasks is None else 'manual'})\n"
+            f"{cleanup_note}"
+            f"首轮开始：Task#{first_task['id']} {first_task.get('title', '')}"
+        ),
+        "formatted_text": (
+            f"🔄 dloop 已启动\n"
+            f"{cleanup_note}"
+            f"   活跃任务数: {active_count}\n"
+            f"   最大任务数: {'∞(无限)' if effective_max == 0 else effective_max}\n"
+            f"   来源: {'自动(活跃任务快照)' if max_tasks is None else '手动指定'}\n"
+            f"   首轮开始: Task#{first_task['id']} {first_task.get('title', '')}"
+        ),
+    }
+
+
+def cmd_status(cwd: Path) -> dict:
+    """查询 dloop 状态。T19: 固定语义，始终 exit 0。"""
+    state_path = _state_path(cwd)
+    diwu_dir = cwd / ".diwu"
+
+    if not state_path.exists():
+        return {
+            "ok": True,
+            "status": "no_loop",
+            "formatted_text": "✅ 无活跃的 dloop 循环",
+        }
+
+    # Stale-state 兜底（#23）：与 cmd_start 相同的三分类判定
+    dtask_for_classify = _task_payload(diwu_dir)
+    settings = load_json_or_empty(diwu_dir / "dsettings.json")
+    classification = classify(cwd, dtask_data=dtask_for_classify, settings=settings)
+    if classification.is_stale:
+        reason = classification.reason or "terminal_stale"
+        cleanup_state(cwd)
+        return {
+            "ok": True,
+            "status": "stale_cleaned",
+            "data": {"cleanup_reason": reason},
+            "message": f"已清理残留 state，原因：{reason}",
+            "formatted_text": f"🧹 已清理残留 dloop state（{reason}）",
+        }
+    if classification.is_invalid:
+        return {
+            "ok": False,
+            "status": "invalid_state_file",
+            "message": f"dloop-state.json 损坏或无效：{classification.reason}。请用 /dend 清理或人工检查。",
+            "formatted_text": "❌ dloop-state.json 无效，无法安全操作",
+        }
+
+    data = load_json_or_empty(state_path)
+    if not data.get("active"):
+        return {
+            "ok": True,
+            "status": "inactive",
+            "formatted_text": "⏸️ dloop 状态文件存在但非活跃状态",
+        }
+
+    completed = data.get("completed_task_ids", [])
+    iteration = data.get("current_iteration", 0)
+    max_t = data.get("max_tasks", 0)
+    started = data.get("started_at", "?")
+
+    return {
+        "ok": True,
+        "status": "running",
+        "data": {
+            "current_iteration": iteration,
+            "completed_task_ids": completed,
+            "max_tasks": max_t,
+            "started_at": started,
+        },
+        "formatted_text": (
+            f"🔄 dloop 运行中\n"
+            f"   当前轮次: {iteration}\n"
+            f"   已完成: {len(completed)} 个任务\n"
+            f"   最大任务数: {max_t}\n"
+            f"   启动时间: {started}"
+        ),
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description="diwu-loop 启动与状态查询")
+    sub = parser.add_subparsers(dest="command")
+
+    # start 子命令
+    p_start = sub.add_parser("start", help="启动 dloop 循环")
+    p_start.add_argument("--cwd", type=str, default=".", help="项目根目录")
+    p_start.add_argument("--max-tasks", type=int, default=None, help="最大任务数（省略=自动取活跃任务数，0=无限）")
+
+    # status 子命令
+    p_status = sub.add_parser("status", help="查询 dloop 状态")
+    p_status.add_argument("--cwd", type=str, default=".", help="项目根目录")
+
+    args = parser.parse_args()
+
+    if args.command == "start":
+        result = cmd_start(Path(args.cwd).resolve(), max_tasks=args.max_tasks)
+    elif args.command == "status":
+        result = cmd_status(Path(args.cwd).resolve())
+    else:
+        parser.print_help()
+        result = {"ok": True, "status": "help"}
+
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    main()

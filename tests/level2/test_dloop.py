@@ -16,21 +16,35 @@ def _run_stop_decision(tmp_path, **kwargs):
     """Run stop_decision.py with given tmp_path and optional stdin data."""
     cmd = [sys.executable, str(STOP_DECISION_SCRIPT), "--task-json", str(tmp_path / ".diwu" / "dtask.json")]
     stdin_data = json.dumps(kwargs) if kwargs else ""
+    env = os.environ.copy()
+    env["DIWU_SILENT"] = "1"
     result = subprocess.run(
         cmd,
         input=stdin_data,
         capture_output=True,
         text=True,
         cwd=str(tmp_path),
+        env=env,
     )
     return result
 
 
-def _make_dtask(tasks, tmp_path):
+def _make_dtask(tasks, tmp_path, **extra):
     """Write dtask.json to tmp_path/.diwu/."""
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(json.dumps({"tasks": tasks}), encoding="utf-8")
+    payload = {"tasks": tasks}
+    payload.update(extra)
+    (diwu / "dtask.json").write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _make_dsettings(tmp_path, **overrides):
+    """Write dsettings.json to tmp_path/.diwu/."""
+    diwu = tmp_path / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    settings = {"review_limit": 5}
+    settings.update(overrides)
+    (diwu / "dsettings.json").write_text(json.dumps(settings), encoding="utf-8")
 
 
 def _make_dloop_state(tmp_path, **overrides):
@@ -41,7 +55,7 @@ def _make_dloop_state(tmp_path, **overrides):
         "started_at": "2026-04-30T12:00:00Z",
         "completed_task_ids": [],
         "current_iteration": 0,
-        "max_tasks": 10,
+        "max_tasks": 0,  # 0 = 无限（Task#22 修复后）
         "stopped_at": None,
         "stop_reason": None,
     }
@@ -59,8 +73,7 @@ def test_dloop_state_file_creation(tmp_path):
     assert state["session_id"] == "test-abc"
     assert state["completed_task_ids"] == []
     assert state["current_iteration"] == 0
-    assert state["max_tasks"] == 10
-
+    assert state["max_tasks"] == 0  # 默认改为无限（Task#22）
 
 def test_cancel_dloop_removes_state(tmp_path):
     """Verify removing dloop-state.json cancels the loop."""
@@ -141,6 +154,24 @@ def test_stop_decision_session_isolation(tmp_path):
     )
 
     # Falls through to default mode -> allow stop
+    assert result.returncode == 1
+
+
+def test_stop_decision_session_isolation_accepts_sessionId(tmp_path):
+    """sessionId 事件字段也必须触发 session isolation。"""
+    tasks = [
+        {"id": 1, "title": "Task A", "status": "InSpec"},
+        {"id": 2, "title": "Task B", "status": "Done"},
+    ]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(tmp_path, session_id="original-session")
+
+    result = _run_stop_decision(
+        tmp_path,
+        sessionId="different-session",
+        cwd=str(tmp_path),
+    )
+
     assert result.returncode == 1
 
 
@@ -274,3 +305,30 @@ def test_loop_completion_reports_completed_tasks(tmp_path):
     assert "Refactor B" in result.stderr
     # Report should mention remaining tasks
     assert "Pending C" in result.stderr
+
+
+def test_stop_decision_pending_review_stops_with_report(tmp_path):
+    """PENDING REVIEW should stop the loop and cleanup stale state."""
+    tasks = [
+        {"id": 1, "title": "Review task", "status": "InReview"},
+        {"id": 2, "title": "Pending C", "status": "InSpec"},
+    ]
+    _make_dtask(tasks, tmp_path, review_used=5)
+    _make_dsettings(tmp_path, review_limit=5)
+    _make_dloop_state(
+        tmp_path,
+        session_id="session-review-limit",
+        completed_task_ids=[1],
+        current_iteration=1,
+        max_tasks=0,
+    )
+
+    result = _run_stop_decision(
+        tmp_path,
+        session_id="session-review-limit",
+        cwd=str(tmp_path),
+    )
+
+    assert result.returncode == 1
+    assert not (tmp_path / DLOOP_STATE_NAME).exists()
+    assert "PENDING REVIEW" in result.stderr

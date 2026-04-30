@@ -13,10 +13,22 @@ import sys
 from datetime import datetime, timezone
 
 DLOOP_STATE_PATH = ".diwu/dloop-state.json"
+HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(os.path.dirname(HOOKS_DIR))
+SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
+if SHARED_SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, SHARED_SCRIPTS_DIR)
+
+from dloop_state import get_executable_tasks, get_terminal_stop_reason  # noqa: E402
 
 
 def notify(msg):
-    """Send OS notification (macOS/Linux). Shell-safe via subprocess."""
+    """Send OS notification (macOS/Linux). Shell-safe via subprocess.
+
+    可通过环境变量 DIWU_SILENT=1 禁用通知（测试环境）。
+    """
+    if os.environ.get("DIWU_SILENT") == "1":
+        return
     try:
         safe_msg = msg.replace("'", "'\\''").replace('"', '\\"').replace('$', '\\$').replace('`', '\\`')
         if platform.system() == 'Darwin':
@@ -36,6 +48,11 @@ def notify(msg):
             open('/dev/tty', 'w').write('\a')
     except OSError:
         pass  # No TTY available
+
+
+def hook_session_id(event: dict) -> str:
+    """Accept both session_id and sessionId event shapes."""
+    return event.get("session_id") or event.get("sessionId") or ""
 
 
 def format_task(prefix, t):
@@ -106,7 +123,7 @@ def _generate_phase_report(loop_state, stop_reason, tasks):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     completed_ids = loop_state.get("completed_task_ids", [])
     iteration = loop_state.get("current_iteration", 0)
-    max_tasks = loop_state.get("max_tasks", 10)
+    max_tasks = loop_state.get("max_tasks", 0)
     started_at = loop_state.get("started_at", "unknown")
 
     # Build task summary from dtask.json
@@ -177,12 +194,8 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
 
 def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, additional_prompts):
     """Loop mode: dloop-state.json exists and active. Drive continuous execution."""
-    done_ids = {t['id'] for t in tasks if t['status'] == 'Done'}
-    is_unblocked = lambda t: all(bid in done_ids for bid in t.get('blocked_by', []))
-
-    max_tasks = loop_state.get("max_tasks", 10)
+    max_tasks = loop_state.get("max_tasks", 0)
     iteration = loop_state.get("current_iteration", 0)
-    completed_ids = loop_state.get("completed_task_ids", [])
 
     extra = ''
     for level, hint in additional_prompts:
@@ -192,8 +205,8 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
             extra += f'\n\nℹ {hint}'
 
     ip = [t for t in tasks if t['status'] == 'InProgress']
+    nx = [task for task in get_executable_tasks(tasks) if task.get('status') == 'InSpec']
     rev = [t for t in tasks if t['status'] == 'InReview']
-    nx = [t for t in tasks if t['status'] == 'InSpec' and is_unblocked(t)]
 
     # --- InProgress: always block (breakpoint recovery takes priority) ---
     if ip:
@@ -201,24 +214,8 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
         base = format_task(f'🔄 dloop iteration {iteration + 1} | 继续当前任务（断点恢复）：', t) + extra
         return True, {'decision': 'block', 'reason': base}
 
-    # --- Check stop conditions ---
-
-    # Stop condition checker: returns (should_stop, reason_string) or None to continue
-    def _check_stop():
-        # No next executable task (covers blocked tasks whose blockers aren't Done)
-        if not nx and not ip:
-            return True, "无可执行任务"
-        # Max tasks reached
-        if max_tasks > 0 and len(completed_ids) >= max_tasks:
-            return True, f"达到任务上限 (max_tasks={max_tasks})"
-        # PENDING REVIEW
-        rlim = settings.get('review_limit', 5)
-        rused = data.get('review_used', 0)
-        if rev and rused >= rlim:
-            return True, f"PENDING REVIEW ({len(rev)} 个 InReview ≥ review_limit={rlim})"
-        return None, None
-
-    should_stop, stop_reason = _check_stop()
+    stop_reason = get_terminal_stop_reason(tasks, settings=settings, data=data, loop_state=loop_state)
+    should_stop = stop_reason is not None
 
     if should_stop:
         # --- LOOP COMPLETE: generate phase report + cleanup ---
@@ -305,16 +302,13 @@ if __name__ == "__main__":
 
     # Session isolation
     if loop_state is not None:
-        hook_session = stdin_data.get("session_id", "")
+        hook_session = hook_session_id(stdin_data)
         state_session = loop_state.get("session_id", "")
         if state_session and hook_session and state_session != hook_session:
             loop_state = None
 
     additional_prompts = []
     try:
-        SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
-        if SCRIPTS_DIR not in sys.path:
-            sys.path.insert(0, SCRIPTS_DIR)
         import stop_archive
         archive_results = stop_archive.check(settings=settings, tasks=tasks)
         additional_prompts = archive_results
