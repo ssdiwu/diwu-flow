@@ -22,7 +22,7 @@ effort: normal
 argument-hint: "[退化信号类型]"
 ---
 
-# diwu-corr
+# dcorr
 
 纠偏体系：偏航时的恢复协议。开工前的完整规范见 mindset（三唯一框架、不确定性门控）。
 

@@ -22,7 +22,7 @@ effort: normal
 argument-hint: "[任务ID] [证据等级]"
 ---
 
-# diwu-verify
+# dvfy
 
 证据优先级体系：验证的核心规则。未验证 = 未完成。
 

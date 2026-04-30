@@ -21,7 +21,7 @@ effort: low
 argument-hint: "[阶段] [判断对象]"
 ---
 
-# diwu-judge
+# djug
 
 判断锚点集中管理：所有判断性规则的示例锚点。按任务阶段分为四段式索引。
 

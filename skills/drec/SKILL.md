@@ -19,7 +19,7 @@ effort: normal
 argument-hint: "[session内容]"
 ---
 
-# diwu-record
+# drec
 
 Session 记录写入规范：每次 session 结束前的必做事项。
 

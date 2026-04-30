@@ -18,7 +18,7 @@ effort: low
 argument-hint: "[--deep]"
 ---
 
-# diwu-stat
+# dstat
 
 项目全局状态只读聚合命令。不修改任何文件，不改变任何状态，不触发 drun 执行循环。
 

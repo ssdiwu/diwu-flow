@@ -26,7 +26,7 @@ effort: high
 argument-hint: "[功能描述] [category] [blocked_by]"
 ---
 
-# diwu-task
+# dtask
 
 任务管理核心方法论：从需求到验收的完整生命周期。
 

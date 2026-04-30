@@ -18,7 +18,7 @@ effort: low
 argument-hint: "[--max-tasks N] [--session-id <sid>]"
 ---
 
-# diwu-loop
+# dloop
 
 /dloop = `while(未停止) { /drun }`
 

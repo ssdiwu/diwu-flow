@@ -26,7 +26,7 @@ effort: high
 argument-hint: "[功能描述] [category] [blocked_by]"
 ---
 
-# diwu-run
+# drun
 
 Session 生命周期管理：从启动到结束的完整协议，含执行验证循环。单任务执行器——做一件事，做完就停。
 

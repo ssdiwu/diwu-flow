@@ -23,7 +23,7 @@ effort: normal
 argument-hint: "[Demo名称] [不确定性类型] [Layer1功能]"
 ---
 
-# diwu-demo
+# ddemo
 
 积木式能力验证方法论：最小成本验证，最高效率复用。
 
