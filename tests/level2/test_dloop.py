@@ -348,3 +348,143 @@ def test_stop_decision_pending_review_stops_with_report(tmp_path):
     runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
     assert runtime_state["dloop"] is None
     assert "PENDING REVIEW" in result.stderr
+
+
+def test_stop_decision_first_bind_replaces_dummy_id(tmp_path):
+    """T1: 首次带真实 SID 的 Stop event 应将 dummy loop_sid 替换并持久化。"""
+    tasks = [{"id": 1, "title": "T1", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(tmp_path, session_id="dloop-20260430-120000")  # dummy
+
+    # 第一次：真实 SID → 应绑定并 block
+    result = _run_stop_decision(tmp_path, session_id="real-session-abc", cwd=str(tmp_path))
+    assert result.returncode == 0
+    output = json.loads(result.stdout)
+    assert output.get("decision") == "block"
+
+    # 验证 state 已被持久化
+    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert state["dloop"]["session_id"] == "real-session-abc"
+
+    # 第二次：同一 SID → 继续 block
+    result2 = _run_stop_decision(tmp_path, session_id="real-session-abc", cwd=str(tmp_path))
+    assert result2.returncode == 0
+
+    # 第三步：不同 SID → 退出 loop mode (allow stop)
+    result3 = _run_stop_decision(tmp_path, session_id="other-session", cwd=str(tmp_path))
+    assert result3.returncode == 1  # allow stop
+
+
+def test_stop_decision_missing_session_id_exits_loop_mode(tmp_path):
+    """T2a: Stop event 无 session_id + InSpec 任务 → 必须 allow stop。"""
+    tasks = [{"id": 1, "title": "T1", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(tmp_path, session_id="dloop-test")  # dummy 或已绑定
+
+    # 不传 session_id
+    result = _run_stop_decision(tmp_path, cwd=str(tmp_path))  # 无 session_id 字段
+    assert result.returncode == 1  # 必须退出 loop mode
+    # stderr 应含 allow_stop 提示
+    assert "allow_stop" in result.stdout
+
+
+def test_stop_decision_missing_session_with_inprogress_allows_stop(tmp_path):
+    """T2b: Stop event 无 session_id + InProgress 任务 → 显式 allow stop。"""
+    tasks = [{"id": 1, "title": "Active", "status": "InProgress"}]
+    _make_dtask(tasks, tmp_path)
+    _make_runtime_state(
+        tmp_path,
+        task_sessions={"1": {"session_id": "session-a", "started_at": "2026-04-30T12:00:00Z"}},
+    )
+    _make_dloop_state(tmp_path, session_id="dloop-test")
+
+    # 不传 session_id
+    result = _run_stop_decision(tmp_path, cwd=str(tmp_path))
+    # 必须 allow stop（不能落入 default mode 的 resolve_session_inprogress_task）
+    assert result.returncode == 1
+    assert "allow_stop" in result.stdout
+
+
+def test_stop_decision_loop_mode_reason_delegates_drun(tmp_path):
+    """Loop mode + InSpec + 未命中停止条件 → reason 含 /drun 委托而非具体任务名。"""
+    tasks = [{"id": 1, "title": "Next task", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(tmp_path, session_id="match-sid", max_tasks=5)
+
+    result = _run_stop_decision(tmp_path, session_id="match-sid", cwd=str(tmp_path))
+    assert result.returncode == 0
+    output = json.loads(result.stdout)
+    assert output.get("decision") == "block"
+    assert "请继续执行 /drun" in output.get("reason", "")
+    # 不应包含具体任务名
+    assert "Next task" not in output.get("reason", "")
+
+
+def test_stop_decision_first_bind_replaces_dummy_id(tmp_path):
+    """T1: 首次带真实 SID 的 Stop event 应将 dummy loop_sid 替换并持久化。"""
+    tasks = [{"id": 1, "title": "T1", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(tmp_path, session_id="dloop-20260430-120000")  # dummy
+
+    # 第一次：真实 SID → 应绑定并 block
+    result = _run_stop_decision(tmp_path, session_id="real-session-abc", cwd=str(tmp_path))
+    assert result.returncode == 0
+    output = json.loads(result.stdout)
+    assert output.get("decision") == "block"
+
+    # 验证 state 已被持久化
+    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert state["dloop"]["session_id"] == "real-session-abc"
+
+    # 第二次：同一 SID → 继续 block
+    result2 = _run_stop_decision(tmp_path, session_id="real-session-abc", cwd=str(tmp_path))
+    assert result2.returncode == 0
+
+    # 第三步：不同 SID → 退出 loop mode (allow stop)
+    result3 = _run_stop_decision(tmp_path, session_id="other-session", cwd=str(tmp_path))
+    assert result3.returncode == 1  # allow stop
+
+
+def test_stop_decision_missing_session_id_exits_loop_mode(tmp_path):
+    """T2a: Stop event 无 session_id + InSpec 任务 → 必须 allow stop。"""
+    tasks = [{"id": 1, "title": "T1", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(tmp_path, session_id="dloop-test")  # dummy 或已绑定
+
+    # 不传 session_id
+    result = _run_stop_decision(tmp_path, cwd=str(tmp_path))  # 无 session_id 字段
+    assert result.returncode == 1  # 必须退出 loop mode
+    # stderr 应含 allow_stop 提示
+    assert "allow_stop" in result.stdout
+
+
+def test_stop_decision_missing_session_with_inprogress_allows_stop(tmp_path):
+    """T2b: Stop event 无 session_id + InProgress 任务 → 显式 allow stop。"""
+    tasks = [{"id": 1, "title": "Active", "status": "InProgress"}]
+    _make_dtask(tasks, tmp_path)
+    _make_runtime_state(
+        tmp_path,
+        task_sessions={"1": {"session_id": "session-a", "started_at": "2026-04-30T12:00:00Z"}},
+    )
+    _make_dloop_state(tmp_path, session_id="dloop-test")
+
+    # 不传 session_id
+    result = _run_stop_decision(tmp_path, cwd=str(tmp_path))
+    # 必须 allow stop（不能落入 default mode 的 resolve_session_inprogress_task）
+    assert result.returncode == 1
+    assert "allow_stop" in result.stdout
+
+
+def test_stop_decision_loop_mode_reason_delegates_drun(tmp_path):
+    """Loop mode + InSpec + 未命中停止条件 → reason 含 /drun 委托而非具体任务名。"""
+    tasks = [{"id": 1, "title": "Next task", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(tmp_path, session_id="match-sid", max_tasks=5)
+
+    result = _run_stop_decision(tmp_path, session_id="match-sid", cwd=str(tmp_path))
+    assert result.returncode == 0
+    output = json.loads(result.stdout)
+    assert output.get("decision") == "block"
+    assert "请继续执行 /drun" in output.get("reason", "")
+    # 不应包含具体任务名
+    assert "Next task" not in output.get("reason", "")

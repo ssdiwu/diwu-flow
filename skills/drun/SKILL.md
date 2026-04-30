@@ -75,6 +75,7 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
   - 达到超前上限 → 输出 PENDING REVIEW
 - **禁止**选择 InDraft 任务
 - 进入实施前必须先通过 `python3 scripts/dtask_transition.py claim --task-id N --session-id SID --cwd <proj>` 显式完成 `InSpec -> InProgress`
+- 实施完成后的最终状态也必须通过 `python3 scripts/dtask_transition.py release --task-id N --to inreview|done|inspec|cancelled --session-id SID --cwd <proj>` 显式完成；不得手改 `dtask.json.status`
 
 ### 5. 环境初始化（可选）
 - 运行 init.sh（如存在）
@@ -92,7 +93,7 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 > **（R1）**：写入 session 文件前必须 Read 当前 session 文件尾部，确认追加位置正确。
 
 3. 如有重大设计决策，追加到 decisions.md
-4. 确保 task.json 反映最新状态
+4. 确保 task.json 反映最新状态；若本轮已完成实施与验证，最后一步必须用 `dtask_transition.py release` 将任务显式切到 `Done` 或 `InReview`
 
 > **详细 recording 格式和踩坑记录格式见 drec skill**
 
@@ -115,6 +116,8 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 | 4 | 结果更新到哪？ | dtask.json（状态变更）+ recording/session（进度记录） |
 
 > **（R1+R2）**：更新 dtask.json status 前 **Read 当前 status 值**；写入 JSON 必须 **indent=2, ensure_ascii=False**。
+
+> **状态流转约束**：`/drun` 的任务状态必须按 `InSpec -> InProgress -> InReview/Done/...` 顺序推进。开始执行用 `dtask_transition.py claim`，收尾判定用 `dtask_transition.py release`；不要直接手改 `status` 跳步完成。
 
 > 状态文件映射（复用现有机制，不新建文件）：
 > - 目标+边界 → dtask.json `description` + `acceptance[]`

@@ -26,7 +26,7 @@ def _task_payload(diwu_dir: Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def cmd_start(cwd: Path, max_tasks: int = None) -> dict:
+def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
     """启动 dloop 循环。"""
     diwu_dir = cwd / ".diwu"
     state_path = runtime_state_path(cwd)
@@ -87,7 +87,7 @@ def cmd_start(cwd: Path, max_tasks: int = None) -> dict:
     # 创建状态文件
     state = {
         "active": True,
-        "session_id": f"dloop-{datetime.now(timezone.utc).strftime('%Y-%m-%d-%H%M%S')}",
+        "session_id": session_id if session_id else f"dloop-{datetime.now(timezone.utc).strftime('%Y-%m-%d-%H%M%S')}",
         "started_at": datetime.now(timezone.utc).isoformat(),
         "completed_task_ids": [],
         "current_iteration": 0,
@@ -206,6 +206,7 @@ def main():
     p_start = sub.add_parser("start", help="启动 dloop 循环")
     p_start.add_argument("--cwd", type=str, default=".", help="项目根目录")
     p_start.add_argument("--max-tasks", type=int, default=None, help="最大任务数（省略=自动取活跃任务数，0=无限）")
+    p_start.add_argument("--session-id", type=str, default=None, help="真实 session ID（省略则自动生成 dloop-<timestamp> 格式）")
 
     # status 子命令
     p_status = sub.add_parser("status", help="查询 dloop 状态")
@@ -214,7 +215,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "start":
-        result = cmd_start(Path(args.cwd).resolve(), max_tasks=args.max_tasks)
+        result = cmd_start(Path(args.cwd).resolve(), max_tasks=args.max_tasks, session_id=args.session_id)
     elif args.command == "status":
         result = cmd_status(Path(args.cwd).resolve())
     else:

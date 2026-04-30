@@ -16,6 +16,7 @@ effort: low
 - 输入 `/drun`：恢复当前 session 可继续的唯一任务。
 - 若存在 `InProgress` 任务：`/drun` 只恢复 **当前 session 在 `.diwu/dtask-state.json.task_sessions` 中持有的 owner**。
 - 若当前无 `InProgress`：`/drun` 选择第一个可执行的 `InSpec` 任务，并先通过 `python3 scripts/dtask_transition.py claim` 把它显式切到 `InProgress`，再开始实施。
+- 当本轮实施与验证结束：必须通过 `python3 scripts/dtask_transition.py release --task-id N --to done|inreview --session-id SID --cwd <proj>` 显式收尾，不能手改 `status`。
 
 ## 运行时真相源
 
@@ -24,6 +25,8 @@ effort: low
 - `dtask_transition.py`：唯一允许同时修改 `dtask.json.status` 与 `dtask-state.json` 的入口。
 
 > 没有完成 `claim` 进入 `InProgress` 的任务，不允许直接开始实施。
+
+> 完成后的最终状态也必须通过 `release` 脚本回写：自审通过切 `Done`，证据不足或需人工确认则切 `InReview`。
 
 ## 与 /dloop 的关系
 
@@ -34,5 +37,6 @@ effort: low
 
 - `继续当前任务`：当前 session 命中 owner 匹配的 `InProgress`。
 - `选择下一个 InSpec`：通过 `dtask_transition.py claim` 接管新任务后开始。
+- `完成并收尾`：通过 `dtask_transition.py release` 将当前 `InProgress` 显式切到 `Done` 或 `InReview`。
 - `PENDING REVIEW`：超前实施达到上限，停止并等待人工验收。
 - `invalid runtime state`：`dtask-state.json` 缺失 owner、损坏或与 `dtask.json` 冲突；此时不会自动恢复 чужой 任务。

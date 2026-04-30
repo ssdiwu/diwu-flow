@@ -1,0 +1,180 @@
+"""L2 tests for task_completed.py — loop tracking behavior."""
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
+TASK_COMPLETED_SCRIPT = PROJECT_ROOT / "hooks" / "scripts" / "task_completed.py"
+RUNTIME_STATE_NAME = ".diwu/dtask-state.json"
+
+
+def _run_task_completed(tmp_path, event_data):
+    """Run task_completed.py with given event data via stdin."""
+    env = os.environ.copy()
+    env["DIWU_SILENT"] = "1"
+    result = subprocess.run(
+        [sys.executable, str(TASK_COMPLETED_SCRIPT)],
+        input=json.dumps(event_data),
+        capture_output=True,
+        text=True,
+        cwd=str(tmp_path),
+        env=env,
+    )
+    return result
+
+
+def _make_dtask(tmp_path, tasks):
+    diwu = tmp_path / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    (diwu / "dtask.json").write_text(
+        json.dumps({"tasks": tasks}, ensure_ascii=False, indent=2)
+    )
+
+
+def _make_runtime_state(tmp_path, dloop=None, task_sessions=None):
+    diwu = tmp_path / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    state = {
+        "version": 1,
+        "task_sessions": task_sessions or {},
+        "dloop": dloop,
+    }
+    (diwu / "dtask-state.json").write_text(json.dumps(state, ensure_ascii=False, indent=2))
+
+
+class TestTaskCompletedLoopTracking:
+    """task_completed.py 的 loop completed_task_ids 追踪行为。"""
+
+    def test_match_session_appends_once(self, tmp_path):
+        """session 匹配 + event.task 存在 → append 到 completed_task_ids。"""
+        _make_dtask(tmp_path, [
+            {"id": 5, "title": "T5", "status": "Done"},
+        ])
+        _make_runtime_state(tmp_path, dloop={
+            "active": True,
+            "session_id": "session-match",
+            "started_at": "2026-04-30T12:00:00Z",
+            "completed_task_ids": [1, 2],
+            "current_iteration": 2,
+            "max_tasks": 5,
+            "stopped_at": None,
+            "stop_reason": None,
+        })
+
+        result = _run_task_completed(tmp_path, {
+            "task": {"id": 5, "title": "T5", "status": "Done"},
+            "sessionId": "session-match",
+        })
+
+        # 脚本本身始终 exit 0
+        assert result.returncode == 0
+        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        assert state["dloop"]["completed_task_ids"] == [1, 2, 5]
+
+    def test_mismatch_session_no_append(self, tmp_path):
+        """session 不匹配 → 不追加。"""
+        _make_dtask(tmp_path, [
+            {"id": 5, "title": "T5", "status": "Done"},
+        ])
+        _make_runtime_state(tmp_path, dloop={
+            "active": True,
+            "session_id": "loop-session",
+            "started_at": "2026-04-30T12:00:00Z",
+            "completed_task_ids": [1],
+            "current_iteration": 1,
+            "max_tasks": 5,
+            "stopped_at": None,
+            "stop_reason": None,
+        })
+
+        result = _run_task_completed(tmp_path, {
+            "task": {"id": 5, "title": "T5", "status": "Done"},
+            "sessionId": "different-session",
+        })
+
+        assert result.returncode == 0
+        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        assert state["dloop"]["completed_task_ids"] == [1]
+
+    def test_missing_event_task_no_append(self, tmp_path):
+        """event.task 缺失 → 不追加（不用 fallback heuristic）。"""
+        _make_dtask(tmp_path, [
+            {"id": 5, "title": "T5", "status": "Done"},
+        ])
+        _make_runtime_state(tmp_path, dloop={
+            "active": True,
+            "session_id": "session-match",
+            "started_at": "2026-04-30T12:00:00Z",
+            "completed_task_ids": [1],
+            "current_iteration": 1,
+            "max_tasks": 5,
+            "stopped_at": None,
+            "stop_reason": None,
+        })
+
+        # event.task 完全缺失，只有 sessionId
+        result = _run_task_completed(tmp_path, {
+            "sessionId": "session-match",
+        })
+
+        assert result.returncode == 0
+        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        assert state["dloop"]["completed_task_ids"] == [1]
+
+    def test_duplicate_done_no_double_append(self, tmp_path):
+        """同一 task_id 再次 Done → 不重复追加。"""
+        _make_dtask(tmp_path, [
+            {"id": 5, "title": "T5", "status": "Done"},
+        ])
+        _make_runtime_state(tmp_path, dloop={
+            "active": True,
+            "session_id": "session-match",
+            "started_at": "2026-04-30T12:00:00Z",
+            "completed_task_ids": [1, 5],
+            "current_iteration": 2,
+            "max_tasks": 5,
+            "stopped_at": None,
+            "stop_reason": None,
+        })
+
+        result = _run_task_completed(tmp_path, {
+            "task": {"id": 5, "title": "T5", "status": "Done"},
+            "sessionId": "session-match",
+        })
+
+        assert result.returncode == 0
+        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        assert state["dloop"]["completed_task_ids"] == [1, 5]
+
+    def test_reminder_off_still_tracks(self, tmp_path):
+        """recording_reminder=false 时 loop 追踪仍生效（reminder 文案可不出但计数要更新）。"""
+        _make_dtask(tmp_path, [
+            {"id": 5, "title": "T5", "status": "Done"},
+        ])
+        _make_runtime_state(tmp_path, dloop={
+            "active": True,
+            "session_id": "session-match",
+            "started_at": "2026-04-30T12:00:00Z",
+            "completed_task_ids": [1],
+            "current_iteration": 1,
+            "max_tasks": 5,
+            "stopped_at": None,
+            "stop_reason": None,
+        })
+        # 关闭 reminder
+        (tmp_path / ".diwu" / "dsettings.json").write_text(
+            json.dumps({"recording_reminder": {"enabled": False}}, ensure_ascii=False, indent=2)
+        )
+
+        result = _run_task_completed(tmp_path, {
+            "task": {"id": 5, "title": "T5", "status": "Done"},
+            "sessionId": "session-match",
+        })
+
+        assert result.returncode == 0
+        # reminder 关闭时脚本应早退（exit 0），但 loop 追踪在早退之前已完成
+        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        assert state["dloop"]["completed_task_ids"] == [1, 5]

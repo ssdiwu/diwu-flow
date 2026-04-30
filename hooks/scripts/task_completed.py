@@ -6,6 +6,11 @@ Checks recording_reminder.enabled (default true) in dsettings.json.
 Non-blocking: always exit(0), outputs reminder via additionalSystemPrompt.
 
 Does NOT write files — recording is handled by Stop hook.
+
+Loop tracking: independently maintains completed_task_ids in dtask-state.json.dloop
+when an active dloop session matches the current event session_id.
+This runs BEFORE the recording_reminder gating so loop bookkeeping
+is never disabled by reminder settings.
 """
 
 import json, os, sys
@@ -51,25 +56,55 @@ def _task_summary(task):
     return f"Task#{tid}: {title}"
 
 
-def main():
-    settings = _load(SETTINGS_FILE)
-    if settings.get('recording_reminder', {}).get('enabled') == False:
-        sys.exit(0)
+def _track_loop_completion(task_id: int, session_id: str):
+    """Loop 追踪：仅在精确条件满足时追加 completed_task_ids。
 
+    独立于 reminder gating —— 即使 recording_reminder 关闭，loop 计数仍需维护。
+    只认 event.task 原始精确信号（event_task），不使用 fallback heuristic 结果。
+    必须在 clear_task_owner 成功后的路径中调用（通过 main() 调用时机保证）。
+    """
+    task_data = _load(TASK_JSON_PATH)
+    sync_result = sync_runtime_state(".", task_data, persist=True, ensure_exists=True)
+    if not sync_result.ok:
+        return
+    runtime_loop = sync_result.state.get("dloop") if sync_result.state else None
+    if (not runtime_loop or not runtime_loop.get("active")
+            or runtime_loop.get("session_id") != session_id):
+        return
+    current_completed = runtime_loop.get("completed_task_ids", [])
+    if task_id in current_completed:
+        return  # 防重复：同一 task_id 再次 Done 不追加
+    runtime_loop["completed_task_ids"] = current_completed + [task_id]
+    save_runtime_state(".", sync_result.state, remove_legacy=True)
+
+
+def main():
     event = _get_event_data()
-    session_id = event.get('sessionId', event.get('session_id', ''))
+    session_id = event.get("sessionId", event.get("session_id", ""))
+
+    # === Loop 追踪（独立于 reminder gating，必须在 reminder 早退之前）===
+    # 只认 event.task 原始精确信号，不使用 fallback heuristic 的结果
+    _event_task = event.get("task")
+    if (_event_task and isinstance(_event_task.get("id"), int)
+            and not isinstance(_event_task["id"], bool)):
+        _track_loop_completion(_event_task["id"], session_id)
+
+    # === Reminder 提醒（原有逻辑）===
+    settings = _load(SETTINGS_FILE)
+    if settings.get("recording_reminder", {}).get("enabled") == False:
+        sys.exit(0)
 
     # Try to identify the completed task from event or task.json
     task_info = ''
-    completed_task = event.get('task')
+    completed_task = event.get("task")
 
     if not completed_task:
         # Fallback: scan task.json for Done tasks (heuristic)
         task_data = _load(TASK_JSON_PATH)
-        tasks = task_data.get('tasks', [])
+        tasks = task_data.get("tasks", [])
         # Last Done task found (most recent completion)
         for t in reversed(tasks):
-            if t.get('status') == 'Done':
+            if t.get("status") == "Done":
                 completed_task = t
                 break
 
@@ -106,5 +141,5 @@ def main():
     sys.exit(0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

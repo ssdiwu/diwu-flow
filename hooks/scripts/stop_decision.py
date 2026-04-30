@@ -15,7 +15,9 @@ SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
 if SHARED_SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SHARED_SCRIPTS_DIR)
 
-from dloop_state import get_executable_tasks, get_terminal_stop_reason  # noqa: E402
+from dloop_state import get_terminal_stop_reason  # noqa: E402
+
+_DUMMY_PREFIX = "dloop-"  # dloop.py start 生成的 dummy session_id 前缀
 from dtask_state import (  # noqa: E402
     clear_loop_state,
     loop_state as runtime_loop_state,
@@ -226,7 +228,6 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
         print(resolution.reason, file=sys.stderr)
         return False, {"decision": resolution.status, "reason": resolution.reason}
 
-    next_tasks = [task for task in get_executable_tasks(tasks) if task.get("status") == "InSpec"]
     in_review = [task for task in tasks if task.get("status") == "InReview"]
 
     stop_reason = get_terminal_stop_reason(tasks, settings=settings, data=data, loop_state_data=loop_state)
@@ -241,20 +242,24 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
         print(report, file=sys.stderr)
         return False, {}
 
+    # 未命中停止条件 → 迭代计数 + 委托 /drun 执行下一轮
     next_iteration = iteration + 1
     loop_state["current_iteration"] = next_iteration
     save_runtime_state(cwd, runtime_state, remove_legacy=True)
 
+    # InReview 计数更新（停止条件输入数据，保留原有语义）
     if in_review:
         data["review_used"] = data.get("review_used", 0) + 1
         _save_task_data(task_json_path, data)
 
-    target = next_tasks[0]
+    # completed_task_ids 由 task_completed.py 在 Done 事件时精确追加
+    # 此处只读不写，用于 max_tasks 判断和阶段报告
+
     return True, {
         "decision": "block",
-        "reason": format_task(
-            f"🔄 dloop iteration {next_iteration}/{f'∞' if max_tasks == 0 else max_tasks} | 继续执行下一个任务：",
-            target,
+        "reason": (
+            f"dloop iteration {next_iteration}/{f'∞' if max_tasks == 0 else max_tasks} | "
+            f"请继续执行 /drun 完成下一轮任务"
         ) + extra,
     }
 
@@ -307,9 +312,22 @@ if __name__ == "__main__":
     session_id = hook_session_id(stdin_data)
 
     if loop_state is not None:
-        loop_session_id = loop_state.get("session_id", "")
-        if loop_session_id and session_id and loop_session_id != session_id:
+        loop_sid = loop_state.get("session_id", "")
+
+        # 分支1: Stop event 缺失 session_id → 显式 allow stop，不落入 default mode
+        if not session_id:
+            print(json.dumps({"decision": "allow_stop", "reason": "Stop event 缺少 session_id，不允许驱动 dloop 循环"}, ensure_ascii=False))
+            sys.exit(1)
+
+        # 分支2: 首次绑定 — dummy ID 替换为真实 session_id（一次性）
+        elif loop_sid.startswith(_DUMMY_PREFIX):
+            loop_state["session_id"] = session_id
+            save_runtime_state(cwd, runtime_state, remove_legacy=True)
+
+        # 分支3: 已绑定但不匹配 → 退出 loop mode
+        elif loop_sid != session_id:
             loop_state = None
+        # else: 匹配 → 进入 loop mode（原有正常路径）
 
     additional_prompts = []
     try:

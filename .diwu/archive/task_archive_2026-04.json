@@ -1,0 +1,925 @@
+{
+  "archived_at": "2026-04-30T16:07:02.961592+00:00",
+  "source": ".diwu/dtask.json",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "修复 dstat SKILL.md 三个设计缺陷",
+      "description": "/dstat 执行时出现两个可复现错误：①相对时间被估算而非精确计算（41min→2h）②归档Session计数错误（3→7）③时间格式未定义。根因：数据源表缺少date命令、recording数据源描述歧义、输出格式无约束。",
+      "acceptance": [
+        "Given 数据源表含 date 命令项 When Agent 执行 /dstat Then 相对时间通过 date 计算差值，误差 <1 分钟",
+        "Given recording 数据源拆为 2a+2b When Agent 执行 /dstat Then 归档 Session 计数与 ls 实际文件数一致",
+        "Given 输出规格定义时间格式规则 When 时间差 <60min Then 显示 N 分钟前；<24h 显示 N 小时前；≥24h 显示 N 天前"
+      ],
+      "steps": [
+        "[锁定] 修改 skills/dstat/SKILL.md「数据源与读取顺序」表格：原 #2 拆为 #2a(取最新1-2个) + #2b(全量统计)，新增 #4 为 `date '+%Y-%m-%d %H:%M:%S'`",
+        "[锁定] 修改 skills/dstat/SKILL.md「标准模式」输出模板时间行：(N 小时前) → (N 分钟/小时/天前)",
+        "[建议] 在 skills/dstat/SKILL.md「约束」章节追加防估算规则和时间格式切换定义"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dstat/SKILL.md"
+      ],
+      "category": "refactor",
+      "status": "Done"
+    },
+    {
+      "id": 2,
+      "title": "修复 task_entry_guard 对 Plan mode 计划文件的误拦截",
+      "description": "当 dtask.json 无活跃任务时，task_entry_guard 阻断所有 Write 操作，包括 Plan mode 写计划文件到 ~/.claude/plans/ 路径。导致死锁：无法建任务→无法写任何文件→无法解除封锁。",
+      "acceptance": [
+        "Given Plan mode 激活且目标路径匹配 ~/.claude/plans/*.md When Agent 调用 Write 工具 Then task_entry_guard 放行，不检查 dtask 任务",
+        "Given 非 Plan mode 且 dtask.json 无活跃任务 When Agent 调用 Write 工具写入项目内文件 Then task_entry_guard 正常拦截并提示",
+        "Given task_entry_guard 修改完成 When 运行 pytest tests/ Then 全量通过"
+      ],
+      "steps": [
+        "[锁定] 阅读 hooks/scripts/task_entry_guard.py 理解当前拦截逻辑",
+        "[锁定] 在拦截判断中加入 Plan mode 路径白名单：~/.claude/plans/*.md 或检测环境变量/上下文标识 Plan mode",
+        "[建议] 补充测试用例覆盖 Plan mode 放行场景",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 3,
+      "title": "task_entry_guard 改为软提醒 + .md 文件白名单",
+      "description": "当前 task_entry_guard 对无活跃 dtask 任务时的所有 Write/Edit 执行硬拦截（exit 2），导致写 README、改 skill、编辑配置等正常操作被阻断。需改为：①.md 文件直接放行（白名单）②非白名单文件从硬拦截改为软提醒（exit 0 + stderr 警告）③更新测试适配新行为。",
+      "acceptance": [
+        "Given dtask.json 无活跃任务且目标文件为 *.md When Agent 调用 Edit/Write 工具 Then task_entry_guard 直接放行（exit 0, 无 stderr）",
+        "Given dtask.json 无活跃任务且目标文件为非 .md 业务代码 When Agent 调用 Edit/Write 工具 Then task_entry_guard 输出警告到 stderr 但放行（exit 0, stderr 含 diwu-task-guard）",
+        "Given dtask.json 有 InSpec/InProgress/InReview 任务 When Agent 调用 Edit/Write 工具 Then 行为不变（exit 0, 无 stderr）",
+        "Given 修改完成后运行 pytest tests/level2/test_plan_dtask_guards.py Then test_task_entry_guard_blocks_without_dtask 的 returncode 断言为 0 且 stderr 含警告文本"
+      ],
+      "steps": [
+        "[锁定] 在 hooks/scripts/task_entry_guard.py 中新增 _is_doc_file(target_path) 函数：检测 target_path 是否以 .md 结尾",
+        "[锁定] 在 main() 函数的 _is_plan_file 判断之后加入 _is_doc_file 白名单判断",
+        "[锁定] 将 main() 末尾的硬拦截逻辑 sys.exit(2) 改为 sys.exit(0)，保留 BLOCK_MESSAGE 输出到 stderr",
+        "[锁定] 更新 tests/level2/test_plan_dtask_guards.py 中 test_task_entry_guard_blocks_without_dtask：returncode 断言改为 0，新增 assert 'diwu-task-guard' in result.stderr",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
+      ],
+      "category": "refactor",
+      "status": "Done"
+    },
+    {
+      "id": 4,
+      "title": "修复 plan_exit_hint.py 文案误导「Plan 已批准」",
+      "description": "plan_exit_hint.py 的 MESSAGE 写死「Plan 已批准」，但它只是 ExitPlanMode 事件的提醒注入器，不参与审批流程。无论用户 Approve 还是 Reject 都输出此文案，造成误导。代码已通过 sed 临时修复为「Plan→Dtask 门控提醒」，需正式纳入任务追踪并补充测试。",
+      "acceptance": [
+        "Given ExitPlanMode 事件触发 When plan_exit_hint.py 执行 Then 输出文案不含「已批准」字样（L1: 文案内容确认）",
+        "Given plan_exit_hint.py 文案更新后 When 运行 pytest tests/level2/test_plan_dtask_guards.py::test_plan_exit_hint_emits_additional_context Then 测试通过且 additionalContext 含正确文案（L3: 自动化断言）",
+        "Given 全量回归 When 运行 pytest tests/ Then 116 tests 全通过（L3: 自动化断言）"
+      ],
+      "steps": [
+        "[锁定] 确认 hooks/scripts/plan_exit_hint.py 的 MESSAGE 已改为中性文案（当前应为「Plan→Dtask 门控提醒」）",
+        "[锁定] 更新 tests/level2/test_plan_dtask_guards.py::test_plan_exit_hint_emits_additional_context 的断言：确认输出不含「已批准」且含「门控提醒」或等效中性表述",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 5,
+      "title": "规范 stop hook 注入任务后的 Agent 行为：禁止自动执行",
+      "description": "stop_decision.py 在有 InSpec 任务时输出 decision:'block'+reason（任务详情），CC 将其注入系统提示。Agent 收到后直接开始执行，跳过了用户确认环节。正确行为：Agent 收到 stop hook 注入的任务信息后应暂停并等待用户明确指示（将任务改为 InProgress 或给出新的指令），不得假设沉默=授权。",
+      "acceptance": [
+        "Given stop hook 注入 InSpec 任务信息到上下文 When Agent 读取到该信息 Then Agent 输出状态摘要并等待用户指令，而非直接执行步骤（行为判定：drun SKILL.md 有明确约束条款）",
+        "Given skills/drun/SKILL.md 新增约束条款 When 搜索「stop.*hook.*注入」或「auto.*execut」Then 能匹配到明确的禁止自动执行规则（L1: 文件内容确认）",
+        "Given 约束写入后 When 运行 pytest tests/ Then 全量通过（L3: 自动化断言）"
+      ],
+      "steps": [
+        "[锁定] 阅读 skills/drun/SKILL.md 定位 stop hook 注入任务后的行为描述段落（如有）",
+        "[锁定] 在 skills/drun/SKILL.md 中新增明确约束：stop hook 注入任务后 Agent 必须暂停等待用户确认（改 InProgress / 给出新指令），禁止自动执行",
+        "[建议] 同步检查 skills/dcorr/SKILL.md 是否有类似需要补充的行为约束",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/ciwu-flow/skills/drun/SKILL.md"
+      ],
+      "category": "refactor",
+      "status": "Done"
+    },
+    {
+      "id": 6,
+      "title": "stop_decision.py 循环模式逻辑修正：去掉 BLOCKED 死代码 + InReview 语义确认",
+      "description": "当前循环模式 _check_stop() 中「BLOCKED」停止条件描述误导——BLOCKED 不是独立 status，只是 is_unblocked 过滤的结果，实际上 not nx 已覆盖此场景。此外 rev[0] 是死代码（_check_stop 中 not nx 优先返回）。需清理代码并确保 InReview 在循环中不被自动执行（等待人工复核）。",
+      "acceptance": [
+        "Given stop_decision.py 循环模式 When _check_stop() 检查条件 Then 不包含名为「BLOCKED」的独立停止条件（L3: 代码内容确认，grep 不命中 BLOCKED 独立条件分支）",
+        "Given stop_decision.py 循环模式 When 搜索 rev[0] 则不命中独立的 rev 回退分支（L3: 代码确认 rev 不再作为循环执行目标）",
+        "Given 全量回归 When 运行 pytest tests/ Then 所有测试通过（L3: 自动化断言）"
+      ],
+      "steps": [
+        "[锁定] 阅读 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py decide_loop_mode() 函数，确认 _check_stop() 逻辑",
+        "[锁定] 去掉 _check_stop() 中对「BLOCKED」的显式描述，保留 not nx and not ip 逻辑（其已正确覆盖被阻塞任务场景）",
+        "[锁定] 清理行 248 的 rev[0] 死代码分支——当 _check_stop 通过后 nx 必非空，rev[0] 不可达",
+        "[建议] 新增测试用例验证：循环模式下剩余仅 InReview 任务时 allow stop",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 7,
+      "title": "README/SKILL.md 停止条件与任务状态机对齐 diwu-workflow",
+      "description": "当前 diwu-flow 的 README 和 dloop SKILL.md 中描述的停止条件（含 BLOCKED 列）与代码实际逻辑不符，且缺少完整任务状态机定义。需参考 diwu-workflow (github.com/ssdiwu/diwu-workflow) 的 stateDiagram 和状态表，统一修改 dloop SKILL.md、drun SKILL.md、README 的状态机描述。",
+      "acceptance": [
+        "Given dloop SKILL.md §停止条件表 When 搜索 BLOCKED 作为独立停止条件行 Then 不命中（BLOCKED 不再列为独立停止条件）",
+        "Given dloop SKILL.md §停止条件 When 检查「无可执行任务」的解释 Then 明确说明：InSpec（未被 blocked_by 阻塞）和 InProgress 为可执行任务，InReview/Done/Cancelled/InDraft 不可执行",
+        "Given README §任务状态机 When 阅读完整状态定义 Then 包含 InDraft/InSpec/InProgress/InReview/Done/Cancelled 六态定义及 stateDiagram（与 diwu-workflow 一致）",
+        "Given 全量回归 When 运行 pytest tests/ Then 所有测试通过（L3: 自动化断言）"
+      ],
+      "steps": [
+        "[锁定] 阅读 diwu-workflow README.md 提取任务状态机 stateDiagram 和状态表（六态定义）",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md §停止条件表：去掉 BLOCKED 行，修正「无可执行任务」解释",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/README.md：新增任务状态机 stateDiagram（参考 diwu-workflow 格式）",
+        "[建议] 检查 skills/drun/SKILL.md 任务选择策略章节是否需要同步更新状态术语",
+        "[建议] 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md"
+      ],
+      "category": "refactor",
+      "status": "Done"
+    },
+    {
+      "id": 8,
+      "title": "修复文档混淆：drun vs dloop 区分 + 计数/版本号修正",
+      "description": "commands/drun.md 与 skills/drun/SKILL.md 对 drun 定位矛盾（Command 写循环，Skill 写单任务）。README.md 计数过时（Skills 11→12, Commands 9→11），install.sh 版本号漂移（0.0.4→0.0.5）。需统一为单任务执行器定位并修正计数。这是脚本化 Phase 0a 的文档澄清工作。",
+      "acceptance": [
+        "Given commands/drun.md 当前内容 When 修复后 Then line 17 不含'循环''自动选下一个'措辞且末尾含'> 连续执行多个任务请用 /dloop'",
+        "Given README.md 当前内容 When 修复后 Then line 65 含'单任务执行'非'执行循环'、line 141 含'单任务执行器'、line 140 含'Skills (12)'、Commands 列表标注 /drun(单次)/dloop(连续)、line 172 含'11 Commands'",
+        "Given install.sh 当前内容 When 修复后 Then 版本号 stub 为 0.0.5（对齐 plugin.json v0.0.5）",
+        "Given 修复完成后 When 运行 pytest tests/ Then 全量 127 passed 无回归"
+      ],
+      "steps": [
+        "[锁定] 读取 commands/drun.md 确认当前 line 15-18 的 auto 模式描述",
+        "[锁定] 修改 commands/drun.md: auto 模式改为'自动完成单任务全部步骤（Preflight → 实施 → 验证 → Session 结束），做完即停'；删除循环/选下一个措辞；末尾追加'> 连续执行多个任务请用 /dloop'",
+        "[锁定] 读取 README.md 确认 line 65/141/140/155-158/172 的当前值",
+        "[锁定] 修改 README.md: line 65→单任务执行; line 141→单任务执行器; line 140→Skills (12); Commands 列表加(单次)/(连续)标注; line 172→11 Commands",
+        "[锁定] 读取 install.sh 定位版本号 stub 位置",
+        "[锁定] 修改 install.sh 版本号 0.0.4 → 0.0.5",
+        "[建议] 运行 pytest tests/ 确认文档修改无测试副作用"
+      ],
+      "files_modified": [
+        "commands/drun.md",
+        "README.md",
+        "install.sh"
+      ],
+      "category": "infra",
+      "status": "Done"
+    },
+    {
+      "id": 9,
+      "title": "搭建脚本基建：scripts/common.py + 测试骨架 + CLAUDE.md 更新",
+      "description": "创建 scripts/ 目录和共享工具函数 common.py（遵循 T4/T5/T6/T7/T8/T12 约定，含 max_task_id 供 /dtask Step 3 复用），建立 tests/level2_scripts/ 测试骨架（conftest.py 含 tmp_project_dir/tmp_git_repo/assert_rel_time_shape），更新 CLAUDE.md 项目结构加入 scripts/。这是所有后续脚本任务的前置依赖（Phase 0b）。",
+      "acceptance": [
+        "Given scripts/common.py 当创建完成 When import 后 Then 包含 plugin_root/load_json_optional/load_json_or_empty/save_json/ensure_dir/rel_time/error_exit 六个函数且 docstring 含 T6/T7/T8 输出约定",
+        "Given scripts/common.py 当执行 python3 -c 'import common; print(common.plugin_root())' Then 输出项目根目录路径且非空",
+        "Given tests/level2_scripts/conftest.py 当创建完成 Then 包含 tmp_project_dir/tmp_git_repo/assert_rel_time_shape 三个 fixture/helper 且 tmp_git_repo 内部配置了 git user.name/email",
+        "Given .claude/CLAUDE.md 当更新后 Then 项目结构表中包含 scripts/ 目录说明且定位文案为'新增 script-backed 执行通道'（T9: 不说统一三层）",
+        "Given 基建完成后 When 运行 pytest tests/ Then 全量 127 passed 且 tests/level2_scripts/ 下可发现新测试文件",
+        "Given .diwu/dtask.json 含 7 个 Done 任务 + archive/task_archive_2026-04.json 含 id=5 When 执行 python3 scripts/common.py --max-task-id --cwd <proj> Then exit code 0 且 stdout JSON 含 {ok:true, max_id:7, source:'dtask.json'}"
+      ],
+      "steps": [
+        "[锁定] 创建 scripts/ 目录",
+        "[锁定] 编写 scripts/common.py: plugin_root() 从 __file__ 推导(T4); load_json_optional(path,default) 不存在返回 default 损坏 error_exit(T5/T12); load_json_or_empty(path) 不存在返回 {} 损坏 error_exit(T5/T12); save_json 原子写入; ensure_dir; rel_time 六段格式; error_exit stderr JSON+exit 1(T6); max_task_id(diwu_dir) 读 dtask.json + glob archive 取 max ID(供 /dtask Step 3 复用); docstring 写入 T6/T7/T8 约定",
+        "[建议] 编写 tests/level2_scripts/test_common.py: 覆盖六个函数的单元测试（正常路径+文件不存在+JSON损坏+相对时间）",
+        "[锁定] 创建 tests/level2_scripts/conftest.py: tmp_project_dir fixture(tmp_path); tmp_git_repo fixture(初始化 git repo+一条 commit+git config user.name/email+分支不断言 main)(I3); assert_rel_time_shape helper(只断言分钟前/小时前/天前结构)",
+        "[建议] 在 conftest.py 中将 scripts/ 加入 sys.path(I2: CLI-first 策略，默认 subprocess 测 CLI)",
+        "[锁定] 更新 .claude/CLAUDE.md 项目结构：加入 scripts/ 目录及文件列表说明，定位文案用'新增 script-backed 执行通道'(T9)",
+        "[建议] 运行 pytest tests/ 全量回归确认无破坏"
+      ],
+      "files_modified": [
+        "scripts/common.py",
+        "tests/level2_scripts/conftest.py",
+        "tests/level2_scripts/test_common.py",
+        ".claude/CLAUDE.md"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        8
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 10,
+      "title": "实现 dstat.py 脚本化 + 变薄 commands/dstat.md",
+      "description": "将 /dstat 从纯 Markdown 注入（116 行 cmd+skill）改造为 Python 脚本执行。dstat 是纯读取聚合命令（读 dtask.json/recording/decisions/git/archive → 格式化输出），完全可脚本化。变薄 command 为 ~18 行脚本调用协议。预期节省 ~85% token。Phase 1 第一个 PoC 目标。",
+      "acceptance": [
+        "Given 空 .diwu/ 项目目录 When 执行 python3 scripts/dstat.py --cwd <proj> Then exit code 0 且 stdout JSON 含 ok=true/status='ok'/summary/tasks 分布/recent_sessions/decisions/git/archive/formatted_text",
+        "Given dtask.json 存在且有 3 个任务(InSpec x2 + Done x1) When 执行 dstat.py Then summary.total=3 InSpec=2 Done=1 且 formatted_text 含正确 ASCII 表格",
+        "Given recording/ 存在 2 个 session 文件 When 执行 dstat.py Then recent_sessions 长度=2 且每项含 relative_time 字段",
+        "Given 非 git 目录 When 执行 dstat.py Then exit code 0 且 git 字段为 null 且 warnings 含'非 git 目录'或类似 graceful degrade 信息(I5)",
+        "Given commands/dstat.md 变薄后 When 读取 Then ≤25 行且不含'触发 skills/dstat/SKILL.md'表述(T20) 且含脚本调用方式说明",
+        "Given 完成后 When pytest tests/ Then 全量 127+ passed 含新 test_dstat.py"
+      ],
+      "steps": [
+        "[锁定] 读取 skills/dstat/SKILL.md 提取完整输出规格（标准模式/deep 模式表格、数据源定义、约束列表）",
+        "[锁定] 实现 scripts/dstat.py (~120 行): get_tasks_summary/get_recent_sessions/get_recent_decisions/get_git_status/get_archive_status/format_output 主函数; 数据源缺失时 warnings+null 降级(I5); 非 git 场景 graceful degrade(I5); formatted_text 完全复刻 SKILL.md ASCII 表格",
+        "[锁定] 变薄 commands/dstat.md: 保留 frontmatter + 脚本调用方式 + 输出字段说明 + AI 判断点（阻塞提醒/未 commit 提醒）；删除'触发 skills/dstat/SKILL.md'表述(T20)；目标 ~18 行",
+        "[建议] 编写 tests/level2_scripts/test_dstat.py: 用 tmp_git_repo fixture 覆盖正常输出/缺 dtaskjson/缺 recording/非 git/deep 模式; CLI-first subprocess 调用(I2); assert_rel_time_shape 验证时间格式(I4)",
+        "[建议] 运行 pytest tests/ 全量回归"
+      ],
+      "files_modified": [
+        "scripts/dstat.py",
+        "commands/dstat.md",
+        "tests/level2_scripts/test_dstat.py"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        9
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 11,
+      "title": "实现 dend.py 脚本化 + 变薄 commands/dend.md",
+      "description": "将 /dend（取消 dloop 循环）从 29 行 Command 改造为 ~35 行 Python 脚本。dend 是最简单的 Tier 1 命令——读写一个 JSON 文件。cancel 职责归 dend.py 唯一入口(T3)，dloop.py 不设 cancel 子命令。预期节省 ~70% token。",
+      "acceptance": [
+        "Given 无 .diwu/dloop-state.json When 执行 python3 scripts/dend.py --cwd <proj> Then exit code 0 且 {ok:true, status:'no_loop', message 含'无活跃'}",
+        "Given 存在 dloop-state.json(completed=[1,2], iteration=3) When 执行 dend.py Then exit code 0 且 {ok:true, status:'cancelled', completed_count:2, iteration:3} 且该文件已被删除",
+        "Given commands/dend.md 变薄后 When 读取 Then ≤12 行且仅含脚本调用方式 + 直接展示输出的指示",
+        "Given 完成后 When pytest tests/ Then 全量 127+ passed 含新 test_dend.py"
+      ],
+      "steps": [
+        "[锁定] 实现 scripts/dend.py (~35 行): 读取 state file → 不存在返回 no_loop(ok:true) → 存在则读取摘要+删除 → 返回 {ok,status,message,formatted_text}; 所有路径 exit 0(T5/T19)",
+        "[锁定] 变薄 commands/dend.md: 保留 frontmatter + 脚本调用 + '将输出直接展示给用户'; 目标 ~10 行",
+        "[建议] 编写 tests/level2_scripts/test_dend.py: 覆盖无状态文件/有状态文件取消/状态文件含多任务三种场景; CLI-first(I2)",
+        "[建议] 运行 pytest tests/ 全量回归"
+      ],
+      "files_modified": [
+        "scripts/dend.py",
+        "commands/dend.md",
+        "tests/level2_scripts/test_dend.py"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        9
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 12,
+      "title": "实现 dloop.py CRUD (start + status) + 变薄 commands/dloop.md",
+      "description": "将 /dloop 的启动和状态查询从 Command 抽取为 Python 脚本（~60 行）。只做 start + status 两项 CRUD，不碰停止逻辑（真相源在 stop_decision.py T2）。cancel 归 dend.py 唯一入口(T3)。start 的可执行任务检查只判断 InProgress 或未阻塞 InSpec 是否存在(T17)。",
+      "acceptance": [
+        "Given 无 dloop-state.json 且有 InSpec 任务 When 执行 python3 scripts/dloop.py start --cwd <proj> Then exit code 0 且 {ok:true, status:'started', data.state_file 存在} 且首轮任务 ID 匹配 stop_decision.py 选择规则(T17)",
+        "Given 已存在 dloop-state.json(active=true) When 执行 dloop.py start Then exit code 0 且 {ok:false, status:'already_running'} （不用 error 字段 T7）",
+        "Given 无 InSpec/InProgress 任务 When 执行 dloop.py start Then exit code 0 且 {ok:false, status:'no_executable_tasks'} （不用 error 字段 T7）",
+        "Given 执行 dloop.py status --cwd <proj>（无状态文件）Then exit code 0 且 {ok:true, status:'no_loop'} (T19: 固定语义)",
+        "Given 执行 dloop.py status --cwd <proj>（有状态文件）Then exit code 0 且含 current_iteration/completed_task_ids/max_tasks 字段",
+        "Given commands/dloop.md 变薄后 When 读取 Then 启动部分引用脚本调用，cancel 部分指向 /dend(T3)，循环驱动描述保留引用 stop_decision.py",
+        "Given 完成后 When pytest tests/ Then 全量 127+ passed 且新测试与 test_dloop.py(stop_decision 测试)不重叠"
+      ],
+      "steps": [
+        "[锁定] 读取 hooks/scripts/stop_decision.py 参考 _load_loop_state/_save_loop_state 风格（已验证成熟的 dloop 状态管理模式）",
+        "[锁定] 实现 scripts/dloop.py (~60 行): argparse subparser(start/status); start 做冲突检查+任务可用性(only InProgress or unblocked InSpec T17)+创建 state JSON; status 读取并展示; 无 cancel(T3)",
+        "[锁定] 变薄 commands/dloop.md: 启动部分→脚本调用+参数说明+首轮任务提示; cancel 部分→'使用 /dend 取消'; 循环驱动→'由 stop_decision.py hook 负责'（T2）; 目标 ~30 行",
+        "[建议] 编写 tests/level2_scripts/test_dloop.py: 覆盖 start 成功/start 冲突/start 无任务/status 有文件/status 无文件; 验证与 test_dloop.py(test_stop_decision) 不重叠(T2); CLI-first(I2)",
+        "[建议] 运行 pytest tests/ 全量回归"
+      ],
+      "files_modified": [
+        "scripts/dloop.py",
+        "commands/dloop.md",
+        "tests/level2_scripts/test_dloop.py"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        9
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 13,
+      "title": "实现 dadr.py 脚本化（编号分配 + 文件骨架 + 索引维护） + 变薄 commands/dadr.md",
+      "description": "将 /dadr 的机械操作（编号分配 ADR-NNN、创建骨架文件、更新 README.md 索引）抽取为 Python 脚本（~110 行）。AI 保留 Step 1-2（澄清问题+内容撰写）。create 子命令需保留'README 缺失时扫描现有 ADR 重建索引'语义(T11)。",
+      "acceptance": [
+        "Given 空 .doc/adr/ 目录 When 执行 python3 scripts/dadr.py next-number --cwd <proj> Then exit code 0 且 {ok:true, next_number:1, formatted: 'ADR-001'}",
+        "Given .doc/adr/ 含 ADR-001.md 和 ADR-003.md When 执行 dadr.py next-number Then exit code 0 且 next_number=4",
+        "Given 参数 --title 'test-adr' --number 4 When 执行 dadr.py create --cwd <proj> Then .doc/adr/ADR-004-test-adr.md 存在且含 Status/Date/Context/Options/Decision/Consequences 骨架; .doc/adr/README.md 已更新追加一行",
+        "Given .doc/adr/README.md 不存在 When 执行 dadr.py create Then 先扫描现有 ADR*.md 生成完整索引表头再追加当前行(T11)",
+        "Given 执行 dadr.py update-status --number 1 --status Accepted --cwd <proj> Then ADR-001.md 的 Status 行改为 Accepted 且 README.md 同步更新",
+        "Given commands/dadr.md 变薄后 When 读取 Then ~45 行且含脚本调用方式 + AI 保留步骤（Step 1-2 澄清+内容撰写）",
+        "Given 完成后 When pytest tests/ Then 全量 127+ passed 含新 test_dadr.py"
+      ],
+      "steps": [
+        "[锁定] 读取 commands/dadr.md 确认 Step 3(编号分配)/Step 4(文件创建)/Step 5(索引更新)的完整契约",
+        "[锁定] 检查是否有测试直接断言 dadr.md 字符串（grep 断言）",
+        "[锁定] 实现 scripts/dadr.py (~110 行): argparse subparser(next-number/create/update-status); create 含骨架模板填充+README 缺失时扫描重建索引(T11); update-status 修改 Status 行+同步索引",
+        "[锁定] 变薄 commands/dadr.md: 保留 frontmatter + 脚本调用方式(next-number/create/update-status 各子命令用法) + AI 保留步骤(Step 1-2 澄清问题+Step 4 内容撰写); 目标 ~45 行",
+        "[建议] 编写 tests/level2_scripts/test_dadr.py: 覆盖首次 create/重复编号/README 缺失重建/update-status/README 已存在追加; CLI-first(I2)",
+        "[建议] 运行 pytest tests/ 全量回归"
+      ],
+      "files_modified": [
+        "scripts/dadr.py",
+        "commands/dadr.md",
+        "tests/level2_scripts/test_dadr.py"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        9
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 14,
+      "title": "改造 dinit 测试契约：从断言 Markdown 字符串转为跑脚本验副作用",
+      "description": "Phase 3 前置条件。test_task_166_dinit_diwu_paths.py 直接绑定 commands/dinit.md 字符串（主契约 T1）；test_dinit_diwu_paths.py 主要盯 assets/ 模板路径（绑定范围不同 I1）。必须先将两个测试的主体改为'运行对应 scripts/dinit.py 子命令并验证副作用'，才能安全减薄 command。保留 1 个 smoke test 断言 dinit.md 含脚本入口声明。",
+      "acceptance": [
+        "Given test_task_166_dinit_diwu_paths.py 改造后 When 运行 pytest tests/level3/ -k 'test_166' Then 通过且断言目标为脚本输出（如 scan-repo 返回 directories 数组/sync-rules 返回 report）而非 Markdown 字符串存在性",
+        "Given test_dinit_diwu_paths.py 改造后 When 运行 pytest tests/level3/ -k 'test_dinit_paths' (排除 smoke) Then 通过且断言目标为 assets/ 模板路径和 rules-manifest.json 的副作用验证",
+        "Given 保留的 smoke test When 运行 Then 断言 commands/dinit.md 含脚本入口声明（如'python3.*scripts/dinit.py'）和 AI 步骤章节标题（如'## Step 1: 信息收集'）",
+        "Given 测试契约改造完成 When 运行 pytest tests/ 全量 Then 127+ passed 无回归"
+      ],
+      "steps": [
+        "[锁定] 读取 test_task_166_dinit_diwu_paths.py 确认所有断言目标（RUNTIME_PATHS/OLD_RUNTIME_PATHS/迁移检测等）",
+        "[锁定] 读取 test_dinit_diwu_paths.py 确认所有断言目标（templates 路径/rules 路径/manifest 有效性/constraints 模板）",
+        "[锁定] 重写 test_task_166_dinit_diwu_paths.py: 主体改为运行 scripts/dinit.py validate --cwd tmp_path 并验证报告(NEW/SAME/UPDATED/ALL_PASSED); 保留 1 个 smoke test 断言 dinit.md 含脚本入口+AI 步骤标题(T1)",
+        "[锁定] 重写 test_dinit_diwu_paths.py: templates/assets 断言改为验证 scripts/dinit.py sync-rules 的副作用（rules 文件存在且内容一致）；manifest 断言保留或调整为读取 manifest JSON; constraints 断言保留（脚本不改此模板）",
+        "[建议] 运行 pytest tests/level3/ 确认两个测试文件改造后通过"
+      ],
+      "files_modified": [
+        "tests/level3/test_task_166_dinit_diwu_paths.py",
+        "tests/level3/test_dinit_diwu_paths.py"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        9
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 15,
+      "title": "实现 dinit.py 多子命令（scan-repo/sync-rules/sync-skills/create-config/migrate-legacy/validate） + 变薄 commands/dinit.md",
+      "description": "dinit 是最大 Command（354 行），80% 是文件操作可脚本化。实现 6 个子命令（scan-repo/sync-rules/sync-skills/create-config/migrate-legacy/validate），接口用 --*-file 风格传路径(T13)。变薄 command 至 ~50 行（保留 AI 交互步骤：模式检测/信息收集/架构约束决策）。前置: Task#14 测试契约已改造。",
+      "acceptance": [
+        "Given 空 When 执行 scripts/dinit.py scan-repo --cwd <proj> Then exit code 0 且含 directories/tech_stack/key_files 三组扫描数据",
+        "Given assets/dinit/assets/rules-manifest.json 含 10 个 rules When 执行 scripts/dinit.py sync-rules --cwd <proj> Then exit code 0 且 10 个 rules 文件已同步到 .claude/rules/ 且 report 含 NEW/SAME/UPDATED 统计",
+        "Given skills/ 下含 SKILL.md 的子目录 When 执行 scripts/dinit.py sync-skills --cwd <proj> Then exit code 0 且 .agents/skills/ 下含对应 symlink 且 target 正确",
+        "Given project-info.json + scan-result.json When 执行 scripts/dinit.py create-config --project-info-file X --scan-result-file Y --cwd <proj> Then exit code 0 且 .claude/CLAUDE.md 已填充(含项目名/技术栈/常用命令) 且 .diwu/ 下含 dtask.json/recording/archive/ 等 runtime 文件",
+        "Given 旧版标志(states.md 存在但 task.md 不存在) When 执行 scripts/dinit.py migrate-legacy --cwd <proj> Then exit code 0 且 states.md 已重命名为 backup 且 CLAUDE.md 引用已更新",
+        "Given 全部资产同步后 When 执行 scripts/dinit.py validate --cwd <proj> Then exit code 0 且 all_passed=true 且每项(pass/fail/skip)含明确判定",
+        "Given commands/dinit.md 变薄后 When 读取 Then ~50 行且含脚本子命令调用方式 + AI 步骤(0 模式检测/1 信息收集/2 迁移决策/5 架构约束/6 git) + validate 引用",
+        "Given 完成后 When pytest tests/ Then 全量 127+ passed 含 test_dinit.py 集成测试"
+      ],
+      "steps": [
+        "[锁定] 前置确认: Task#14 测试契约改造已完成（pytest tests/level3/ 通过）",
+        "[锁定] 读取 commands/dinit.md 确认 7 个 Step + Refresh Protocol 的完整结构作为 AI 步骤保留依据",
+        "[锁定] 实现 scripts/dinit.py (~260 行): argparse 6 子命令; scan-repo(目录/技术栈/关键文件); sync-rules(manifest 驱动逐文件比较); sync-skills(扫描+创建symlink); create-config(--project-info-file/--scan-result-file T13); migrate-legacy(旧版检测+迁移); validate(20+ 检查项)",
+        "[锁定] 变薄 commands/dinit.md (~50 行): 保留 frontmatter + Step 0(模式检测 AI) + Step 1(信息收集 AI) + Step 2(迁移决策 AI) + 各 Step 的脚本调用方式 + Step 5(架构约束 AI) + Step 6(git AI) + Step 7(validate 脚本调用)",
+        "[建议] 编写 tests/level2_scripts/test_dinit.py: 端到端测试完整 dinit 流程(临时项目→scan→sync→create→validate); CLI-first(I2); 覆盖初始化模式/刷新模式/旧版迁移",
+        "[建议] 运行 pytest tests/ 全量回归（含 level3 改造后的 dinit 测试 + level2 新增脚本测试）"
+      ],
+      "files_modified": [
+        "scripts/dinit.py",
+        "commands/dinit.md",
+        "tests/level2_scripts/test_dinit.py"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        14,
+        9
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 16,
+      "title": "L1: 更新 .claude/CLAUDE.md 行为铁律区 — 文件操作安全 4 条",
+      "description": "在 CLAUDE.md「行为铁律」区新增文件操作安全铁律（R1 先读后写分层 / R2 JSON indent=2 / R3 原子替换优先 / R4 敏感目录谨慎）。这是四层覆盖约束体系的 L1 顶层——本仓库开发时主代理加载。",
+      "acceptance": [
+        "Given .claude/CLAUDE.md 当更新后 Then 行为铁律区含'文件操作安全铁律'标题且含 R1/R2/R3/R4 四条子规则",
+        "Given 搜索'先读后写.*分层' When 在 .claude/CLAUDE.md 中 Then 命中且措辞含'修改已有文件前必须先读取将被修改的当前内容'",
+        "Given 搜索'indent=2.*ensure_ascii' When 在 .claude/CLAUDE.md 中 Then 命中且在文件操作安全段落内",
+        "Given 更新完成后 When 运行 pytest tests/ Then 全量通过无回归"
+      ],
+      "steps": [
+        "[锁定] 读取 .claude/CLAUDE.md 定位行为铁律区末尾（版本号同步之后）",
+        "[锁定] 在行为铁律区追加'**文件操作安全铁律**：'段落，含 R1 先读后写分层 / R2 JSON 格式化 / R3 原子替换优先 / R4 敏感目录谨慎",
+        "[建议] 确认新增段落与现有铁律（Push 前必跑 / Rules 同步 / 时间戳 / recording / 提交规则 / 版本号）格式一致"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md"
+      ],
+      "category": "infra",
+      "status": "Done"
+    },
+    {
+      "id": 17,
+      "title": "L2: 更新 rules/constraints.md — FileOps 第 6 维 + 表格格式修复",
+      "description": "Constraints 表（当前 5 维）新增第 6 维 FileOps（三列格式：Dimension|Constraint|Verification）。同时修复 line 20'版本号存放位置'掉出表格边界的格式 bug。这是 L2 runtime 参考锚点（read-on-demand），也是 rules 同步源文件。",
+      "acceptance": [
+        "Given rules/constraints.md 当更新后 Then Constraints 表含 FileOps 行且格式为三列（Dimension|Constraint|Verification）",
+        "Given Constraints 表 When 搜索 FileOps Then 命中且 Verification 列含'Write/Edit前有Read; JSON含indent=2'",
+        "Given rules/constraints.md 当搜索'版本号存放位置' Then 该文本在表格内或独立规范段中（非掉行状态）",
+        "Given 更新完成后 When 运行 pytest tests/ Then 全量通过无回归"
+      ],
+      "steps": [
+        "[锁定] 读取 rules/constraints.md 确认表格当前结构（5 维 + 掉行的 line 20）",
+        "[锁定] 在 | Perception | 行之后追加 | FileOps | 先读后写(分层)+JSON indent=2+原子替换优先+.diwu/.claude 谨慎修改 | Write/Edit前有Read; JSON含indent=2; 敏感文件修改有确认 |",
+        "[锁定] 修复 line 20'版本号存放位置'：将其收进 Business 维度备注或表后独立段落，确保表格不再有掉行"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        16
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 18,
+      "title": "L3-c: 强化 agents/implementer.md — 写安全守则 R1-R4",
+      "description": "implementer agent 当前仅 11 行且有 Write/Edit 权限但零条安全指令。扩展至 ~25 行：加入标准动作序列（Read→Edit/Write）+ R1-R4 文件操作守则。注意：只覆盖 delegated implementer 子代理，不替代全局规则。",
+      "acceptance": [
+        "Given agents/implementer.md 当更新后 Then 含'## 文件操作守则'章节且含 4 条守则（先读后写 / Write vs Edit 用途 / JSON indent=2 / 敏感目录谨慎）",
+        "Given agents/implementer.md When 搜索'收到编辑任务' Then 命中标准动作序列描述",
+        "Given 更新完成后 When 运行 pytest tests/ Then 全量通过无回归"
+      ],
+      "steps": [
+        "[锁定] 读取 agents/implementer.md 确认当前 11 行内容",
+        "[锁定] 重写 implementer.md：保留 frontmatter 不变；正文从 11 行扩展至 ~25 行；加入'## 文件操作守则'含 4 条编号守则",
+        "[建议] 确认 frontmatter tools 字段不变（仍含 Read, Grep, Glob, Edit, Write, Bash, LSP）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/agents/implementer.md"
+      ],
+      "category": "refactor",
+      "status": "Done"
+    },
+    {
+      "id": 19,
+      "title": "L3-a: 更新 7 个 Command 文件操作约束（R1 统一强措辞 + 路径修复 + dinit R2）",
+      "description": "7 个写入 command（dtask/dinit/dadr/prd/ddoc/ddemo/dcorr）统一追加 R1 强措辞。dtask.md 顺手修路径字面 bug（.diwu/dtask → .diwu/dtask.json 两处）。dinit 额外加 R2（JSON indent=2）。纯 Markdown 写入命令只需 R1 不加 R2。",
+      "acceptance": [
+        "Given commands/dtask.md 当更新后 Then Step 4 含'先 Read 当前内容'强措辞且路径已修正为'.diwu/dtask.json'（两处均修正）",
+        "Given commands/dinit.md 当更新后 Then 写入 Steps 含 R1 强措辞 + R2'JSON 必须 indent=2'提示",
+        "Given commands/dadr.md commands/dprd.md commands/ddoc.md commands/ddemo.md commands/dcorr.md 当更新后 Then 各自写入 Step 含'修改已有文件前先 Read 当前内容'统一强措辞",
+        "Given 全部 7 个 command 更新完成后 When 运行 pytest tests/ Then 全量通过无回归"
+      ],
+      "steps": [
+        "[锁定] 读取 commands/dtask.md Step 4 区域，确认'.diwu/dtask'字面 bug 两处位置（line 108, 119）",
+        "[锁定] 修改 commands/dtask.md: Step 4 追加 R1 强措辞 + 将'.diwu/dtask'修正为'.diwu/dtask.json'（两处）",
+        "[锁定] 修改 commands/dinit.md: 各写入 Step（4.2 dtask / 4.7 dsettings / scan 输出）追加 R1+R2 强措辞",
+        "[锁定] 逐一修改 commands/dadr.md(d Step 4/5) / dprd.md(Step 4/5) / ddoc.md(Step 3) / ddemo.md(Step 5) / dcorr.md(Step 2): 追加 R1 统一强措辞"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dinit.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dadr.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dprd.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddemo.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dcorr.md"
+      ],
+      "category": "infra",
+      "status": "Done"
+    },
+    {
+      "id": 20,
+      "title": "L3-b: 更新 5 Skill + 1 reference 文件操作约束（跨平台生效面）",
+      "description": "Codex/OpenCode 通过 install.sh symlink skills/ 目录，不读 CLAUDE.md。所以 skill 侧必须镜像补 R1/R2。目标：dtask SKILL.md 补 R1 / drun SKILL.md 补 R1+R2（写 dtask.json status+recording） / darc SKILL.md 补 R1+R2（写 archive JSON） / drec SKILL.md 补 R1（追加 session） / ddoc references/output-structure.md 补 R1（SKILL.md 是路由入口不在此补）。",
+      "acceptance": [
+        "Given skills/dtask/SKILL.md 当更新后 Then 写入规则段含 R1'写入 dtask.json 前必须先 Read 当前完整内容'",
+        "Given skills/drun/SKILL.md 当更新后 Then recording 写入处和 dtask 状态更新处均含 R1+R2 提示",
+        "Given skills/darc/SKILL.md 当更新后 Then 归档写入处（archive JSON + summary JSON）含 R1+R2 提示",
+        "Given skills/drec/SKILL.md 当更新后 Then session 写入规范处含 R1'追加前 Read 当前文件尾部'",
+        "Given skills/ddoc/references/output-structure.md 当更新后 Then 含 R1'写入文档前 Read 目标文件当前状态'"
+      ],
+      "steps": [
+        "[锁定] 读取 skills/dtask/SKILL.md 写入规则段（line 155-158 之后），追加 R1",
+        "[锁定] 读取 skills/drun/SKILL.md line 89-91(recording) 和 line 111-117(dtask status)，追加 R1+R2",
+        "[锁定] 读取 skills/darc/SKILL.md 归档写入处（line 54 archive + line 77-117），追加 R1+R2",
+        "[锁定] 读取 skills/drec/SKILL.md session 写入规范处，追加 R1",
+        "[锁定] 读取 skills/ddoc/references/output-structure.md，追加 R1（注意：不在 SKILL.md 路由入口补，在实际写步骤层补）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/darc/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/references/output-structure.md"
+      ],
+      "category": "infra",
+      "status": "Done"
+    },
+    {
+      "id": 21,
+      "title": "L4: 下游模板继承（portable + minimal） + Rules 同步 + 全量验证",
+      "description": "portable.template 是 /dinit 唯一下游 SoT（有行为铁律区 → 追加第 4 条）。minimal.template 也有行为铁律区（line 44-48 → 同步追加）。claude-md.template 无行为铁律区 → 本轮不改。constraints.md 修改后同步到 assets/dinit/assets/rules/constraints.md。最后全量 pytest + grep 6 组覆盖验证。",
+      "acceptance": [
+        "Given claude-md-portable.template 当更新后 Then 行为铁律区含第 4 条'文件操作安全'且含 indent=2 和先读后写关键词",
+        "Given claude-md-minimal.template 当更新后 Then 行为铁律区含第 4 条'文件操作安全'",
+        "Given claude-md.template 当检查后 Then 无变更（本轮不修改此模板）",
+        "Given assets/dinit/assets/rules/constraints.md 当同步后 Then 含 FileOps 行与 rules/constraints.md 源文件一致",
+        "Given 全部 18 个文件更新完成 When 运行 pytest tests/ Then 127+ passed",
+        "Given Grep V1-V4 验证 When 执行 Then 6 组全部命中（CLAUDE.md / constraints 源+assets / 7 command / 5 skill+reference / implementer / 2 template）",
+        "Given 正交性验证 When 执行 Then .diuw/ typo 零命中 且 dtask.md 路径已修正"
+      ],
+      "steps": [
+        "[锁定] 读取 assets/dinit/assets/claude-md-portable.template 行为铁律区（line 90-94），追加第 4 条",
+        "[锁定] 读取 assets/dinit/assets/claude-md-minimal.template 行为铁律区（line 44-48），追加第 4 条",
+        "[锁定] 确认 assets/dinit/assets/claude-md.template 无行为铁律区（本轮不改）",
+        "[锁定] 同步 rules/constraints.md → assets/dinit/assets/rules/constraints.md（Rules 同步规则）",
+        "[锁定] 运行 pytest tests/ 全量回归",
+        "[锁定] 执行 Grep 6 组覆盖验证 + 正交性验证（.diuw/ typo 零命中 + dtask.md 路径修正确认）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/claude-md-portable.template",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/claude-md-minimal.template",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/constraints.md"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 22,
+      "title": "修复 /dloop 默认快照语义 + Stop 通知误弹 + session 隔离脆弱点",
+      "description": "/dloop 当前将 max_tasks 默认值硬编码为 10，活跃任务数 >10 时会提前停止，和“跑完这批活跃任务”的用户预期冲突。确定语义：未传 --max-tasks 时，默认值取启动时 status in {InSpec, InProgress} 的活跃任务数快照；不得按当前 unblocked 数量估算。--max-tasks N 显式值优先，--max-tasks 0 保留手动无限模式；启动确认需打印 active_tasks/max_tasks/source；启动后新增任务不自动纳入本轮。与此同时，stop_decision.py 当前在 dloop 停止时会直接调用系统通知，导致 tests/level2/test_dloop.py 这类 subprocess 测试也会真实弹窗；且 session 隔离只读取 stdin_data['session_id']，未兼容仓库其他 hook 已使用的 sessionId 字段，存在跨 session 误驱动 dloop-state 的脆弱点。此次一并修复：max_tasks 缺失 fallback 改为 0（无限）、测试/静默场景可禁用通知、Stop 事件同时兼容 session_id 和 sessionId。代码与测试验证后，还需按“已完成数 + 当前活跃任务数”的 best-effort 原始快照修复当前 .diwu/dloop-state.json 的 max_tasks，避免正在运行的一轮继续被 10 截断。",
+      "acceptance": [
+        "Given 未传 --max-tasks 且 dtask.json 中有 InSpec/InProgress 任务 When 阅读 commands/dloop.md 启动流程 Then 文档明确先统计 active_tasks，再令 effective_max=active_tasks 且 source=auto，并保留 --max-tasks 0 为无限模式、--max-tasks N 为手动覆盖",
+        "Given 更新后的 /dloop 启动确认文案 When 阅读 commands/dloop.md Then 示例输出含 active_tasks=<X>, max_tasks=<Y>, source=auto|manual，且明确启动后新增任务不自动纳入本轮",
+        "Given 更新后的 skills/dloop/SKILL.md When 阅读停止条件、状态文件示例、字段说明和安全限制章节 Then 不再出现“默认 10”表述，并明确 max_tasks 来源为启动时活跃任务快照或手动指定值",
+        "Given dloop-state.json 缺少 max_tasks 字段 When 运行 tests/level2/test_dloop.py 中对应 stop_decision 场景 Then hooks/scripts/stop_decision.py 按 0（无限）处理，不会因 fallback=10 提前停止",
+        "Given loop_state.max_tasks=5 且 completed_task_ids 长度为 4 且仍有可执行 InSpec 任务 When 运行 pytest tests/level2/test_dloop.py Then 循环继续而不是因硬编码 10 或错误快照语义停止",
+        "Given loop_state.max_tasks=5 且 completed_task_ids 长度为 5 When 运行 pytest tests/level2/test_dloop.py Then 循环停止并输出阶段报告，且停止原因仍基于 completed_task_ids.length >= max_tasks",
+        "Given 通过 subprocess 运行的 stop_decision 测试场景 When 触发 dloop 停止分支 Then 测试环境不会真实调用系统通知弹窗，且仍可断言停止行为和阶段报告",
+        "Given Stop hook 事件仅提供 sessionId 且 dloop-state.json 中 session_id 与其不匹配 When 运行对应 stop_decision 测试 Then session 隔离仍生效，不会误把其他 session 的 loop_state 视为当前活跃循环",
+        "Given 代码修改完成 When 运行 pytest tests/level2/test_dloop.py 和 pytest tests/ Then 两轮测试均通过",
+        "Given 当前活跃 .diwu/dloop-state.json 修复前保存了 session_id/current_iteration/completed_task_ids When 按修复时刻的 completed_count + active_count 回填 max_tasks Then 这些已有字段保持不变，且 max_tasks 不再保留旧的 10 截断值"
+      ],
+      "steps": [
+        "[锁定] 先读 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md、/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md、/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py，确认现有默认 10 的文档点、代码 fallback 点、通知触发点和 session 字段读取方式",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md：在启动流程中加入 active_tasks 快照计算和 effective_max/source 规则；启动确认文案改为打印 active_tasks/max_tasks/source，并写明新增任务不自动纳入本轮",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md：同步停止条件脚注、状态文件示例、字段说明和安全限制 4 处文案；保留 completed_task_ids.length >= max_tasks 的停止判定不变",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py：将两个 loop_state.get(\"max_tasks\", 10) 改为 loop_state.get(\"max_tasks\", 0)；为 notify() 增加显式静默开关（测试/环境变量可禁用）；session 隔离读取同时兼容 session_id 和 sessionId；不要改 _check_stop() 中 completed_task_ids.length >= max_tasks 的比较逻辑，也不要改阶段报告格式",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py：不要只把 10 机械替换成另一个常量；应新增缺失 max_tasks → fallback 0 的测试，以及 snapshot_count=5 时 4/5 继续、5/5 停止的语义测试，并让 subprocess 场景在测试时显式静默通知",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py：补 sessionId/session_id 兼容与通知静默的单元测试，避免只覆盖 session_id 路径",
+        "[建议] 先运行 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py，再运行 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ 做全量回归",
+        "[锁定] 测试通过后再修复 /Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/dloop-state.json：按修复时刻的 len(completed_task_ids)+当前 InSpec/InProgress 数 计算 best-effort 原始快照并回填 max_tasks；保留 session_id/current_iteration/completed_task_ids，不把当前 active_count 误写成整轮快照"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 23,
+      "title": "修复 dloop stale-state 残留：start/status 自动清理 terminal stale state",
+      "description": "为 /dloop 增加运行态兜底，解决 .diwu/dloop-state.json 残留但这轮循环其实已经终止的问题。兜底放在 /dloop runtime 层，不放在 /drun，rules 只做同步说明。新增 scripts/dloop_state.py 作为共享纯判定 helper，由 scripts/dloop.py 和 hooks/scripts/stop_decision.py 共用。判定结果分为 active_or_recoverable、terminal_stale、invalid_state 三类；其中 terminal_stale 必须严格复用现有 loop stop 语义（completed_task_ids.length >= max_tasks、无可执行任务、PENDING REVIEW）。/dloop start/status 命中 terminal_stale 时自动清理旧 state；命中 invalid_state 时返回 invalid_state_file 且不自动删除；/dend 仍是活跃循环的手动取消入口。",
+      "acceptance": [
+        "Given 存在 active=true 的 .diwu/dloop-state.json 且共享判定结果为 terminal_stale When 执行 python3 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py status --cwd <proj> Then exit code 0 且 stdout JSON 含 {ok:true, status:'stale_cleaned'}，并给出 cleanup reason 且该 state 文件已删除",
+        "Given 存在 active=true 的 .diwu/dloop-state.json 且共享判定结果为 terminal_stale When 执行 python3 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py start --cwd <proj> Then 先自动清理旧 state 再继续本次启动，stdout JSON 仍为 {ok:true, status:'started'}，且 message/formatted_text 明确包含“已清理残留 state，原因：...”",
+        "Given 存在 active=true 的 .diwu/dloop-state.json 且共享判定结果为 active_or_recoverable When 分别执行 dloop.py start/status Then start 保持 {ok:false, status:'already_running'}、status 保持 {ok:true, status:'running'}，且不会自动删除 state 文件",
+        "Given .diwu/dloop-state.json 存在但 JSON 损坏或字段语义矛盾而无法安全判断 When 分别执行 dloop.py start/status Then 返回 {ok:false, status:'invalid_state_file'}，提示用户用 /dend 或人工检查，且不会自动删除 state 文件",
+        "Given completed_task_ids.length >= max_tasks 或无可执行任务或 review_limit 命中 When 运行 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py 与 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py Then 共享 helper 将这三类场景判为 terminal_stale，且 stop_decision.py 正常 stop 时原有 cleanup 行为无回归",
+        "Given /dloop stale-state 兜底实现完成 When 阅读 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md 与 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md Then 文档明确说明 start/status 会自动清理 terminal stale state，/dend 只负责手动取消活跃循环，且 /drun 不承担 dloop-state 生命周期管理职责",
+        "Given 代码修改完成 When 运行 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py 与 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ Then 定向与全量回归均通过"
+      ],
+      "steps": [
+        "[锁定] 先读 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md、/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py，确认现有 dloop-state 生命周期与测试锚点",
+        "[锁定] 新建 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop_state.py：实现纯判定 helper，输入 dtask/settings/loop_state，输出 active_or_recoverable、terminal_stale、invalid_state 三类结果；terminal_stale 仅复用现有 stop 语义，不额外发明新规则",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py：start/status 发现已有 state 文件时先调用共享 helper；terminal_stale 自动清理并继续/返回 stale_cleaned；invalid_state 返回 invalid_state_file；同时修正 state 文件路径读取与 active_tasks/executable_tasks 的职责分层",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py：复用共享 helper 做 loop terminal 判定；保留“正常 stop 时立即清理 state 文件”的主路径，不把 stale-state cleanup 下放到 /drun 或 SessionStart",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py：覆盖 terminal_stale auto-clean、active_or_recoverable 保持 running/already_running、invalid_state_file 不自动删除，以及 completed>=max_tasks/无可执行任务/review_limit 命中的共享判定语义",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md 与 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md：补充 stale-state auto-clean 行为说明，并明确 /dend 仍只负责手动取消活跃循环，/drun 不管理 dloop-state 生命周期",
+        "[建议] 先运行 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py，再运行 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ 做全量回归"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop_state.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py"
+      ],
+      "category": "bugfix",
+      "blocked_by": [
+        22
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 24,
+      "title": "锁定 dloop.py 子进程真值来源：防止旧副本或路径漂移导致 status 误判",
+      "description": "当前外部调试曾观察到 `sp=.../.diwu/.diwu/dloop-state.json`，但仓库内现有 scripts/dloop.py 已显示 `STATE_FILE = 'dloop-state.json'`，说明“子进程里 status 返回 no_loop”的现象可能不是当前 worktree 代码本身，而是执行来源、脚本副本、调试脚本注入或路径构造真值未被固定。需要单独立项锁定 subprocess 真正执行的是哪一份 dloop.py、状态文件路径是否稳定为 `<cwd>/.diwu/dloop-state.json`、以及如何用测试防止以后再次把旧副本/错误路径当成当前实现问题。此任务不处理 max_tasks 语义和 stale-state 回收逻辑本身，只处理脚本来源和路径真值的可观测性与防回归。",
+      "acceptance": [
+        "Given 在临时项目目录中创建 `.diwu/dloop-state.json` 且其中 `active=true` When 通过 subprocess 执行 python3 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py status --cwd <proj> Then 返回 {ok:true, status:'running'}，证明 repo-local dloop.py 读取的是 `<cwd>/.diwu/dloop-state.json` 而不是 `.diwu/.diwu/dloop-state.json` 或其他副本路径",
+        "Given 需要固定状态文件路径真值 When 阅读 dloop.py 的内部路径构造 Then start/status 共用同一个明确 helper 或常量拼接逻辑，且该逻辑唯一地产生 `<cwd>/.diwu/dloop-state.json`",
+        "Given 外部再次报告“当前代码看起来对，但 subprocess 结果不对” When 运行新增测试或调试断言 Then 能直接证明 subprocess 执行的是 repo-local 脚本，而不是旧副本、缓存副本或调试脚本内嵌逻辑",
+        "Given dloop.py provenance/path 修复完成 When 运行 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py 与 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ Then 定向与全量回归均通过，且现有 running/inactive/no_loop 行为无回归"
+      ],
+      "steps": [
+        "[锁定] 先读 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/conftest.py，确认当前 subprocess 运行脚本的入口、cwd 传递方式和状态文件路径构造",
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py 中抽出单一的状态文件路径 helper（或等效单一真相源），让 start/status 都只通过这一路径构造读取 `.diwu/dloop-state.json`",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py：新增能稳定复现 subprocess status=running 的用例，并加一条针对路径 helper 或等效可观测真值的断言，防止以后再次出现 `.diwu/.diwu` 类误判",
+        "[建议] 如仅靠现有输出仍无法证明脚本来源，可在测试中通过导入模块路径、helper 返回值或受控调试输出确认 subprocess 执行的是 repo-local `scripts/dloop.py`；不要把临时调试输出保留成正式用户接口",
+        "[建议] 先运行 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py，再运行 pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ 做全量回归"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py"
+      ],
+      "category": "bugfix",
+      "blocked_by": [
+        23
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 25,
+      "title": "Follow-up: 修复 dloop review findings + subprocess 测试静默通知",
+      "description": "针对最新 review findings 和本机测试弹窗做一轮 follow-up 修复：1) /dloop 默认快照必须按全部 InSpec + InProgress 计数，而不是只按当前 executable 数；2) dloop_state.classify() 对字段类型损坏返回 invalid_state_file，不能 traceback；3) PENDING REVIEW 需要被识别为 terminal stale；4) stop_decision.py 的 session 隔离同时兼容 session_id 和 sessionId；5) 所有 subprocess 测试入口统一注入 DIWU_SILENT=1，避免本机测试时弹系统通知。",
+      "acceptance": [
+        "Given 不传 --max-tasks 且 dtask.json 中存在被 blocked_by 暂时卡住的 InSpec When 执行 python3 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py start --cwd <proj> Then dloop-state.json 的 max_tasks 取全部 InSpec + InProgress 的数量，而不是只取当前 executable 数",
+        "Given .diwu/dloop-state.json 为可解析 JSON 但字段类型错误（例如 max_tasks 为字符串）When 执行 dloop.py start/status Then 返回 {ok:false, status:'invalid_state_file'}，而不是 traceback 退出",
+        "Given dloop 循环因 review_limit 命中而进入 PENDING REVIEW 终态 When 执行 dloop.py status 或 stop_decision.py 对应测试 Then 能识别为 terminal stale / stop reason，并按既有 cleanup 语义处理",
+        "Given Stop hook 事件只提供 sessionId 字段 When 运行 stop_decision 隔离相关测试 Then 仍能正确隔离其他 session 的 loop_state",
+        "Given 运行 pytest tests/level2/test_dloop.py tests/level2/test_stop_decision.py tests/level2_scripts/test_dloop_crud.py -q When subprocess 测试触发 stop_decision.py Then 本机不会再收到 diwu-flow 的系统通知弹窗",
+        "Given 代码修改完成 When 运行 pytest tests/level2/test_dloop.py tests/level2/test_stop_decision.py tests/level2_scripts/test_dloop_crud.py -q 与 pytest tests -q Then 定向与全量回归均通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py：将默认快照计数改为全部 InSpec + InProgress；保持显式 --max-tasks 0=无限、N>0=手动上限；start/status 调 classify 时传入 dsettings",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop_state.py：增加 state 字段类型校验、提炼共享的 terminal stop reason 判定，并补齐 PENDING REVIEW stale 判定",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py：session 隔离兼容 session_id 和 sessionId，并复用共享 terminal stop reason helper",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py、/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/conftest.py：修正自动快照断言、覆盖 typed invalid state / PENDING REVIEW / sessionId，并统一注入 DIWU_SILENT=1",
+        "[建议] 先跑定向 pytest，再跑 pytest tests -q 全量回归；通过后将本任务标为 Done"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop_state.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/conftest.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 26,
+      "title": "定义 dtask-state.json 运行态真相源与迁移约束",
+      "description": "为任务 owner 与 dloop runtime state 引入统一真相源 `.diwu/dtask-state.json`。该文件只保存 `task_sessions` 和 `dloop` 元数据，不重复保存任务 status。兼容旧 `.diwu/dloop-state.json` 读取，并定义 stale owner 清理与单 session 单 InProgress 约束，为后续 transition 脚本和 hooks 整合提供稳定 schema。",
+      "acceptance": [
+        "Given 仓库存在 `.diwu/dtask.json` 与可选旧 `.diwu/dloop-state.json` When 读取新的 runtime state helper Then 能得到标准化的 `dtask-state.json` 结构（含 `version`、`task_sessions`、`dloop`）",
+        "Given 任意已写入 owner 的 `dtask-state.json` When 读取 `task_sessions` Then 任一 owner 记录都只包含 `session_id` 与 `started_at`，不保存 `status` 字段",
+        "Given `dtask.json` 中某任务 status 不为 `InProgress` 但 `dtask-state.json.task_sessions` 仍存在对应 owner When 执行 runtime sync Then 该 owner 记录被识别为 stale 并清理",
+        "Given 同一 session 在 `task_sessions` 中持有多个任务 When 调用 runtime 校验 helper Then helper 返回 invalid result（含 reason），且调用方不得继续选择其中一个任务恢复",
+        "Given 仅存在旧 `.diwu/dloop-state.json` 且新文件缺失 `dloop` 数据 When 执行 runtime sync Then 旧 loop metadata 会迁入 `dtask-state.json.dloop`，且后续读取以新文件为准"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ 下新增 runtime state helper `dtask_state.py`，定义 `dtask-state.json` schema、读写与校验函数",
+        "[锁定] 在 helper 中实现 stale owner 清理、单 session 单 InProgress 校验、旧 `.diwu/dloop-state.json` → `dtask-state.json.dloop` 兼容迁移",
+        "[建议] 为 helper 编写独立单元测试，覆盖空文件/损坏 JSON/stale owner/多 owner/无 status 字段断言/旧 dloop-state 迁移"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_state.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_state.py"
+      ],
+      "category": "infra",
+      "status": "Done"
+    },
+    {
+      "id": 27,
+      "title": "实现 dtask_transition.py：批量状态迁移与显式接管",
+      "description": "新增统一状态迁移脚本 `scripts/dtask_transition.py`，作为唯一允许修改 `dtask.json.status` 与 `dtask-state.json` 的入口。支持 `InDraft -> InSpec` 批量确认、`InSpec -> InProgress` claim、`InProgress -> InReview/Done/InSpec/Cancelled` release、以及跨 session 的显式 adopt。禁止未进入 `InProgress` 就开始任务，也禁止 `InSpec -> Done` 直跳。",
+      "acceptance": [
+        "Given 一组 `InDraft` 任务 When 执行 `python3 scripts/dtask_transition.py mark-inspec --task-ids 1,2 --cwd <proj>` Then 这些任务的 `dtask.json.status` 变为 `InSpec`，且 `dtask-state.json.task_sessions` 不新增 owner",
+        "Given 一个 `InSpec` 任务且当前 session 未持有其他 `InProgress` When 执行 `claim --task-id N --session-id SID` Then 该任务先变为 `InProgress`，并在 `dtask-state.json.task_sessions[N]` 写入 `{session_id, started_at}`",
+        "Given 一个 `InProgress` 任务且 owner 匹配当前 session When 执行 `release --task-id N --to inreview|done|inspec|cancelled --session-id SID` Then `dtask.json.status` 更新为目标状态，且对应 owner 记录被删除",
+        "Given 一个 `InProgress` 任务 owner 属于其他 session When 执行普通 release Then 返回 owner mismatch，且不修改 `dtask.json.status` 与 `dtask-state.json.task_sessions`",
+        "Given 一个 `InProgress` 任务 owner 属于其他 session When 先执行 `adopt --task-id N --session-id NEW_SID` 再执行 release Then owner 被显式更新后才允许继续 release 或恢复",
+        "Given 同一 session 已持有一个 `InProgress` 任务 When 再对另一个 `InSpec` 执行 claim Then 返回 invalid runtime state，而不是让该 session 同时持有两个 `InProgress`",
+        "Given 一个 `InSpec` 任务 When 尝试直接执行 `release --to done` 或任何等价的 `InSpec -> Done` 直跳 Then 脚本返回 invalid transition，且任务 status 保持原值"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ 新增 `dtask_transition.py`，提供 `mark-inspec/claim/release/adopt/sync-runtime` 子命令",
+        "[锁定] 复用 Task#26 产出的 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_state.py 同时更新 `dtask.json` 与 `dtask-state.json`，保证成功/失败路径一致，不留下 `InProgress` 无 owner 或 owner 对应非 InProgress 的半完成状态",
+        "[建议] 为脚本编写 CLI-first 测试，覆盖批量确认、claim、release、adopt、owner mismatch、禁止 `InSpec -> Done` 直跳、单 session 单 InProgress 约束"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        26
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 28,
+      "title": "整合 dloop / stop_decision 到 dtask-state runtime 真相源",
+      "description": "将现有 `dloop-state.json` 兼容迁移到 `dtask-state.json.dloop`，让 `scripts/dloop.py`、`scripts/dloop_state.py`、`hooks/scripts/stop_decision.py` 统一以新 runtime state 为真相源。Task#25 已验证过的自动快照、`PENDING REVIEW` stale 判定、`session_id/sessionId` 双键隔离等行为在本任务中只作为迁移后的回归护栏，不再重复定义为独立需求。",
+      "acceptance": [
+        "Given 执行 `python3 scripts/dloop.py start --cwd <proj>` When loop 成功启动 Then loop metadata 被写入 `dtask-state.json.dloop`，后续 `status` 读取同一路径而不是独立的 `dloop-state.json` 真相源",
+        "Given `hooks/scripts/stop_decision.py` 进入 loop mode When 读取当前 loop owner 与更新 iteration Then 统一读写 `dtask-state.json.dloop`，而不是自行维护独立状态文件",
+        "Given 仅存在旧 `.diwu/dloop-state.json` When 执行 `dloop.py start/status` 或 Stop hook Then 旧 loop metadata 会迁入 `dtask-state.json.dloop`，且迁移后后续读取以新文件为准",
+        "Given 完成迁移整合后 When 运行 dloop/stop_decision 回归测试 Then Task#25 已验证过的自动快照、`PENDING REVIEW` stale 判定、`session_id/sessionId` 双键隔离行为继续保持通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py：读取/写入 `dtask-state.json.dloop`，并在 start/status 中接入 legacy `dloop-state.json` 迁移",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop_state.py：让 stale 判定与 cleanup 基于统一 runtime helper，而不是独立 loop 文件路径",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py：用 `dtask-state.json.dloop` 做 loop session isolation、iteration 更新与 loop cleanup",
+        "[建议] 更新 `tests/level2/test_dloop.py`、`tests/level2/test_stop_decision.py`、`tests/level2_scripts/test_dloop_crud.py`，重点覆盖新真相源路径与旧 dloop-state 迁移"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop_state.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py"
+      ],
+      "category": "bugfix",
+      "blocked_by": [
+        26,
+        27
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 29,
+      "title": "把普通 InProgress 断点恢复也改成 session-scoped，并接入 dtask_transition",
+      "description": "将默认模式下的普通 `InProgress` 断点恢复改成 session-scoped。`stop_decision.py`、`context_monitor.py`、`pre_compact.py`、`task_completed.py`、`session_start.py` 不再假设只要存在 `InProgress` 就能直接恢复，也不再盲取 `ip[0]`；而是统一以 `dtask-state.json.task_sessions` 判断 owner。只有 owner 匹配当前 session 才能自动恢复；否则提示显式 adopt。",
+      "acceptance": [
+        "Given 存在一个 `InProgress` 任务且 owner 匹配当前 session When Stop hook 触发 Then 仍然 `block` 并继续断点恢复",
+        "Given 存在一个 `InProgress` 任务但 owner 属于其他 session When Stop hook 触发 Then 不自动续做，返回明确提示要求显式 adopt 或人工介入",
+        "Given 存在 `InProgress` 任务但 `dtask-state.json.task_sessions` 中无 owner 记录 When Stop hook 触发 Then 返回 invalid runtime state，而不是默默恢复",
+        "Given `context_monitor` 或 `pre_compact` 需要为当前任务写 checkpoint When 当前 session 没有 owner 匹配的 `InProgress` Then 不会误取 `ip[0]` 或误写 чужой 任务的 checkpoint",
+        "Given 一个 `InProgress` 任务转为 `Done` When `task_completed.py` 运行 Then 对应 owner 记录被清理",
+        "Given `dtask-state.json` 缺失、损坏或无法解析 When `stop_decision.py`、`context_monitor.py`、`pre_compact.py`、`session_start.py` 读取 runtime state Then 不会误恢复 чужой 任务或误写 checkpoint，且输出 invalid runtime state 或安全降级提示"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py：默认模式下恢复 `InProgress` 前先校验 owner",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/context_monitor.py：checkpoint 只允许选择 owner 匹配当前 session 的 `InProgress` 任务",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/pre_compact.py：auto-compact 只允许写入 owner 匹配当前 session 的 `InProgress` 任务",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py：任务转 `Done` 时同步清理 owner 记录",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/session_start.py：初始化并校验 `dtask-state.json`，对损坏/缺失状态做安全降级提示",
+        "[建议] 为这些 hooks 补测试，覆盖 owner 匹配、不匹配、缺失、runtime state 损坏、checkpoint 误选防护"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/context_monitor.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/pre_compact.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/session_start.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_context_monitor_dict.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py"
+      ],
+      "category": "bugfix",
+      "blocked_by": [
+        26,
+        27
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 30,
+      "title": "同步 commands / skills / rules 到新的状态迁移脚本与 runtime 契约",
+      "description": "将新的 `dtask_transition.py`、`dtask-state.json`、session-scoped `InProgress` 恢复规则，完整同步到用户可见与下发链路：`commands/*`、`skills/*`、`rules/*`、`.claude/rules/*`、`assets/dinit/assets/rules/*`、`README.md`。目标是让脚本的用法、状态机的真实流转、以及 runtime owner 契约在所有入口都一致，不再出现“脚本有了但没人知道怎么用”的割裂。",
+      "acceptance": [
+        "Given 用户阅读 `commands/drun.md` 与 `skills/drun/SKILL.md` When 查阅如何开始任务 Then 明确看到 `/drun` 会先通过状态迁移脚本执行 `InSpec -> InProgress`，未进入 `InProgress` 不得开始实施",
+        "Given 用户阅读 `commands/dloop.md` 与 `skills/dloop/SKILL.md` When 查阅循环状态 Then 明确看到 loop owner 已迁入 `dtask-state.json`，且 session 不匹配时不会自动续跑",
+        "Given 用户阅读 `rules/task.md`、`rules/session.md`、`rules/file-layout.md` When 查阅状态机与运行态结构 Then 能明确区分 `dtask.json`（任务状态真相源）与 `dtask-state.json`（runtime owner/loop 真相源）",
+        "Given `/dinit` 下发 rules 到其他项目 When 检查 `assets/dinit/assets/rules/*` 与 `.claude/rules/*` Then 内容与 `rules/*` 的新契约一致，不存在副本漂移",
+        "Given 完成后 When 运行 pytest tests -q Then 全量回归通过，且 docs/rules smoke 检查通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md、commands/dloop.md、commands/dtask.md：补充 `dtask_transition.py` 的调用语义与 `dtask-state.json` 的职责",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md、skills/dloop/SKILL.md、skills/dtask/SKILL.md：同步状态机真实落地方式",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md、rules/session.md、rules/workflow.md、rules/judgments.md、rules/file-layout.md：补充新的 runtime 契约与判断锚点",
+        "[锁定] 同步 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/* 对应文件：确保 repo-local 副本与 `rules/*` 契约一致",
+        "[锁定] 同步 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/* 对应文件：确保 `/dinit` 下发模板与 `rules/*` 契约一致",
+        "[建议] 更新 README.md 里的运行态文件说明和状态迁移示意，必要时补一段 `dtask_transition.py` 用法示例",
+        "[建议] 校准 /Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/checks/smoke.sh 中与 Skill / docs-rules 验证相关的旧计数或文案，避免 Task#30 完成后 smoke 假失败"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/checks/smoke.sh"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        26,
+        27,
+        28,
+        29
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 31,
+      "title": "清理 dinit 用户话术与索引命名",
+      "description": "清理 `/dinit` 相关用户可见话术中泄漏的内部实现世代概念（如“v2 格式”“v2 升级”“v2 精简格式”），把对外表述统一为稳定用户语言。同时统一 CLAUDE 模板中的索引章节命名。注意：README.md 中的 `stateDiagram-v2` 是 Mermaid 官方语法关键字，不在清理范围；`assets/dinit/assets/rules/*` 已在 Task#30 同步，本轮不重复。",
+      "acceptance": [
+        "Given 用户触发 `/dinit` 刷新模式 When 阅读 `commands/dinit.md` 或 `assets/dinit/assets/claude-md*.template` Then 不再出现“v2 格式”“v2 升级”“v2 精简格式”等内部实现版本话术（L3: grep 否定模式 `v2 格式|v2 升级|v2 精简` 在目标文件中零命中）",
+        "Given 用户查看三份 CLAUDE 模板的索引章节 When 比对标题 Then 统一使用 `Skill 索引` 命名（portable 可追加「按需加载」后缀），不再混用 `Skill 与参考文件索引`",
+        "Given 完成后 When 运行 pytest tests -q Then 全量回归通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dinit.md：把用户可见说明改成稳定语言，不暴露内部格式世代",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/claude-md.template：line 72 `（v2 精简格式）` 改为稳定表述，line 25 索引标题统一为 `Skill 索引`",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/claude-md-portable.template 和 claude-md-minimal.template：确认索引标题已为 `Skill 索引`，如不一致则统一",
+        "[建议] 补充 grep smoke 检查验证 `v2 格式|v2 升级|v2 精简` 在 commands/dinit.md 与三份 template 中零命中"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dinit.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/claude-md.template",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/claude-md-minimal.template",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/claude-md-portable.template"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        30
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 32,
+      "title": "激活 decisions.md：集成到 /drec + 门槛分档 + 三层软强制",
+      "description": "当前 `.diwu/decisions.md` 为空壳——写入门槛过高（仅「多方案选一且影响≥2模块」）、无强制机制、无独立 command/skill。本任务将其改造为可实际运转的设计决策记录：①将写入检查点集成到 `/drec` Session 结束流程；②门槛从单档拆为两档（必须写 / 建议写）；③三层递进软强制（Agent 自检清单 + Stop hook DECISION TRACE 软提示 + dstat 可观测）；④补写 dtask-state.json 架构决策作为首条记录。",
+      "acceptance": [
+        "Given Agent 执行 Session 结束流程（/drec）When 阅读步骤列表 Then 包含「设计决策检查点：本轮是否做出需要记录的设计决策？」自检项，且指向 decisions.md 两档判断标准",
+        "Given Session 中输出了 `DECISION TRACE` 结论 When Stop hook 触发 Then 注入轻量提醒文本含 `decisions.md` 且不阻止退出（exit 行为不变）",
+        "Given 执行 `/dstat` 且 decisions.md 为空或不存在 When 查看输出 Then 决策区域显示 `(暂无设计决策记录)` 而非静默跳过",
+        "Given 阅读 `rules/judgments.md` 或 `skills/djug/SKILL.md` 的「何时写 decisions.md」章节 Then 写入条件已从单档变为两档：「必须写」（多方案选一 **或** 影响范围 ≥2 模块）与「建议写」（对后续任务有约束作用的技术选型）",
+        "Given 完成后 When 运行 pytest tests -q Then 全量回归通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/.claude/plugins/marketplaces/ssdiwu/skills/drec/SKILL.md：在 Session 文件格式模板之后、踩坑经验之前，新增「## 设计决策记录（Session 结束检查点）」章节；含两档判断标准简表 + 追加格式模板（时间戳 + 决策标题 + 备选方案 + 选定方案 + 影响范围 + 理由）",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md 与 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md：将「何时写 decisions.md」从单档改为两档表格（必须写 / 建议写），同步更新 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py：在 Stop hook 输出逻辑中检测本轮是否产生过 DECISION TRACE（可通过上下文注入文本或 session recording 内容推断），若检测到则在输出末尾追加一行提醒含 `decisions.md`；不得改变现有 exit code 或 block/continue 行为",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dstat.py：当 decisions.md 不存在或为空时，决策摘要区域输出 `(暂无设计决策记录)` 而非跳过该区域",
+        "[锁定] 向 /Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/decisions.md 写入首条决策记录：dtask-state.json 统一真相源架构决策（备选：分散状态文件 vs 统一 runtime state；选定：dtask-state.json；影响范围：Task#26-31；理由：消除 dloop-state 与 task owner 的状态分裂）",
+        "[建议] 同步更新 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/djug/SKILL.md 中「何时写 decisions.md」段落为两档格式",
+        "[建议] 补充测试覆盖：drec 新章节存在性断言、Stop hook 提醒文本匹配、dstat 空文件显示、judgments.md 两档格式"
+      ],
+      "files_modified": [
+        "/Users/diwu/.claude/plugins/marketplaces/ssdiwu/skills/drec/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dstat.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/decisions.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/djug/SKILL.md"
+      ],
+      "category": "infra",
+      "status": "Done"
+    }
+  ],
+  "count": 32
+}
