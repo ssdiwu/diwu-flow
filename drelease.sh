@@ -111,8 +111,29 @@ if [ "$PUSH_PUBLIC" = "--push-public" ]; then
     echo "=== Step 3: 推送到公开仓库 ==="
     echo "→ 推送 clean commit 到 $PUBLIC_REMOTE/main"
     git push "$PUBLIC_REMOTE" "${CLEAN_SHA}:refs/heads/main"
-    echo "→ 推送 tag 到 $PUBLIC_REMOTE"
-    git push "$PUBLIC_REMOTE" "refs/tags/${VERSION}"
+
+    # 同步历史 tags（防止遗漏）——仅推送 public 缺少的
+    LOCAL_TAGS=$(git tag -l 'v*' 2>/dev/null)
+    REMOTE_TAGS=$(git ls-remote --tags "$PUBLIC_REMOTE" 2>/dev/null | grep -oE 'refs/tags/v[^ ^]+' | sed 's|refs/tags/||')
+    for t in $LOCAL_TAGS; do
+        if ! echo "$REMOTE_TAGS" | grep -qx "$t"; then
+            git push "$PUBLIC_REMOTE" "refs/tags/${t}" 2>/dev/null || true
+            echo "  补推历史 tag: $t"
+        fi
+    done
+
+    # public tag 必须指向 clean commit（非 origin commit）
+    if [ "$CLEAN_SHA" != "$HEAD_SHA" ]; then
+        TEMP_TAG="${VERSION}-public"
+        git tag -a "$TEMP_TAG" "$CLEAN_SHA" -m "diwu-flow ${VERSION} (public clean)"
+        git push "$PUBLIC_REMOTE" "refs/tags/${TEMP_TAG}:refs/tags/${VERSION}"
+        git tag -d "$TEMP_TAG"
+        echo "→ 公开 tag $VERSION → ${CLEAN_SHA:0:8} (clean commit)"
+    else
+        git push "$PUBLIC_REMOTE" "refs/tags/${VERSION}"
+        echo "→ 公开 tag $VERSION (已是 clean)"
+    fi
+
     echo ""
     echo "✓ 公开仓库已推送（无 .diwu/）"
 fi
