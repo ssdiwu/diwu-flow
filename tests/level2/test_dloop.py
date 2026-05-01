@@ -384,8 +384,8 @@ def test_stop_decision_missing_session_id_exits_loop_mode(tmp_path):
     # 不传 session_id
     result = _run_stop_decision(tmp_path, cwd=str(tmp_path))  # 无 session_id 字段
     assert result.returncode == 1  # 必须退出 loop mode
-    # stderr 应含 allow_stop 提示
-    assert "allow_stop" in result.stdout
+    # stderr 应含 STOP_HINT 提示（不再输出非法 decision JSON 到 stdout）
+    assert "STOP_HINT" in result.stderr
 
 
 def test_stop_decision_missing_session_with_inprogress_allows_stop(tmp_path):
@@ -402,7 +402,7 @@ def test_stop_decision_missing_session_with_inprogress_allows_stop(tmp_path):
     result = _run_stop_decision(tmp_path, cwd=str(tmp_path))
     # 必须 allow stop（不能落入 default mode 的 resolve_session_inprogress_task）
     assert result.returncode == 1
-    assert "allow_stop" in result.stdout
+    assert "STOP_HINT" in result.stderr
 
 
 def test_stop_decision_loop_mode_reason_delegates_drun(tmp_path):

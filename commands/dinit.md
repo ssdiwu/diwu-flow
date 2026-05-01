@@ -10,7 +10,7 @@ effort: high
 
 # /dinit — 项目初始化
 
-> 脚本：`python3 scripts/dinit.py <子命令> --cwd <项目根目录>`
+> 脚本：`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dinit.py <子命令> --cwd <项目根目录>`
 
 ## 核心原则
 

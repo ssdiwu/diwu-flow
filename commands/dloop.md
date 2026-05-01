@@ -7,7 +7,7 @@ effort: low
 
 # /dloop — 连续任务循环
 
-> 执行 `python3 scripts/dloop.py start [--max-tasks N] --cwd <项目根目录>` 启动循环。
+> 执行 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dloop.py start [--max-tasks N] --cwd <项目根目录>` 启动循环。
 
 ## 用法
 

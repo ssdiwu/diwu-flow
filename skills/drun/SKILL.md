@@ -74,8 +74,8 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
   - 存在 InReview 且超前未达上限 → 可超前（标记 InReview + 立即 commit）
   - 达到超前上限 → 输出 PENDING REVIEW
 - **禁止**选择 InDraft 任务
-- 进入实施前必须先通过 `python3 scripts/dtask_transition.py claim --task-id N --session-id SID --cwd <proj>` 显式完成 `InSpec -> InProgress`
-- 实施完成后的最终状态也必须通过 `python3 scripts/dtask_transition.py release --task-id N --to inreview|done|inspec|cancelled --session-id SID --cwd <proj>` 显式完成；不得手改 `dtask.json.status`
+- 进入实施前必须先通过 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py claim --task-id N --cwd <proj>` 显式完成 `InSpec -> InProgress`（`--session-id` 默认 `auto`，按优先级自动解析：session 文件 → 环境变量 → drun-<timestamp> fallback）
+- 实施完成后的最终状态也必须通过 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py release --task-id N --to inreview|done|inspec|cancelled --cwd <proj>` 显式完成；不得手改 `dtask.json.status`（`--session-id` 同样默认 `auto`）
 
 ### 5. 环境初始化（可选）
 - 运行 init.sh（如存在）

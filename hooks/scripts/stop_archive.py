@@ -6,6 +6,7 @@ have exceeded their archive thresholds.
 import json
 import os
 import time
+from pathlib import Path
 
 SETTINGS_PATH = ".diwu/dsettings.json"
 TASK_JSON_PATH = ".diwu/dtask.json"
@@ -17,10 +18,16 @@ DEFAULTS = {
     "recording_retention_days": 30,
 }
 
+_CWD: str = "."
+
+
+def _resolve(path: str) -> str:
+    return os.path.join(_CWD, path)
+
 
 def _load_settings():
     """Load settings from dsettings.json, falling back to defaults."""
-    full = os.path.join(os.getcwd(), SETTINGS_PATH)
+    full = _resolve(SETTINGS_PATH)
     if not os.path.exists(full):
         return dict(DEFAULTS)
     try:
@@ -35,7 +42,7 @@ def _load_settings():
 
 def _load_tasks():
     """Load tasks from dtask.json, returning empty list on failure."""
-    full = os.path.join(os.getcwd(), TASK_JSON_PATH)
+    full = _resolve(TASK_JSON_PATH)
     if not os.path.exists(full):
         return []
     try:
@@ -81,7 +88,7 @@ def check_recording_archive(settings):
         "recording_retention_days", DEFAULTS["recording_retention_days"]
     )
 
-    rec_dir = os.path.join(os.getcwd(), RECORDING_DIR)
+    rec_dir = _resolve(RECORDING_DIR)
     if not os.path.isdir(rec_dir):
         return False, 0, 0, ct, dt, ""
 
@@ -111,8 +118,11 @@ def check_recording_archive(settings):
     return False, total, old, ct, dt, ""
 
 
-def check(settings=None, tasks=None):
+def check(settings=None, tasks=None, cwd=None):
     """Main entry point — returns list of (level, message) tuples."""
+    global _CWD
+    if cwd:
+        _CWD = cwd
     if settings is None:
         settings = _load_settings()
     if tasks is None:
@@ -146,7 +156,8 @@ if __name__ == "__main__":
         except (json.JSONDecodeError, ValueError):
             pass
 
-    results = check()
+    event_cwd = stdin_data.get("cwd", ".") if stdin_data else "."
+    results = check(cwd=event_cwd)
     if results:
         messages = [msg for _, msg in results]
         # Use hookSpecificOutput — CC-recognized field for plugin-specific advisory output

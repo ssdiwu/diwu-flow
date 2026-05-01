@@ -188,8 +188,17 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
         return True, {"decision": "block", "reason": format_task("继续完成当前任务（断点恢复）：", resolution.task) + extra}
 
     if resolution.status in ("missing_owner", "owner_mismatch", "invalid_runtime_state"):
-        print(resolution.reason, file=sys.stderr)
-        return False, {"decision": resolution.status, "reason": resolution.reason}
+        task_id = resolution.task.get("id") if resolution.task else "?"
+        action = "adopt" if resolution.status == "missing_owner" else "claim"
+        plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "<plugin-root>")
+        hint = (
+            f"[STOP_HINT] {resolution.reason}。"
+            f" 请先执行 {action} 补全 owner 记录后再继续："
+            f" python3 {plugin_root}/scripts/dtask_transition.py "
+            f"{action} --task-id {task_id} --session-id \"$SESSION_ID\" --cwd <proj>"
+        )
+        print(hint, file=sys.stderr)
+        return False, {}
 
     done_ids = {task["id"] for task in tasks if task.get("status") == "Done"}
     executable = [
@@ -225,8 +234,17 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
             "reason": format_task(f"🔄 dloop iteration {iteration + 1} | 继续当前任务（断点恢复）：", resolution.task) + extra,
         }
     if resolution.status in ("missing_owner", "owner_mismatch", "invalid_runtime_state"):
-        print(resolution.reason, file=sys.stderr)
-        return False, {"decision": resolution.status, "reason": resolution.reason}
+        task_id = resolution.task.get("id") if resolution.task else "?"
+        action = "adopt" if resolution.status == "missing_owner" else "claim"
+        plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "<plugin-root>")
+        hint = (
+            f"[STOP_HINT] {resolution.reason}。"
+            f" 请先执行 {action} 补全 owner 记录后再继续："
+            f" python3 {plugin_root}/scripts/dtask_transition.py "
+            f"{action} --task-id {task_id} --session-id \"$SESSION_ID\" --cwd <proj>"
+        )
+        print(hint, file=sys.stderr)
+        return False, {}
 
     in_review = [task for task in tasks if task.get("status") == "InReview"]
 
@@ -300,12 +318,8 @@ if __name__ == "__main__":
 
     sync_result = sync_runtime_state(cwd, data, persist=True)
     if sync_result.is_invalid:
-        output = {
-            "decision": "invalid_runtime_state",
-            "reason": f"dtask-state.json 无效：{sync_result.reason}",
-        }
-        print(json.dumps(output, ensure_ascii=False))
-        sys.exit(1)
+        print(f"[STOP_HINT] dtask-state.json 无效：{sync_result.reason}。请检查文件格式或执行 /dinit validate 修复", file=sys.stderr)
+        sys.exit(0)
 
     runtime_state = sync_result.state
     loop_state = runtime_loop_state(runtime_state)
@@ -314,9 +328,9 @@ if __name__ == "__main__":
     if loop_state is not None:
         loop_sid = loop_state.get("session_id", "")
 
-        # 分支1: Stop event 缺失 session_id → 显式 allow stop，不落入 default mode
+        # 分支1: Stop event 缺失 session_id → 阻止驱动循环（exit 1）
         if not session_id:
-            print(json.dumps({"decision": "allow_stop", "reason": "Stop event 缺少 session_id，不允许驱动 dloop 循环"}, ensure_ascii=False))
+            print("[STOP_HINT] Stop 事件缺少 session_id，跳过 dloop 驱动", file=sys.stderr)
             sys.exit(1)
 
         # 分支2: 首次绑定 — dummy ID 替换为真实 session_id（一次性）

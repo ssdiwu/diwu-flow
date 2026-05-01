@@ -81,7 +81,9 @@ class TestDecideInProgress(unittest.TestCase):
             runtime_state={'version': 1, 'task_sessions': {}, 'dloop': None}, session_id='session-a'
         )
         self.assertFalse(should_continue)
-        self.assertEqual(output.get('decision'), 'missing_owner')
+        # missing_owner 不再返回非法 decision 值（旧行为返回 {"decision": "missing_owner"}），
+        # 而是返回空 dict + stderr 输出 STOP_HINT 引导 AI 执行 claim/adopt
+        self.assertNotIn('decision', output)
 
 
 class TestDecideInReview(unittest.TestCase):

@@ -367,6 +367,74 @@
       ],
       "category": "bugfix",
       "status": "Done"
+    },
+    {
+      "id": 48,
+      "title": "修复插件内硬编码路径问题并创建防回归测试",
+      "description": "插件安装后位于 ~/.claude/plugins/marketplaces/ssdiwu/，但 commands/*.md 用相对路径 scripts/ 引用插件内部脚本（用户在自家项目执行时解析到错误位置）；部分 hook 脚本用 os.getcwd() 或硬编码 '.' 做路径拼接（hook 执行时 cwd 不一定可靠）；dinit.py 重复实现 PLUGIN_ROOT 而不复用 common.plugin_root()；stop_decision.py 遇 missing_owner 时返回非法 decision 值导致 CC schema 校验失败暴露内部错误。需全面修复并创建测试杜绝后续再犯。",
+      "acceptance": [
+        "Given hooks/scripts/stop_archive.py When 读取源码 Then _load_settings/_load_tasks/check_recording_archive 均通过 _resolve() 或 cwd 参数获取路径，不含 os.getcwd() 直接调用",
+        "Given hooks/scripts/task_completed.py When 读取源码 Then sync_runtime_state/load_runtime_state/save_runtime_state 均使用 _CWD 变量而非硬编码 '.'，main() 从 event.cwd 初始化 _CWD",
+        "Given scripts/dinit.py When 读取源码 Then PLUGIN_ROOT 来自 common.plugin_root() 而非独立 Path(__file__).parent.parent 实现",
+        "Given commands/*.md 中引用 python3 scripts/ 的行 When 检查 Then 全部包含 ${CLAUDE_PLUGIN_ROOT} 前缀",
+        "Given pytest tests/level3/test_task_168_no_hardcoded_paths.py 执行 Then 5 条测试全部 PASS（绝对路径检测 + getcwd 检测 + commands plugin-root 检测）",
+        "Given hooks/scripts/stop_decision.py 遇 missing_owner/owner_mismatch/invalid_runtime_state When 执行 Then 返回空 dict（合法格式）+ stderr 输出 STOP_HINT 引导 claim/adopt，不再返回非法 decision 值"
+      ],
+      "steps": [
+        "[锁定] 修改 hooks/scripts/stop_archive.py：新增 _CWD 全局变量和 _resolve() 辅助函数，_load_settings/_load_tasks/check_recording_archive 改用 _resolve()；check() 增加 cwd 参数；__main__ 从 stdin event.cwd 初始化",
+        "[锁定] 修改 hooks/scripts/task_completed.py：新增 _CWD 全局变量；sync_runtime_state/load_runtime_state/save_runtime_state 调用改用 _CWD；main() 从 event.get('cwd') 初始化 _CWD",
+        "[锁定] 修改 scripts/dinit.py：from common import plugin_root；PLUGIN_ROOT = plugin_root() 替换独立实现",
+        "[锁定] 修复 tests/level3/test_task_165_hook_paths_to_diwu.py 第61行：硬编码 /Users/diwu/... 改为 str(PROJECT_ROOT / '.claude' / 'dtask.json')",
+        "[锁定] 新建 tests/level3/test_task_168_no_hardcoded_paths.py：5 条测试覆盖 (1) hook 无绝对路径 (2) scripts 无绝对路径 (3) hook 无裸 os.getcwd() (4) commands 用 ${CLAUDE_PLUGIN_ROOT} (5) commands 无裸 python3 scripts/",
+        "[锁定] 批量修改 commands/*.md（drun/dtask/dinit/dloop/dend/dadr/dstat 共 7 文件 10 处）：python3 scripts/ → python3 ${CLAUDE_PLUGIN_ROOT}/scripts/",
+        "[锁定] 修改 hooks/scripts/stop_decision.py：missing_owner/owner_mismatch/invalid_runtime_state 不再返回非法 decision 值，改为空 dict + stderr STOP_HINT 引导 AI 执行 claim/adopt；同步更新 tests/level2/test_stop_decision.py 断言"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_archive.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_task_165_hook_paths_to_diwu.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_task_168_no_hardcoded_paths.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dinit.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dend.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dadr.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dstat.md"
+      ],
+      "category": "infra",
+      "status": "Done"
+    },
+    {
+      "id": 49,
+      "title": "drun claim 步骤使用真实 CC session ID 替代手造 $(date)",
+      "description": "当前 /drun Preflight 第5步 claim 使用 drun-$(date '+%Y%m%d-%H%M%S') 手造 session ID，与 CC 真实 session ID（如 e7398b54-86f9-45f1-ab9b-304da0e50937）不匹配，导致断点恢复时 Stop hook 持续报 owner_mismatch。session_start.py 已将真实 SID 写入 /tmp/.claude_main_session 但无任何脚本读取。需建立非 hook 场景获取真实 session ID 的完整链路。",
+      "acceptance": [
+        "Given dtask_transition.py claim 执行时未传 --session-id 或传入 'auto' When 命令执行 Then 自动从 /tmp/.claude_main_session 读取真实 SID 作为 session_id（文件存在时）",
+        "Given /tmp/.claude_main_session 不存在且未传 --session-id When claim 执行 Then fallback 到 $(date) 格式并输出 stderr 警告提示 session ID 非真实",
+        "Given /tmp/.claude_main_session 存在且内容为合法 UUID 格式 When claim 执行 Then task_sessions 中写入该真实 SID",
+        "Given 上述场景 When python3 -m py_compile scripts/dtask_transition.py Then 编译通过",
+        "Given 上述场景 When python3 -m pytest tests/level2_scripts/test_dtask_transition.py -q -k claim Then 现有 claim 测试不受影响（auto/fallback 为新增行为）"
+      ],
+      "steps": [
+        "[锁定] 修改 scripts/dtask_transition.py：cmd_claim() 的 --session-id 参数从 required 改为 optional（default='auto'），当值为 'auto' 时按优先级链获取：(1) /tmp/.claude_main_session 文件内容（非空）→ (2) 读取环境变量 CLAUDE_SESSION_ID → (3) fallback 到 f'drun-{datetime.now()}' 并 stderr 警告",
+        "[锁定] 同步修改 cmd_adopt() 的 --session-id 参数：同样的 auto 优先级链",
+        "[锁定] 新增 _resolve_session_id(cwd) 辅助函数在 dtask_transition.py 或 dtask_state.py 中，统一供 cmd_claim/cmd_adopt/cmd_release 调用；优先级：文件 > 环境变量 > date fallback + 警告",
+        "[锁定] 更新 skills/drun/SKILL.md 的 Preflight 第5步 claim 示例：--session-id 参数改为可选，说明 auto 行为（优先读文件、fallback 到日期格式+警告）",
+        "[锁定] 更新 commands/drun.md 的 claim 示例：同步 --session-id auto 说明",
+        "[建议] 在 tests/level2_scripts/test_dtask_transition.py 补充 auto session_id 解析测试：(1) 文件存在时用文件值 (2) 文件不存在时 fallback (3) 显式传入 --session-id 时覆盖 auto"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py"
+      ],
+      "category": "functional",
+      "status": "Done"
     }
   ]
 }

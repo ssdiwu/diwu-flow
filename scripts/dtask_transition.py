@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -130,7 +131,39 @@ def cmd_mark_inspec(cwd: Path, task_ids: list[int]) -> dict:
     return _result(True, "marked_inspec", task_ids=changed)
 
 
+def _resolve_session_id(session_id: str) -> str:
+    """解析 session_id：auto 时按优先级链获取真实 SID。
+
+    优先级：(1) /tmp/.claude_main_session 文件内容（session_start hook 写入）
+           (2) CLAUDE_SESSION_ID 环境变量
+           (3) fallback 到 drun-<timestamp> + stderr 警告
+    """
+    if session_id and session_id != "auto":
+        return session_id
+
+    # 优先级 1：session_start hook 写入的文件
+    session_file = Path("/tmp/.claude_main_session")
+    if session_file.exists():
+        try:
+            content = session_file.read_text(encoding="utf-8").strip()
+            if content and len(content) > 4:
+                return content
+        except OSError:
+            pass
+
+    # 优先级 2：环境变量
+    env_sid = os.environ.get("CLAUDE_SESSION_ID", "")
+    if env_sid:
+        return env_sid
+
+    # 优先级 3：fallback
+    fallback = f"drun-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
+    print(f"[SESSION_ID] 使用 fallback session ID: {fallback}（非 CC 真实 session ID）", file=sys.stderr)
+    return fallback
+
+
 def cmd_claim(cwd: Path, task_id: int, session_id: str) -> dict:
+    session_id = _resolve_session_id(session_id)
     task_payload, tasks = _load_tasks(cwd)
     index = _task_index(tasks)
     task = index.get(task_id)
@@ -159,6 +192,7 @@ def cmd_claim(cwd: Path, task_id: int, session_id: str) -> dict:
 
 
 def cmd_release(cwd: Path, task_id: int, session_id: str, target: str) -> dict:
+    session_id = _resolve_session_id(session_id)
     task_payload, tasks = _load_tasks(cwd)
     index = _task_index(tasks)
     task = index.get(task_id)
@@ -189,6 +223,7 @@ def cmd_release(cwd: Path, task_id: int, session_id: str, target: str) -> dict:
 
 
 def cmd_adopt(cwd: Path, task_id: int, session_id: str) -> dict:
+    session_id = _resolve_session_id(session_id)
     task_payload, tasks = _load_tasks(cwd)
     index = _task_index(tasks)
     task = index.get(task_id)
@@ -241,18 +276,18 @@ def main() -> None:
 
     p_claim = sub.add_parser("claim", help="InSpec -> InProgress 并写 owner")
     p_claim.add_argument("--task-id", required=True, type=int)
-    p_claim.add_argument("--session-id", required=True)
+    p_claim.add_argument("--session-id", default="auto", help="session ID（默认 auto 从文件/环境变量自动解析）")
     add_cwd_arg(p_claim)
 
     p_release = sub.add_parser("release", help="InProgress -> InReview/Done/InSpec/Cancelled")
     p_release.add_argument("--task-id", required=True, type=int)
     p_release.add_argument("--to", required=True, choices=sorted(VALID_RELEASE_TARGETS.keys()))
-    p_release.add_argument("--session-id", required=True)
+    p_release.add_argument("--session-id", default="auto", help="session ID（默认 auto 从文件/环境变量自动解析）")
     add_cwd_arg(p_release)
 
     p_adopt = sub.add_parser("adopt", help="显式接管其他 session 的 InProgress owner")
     p_adopt.add_argument("--task-id", required=True, type=int)
-    p_adopt.add_argument("--session-id", required=True)
+    p_adopt.add_argument("--session-id", default="auto", help="session ID（默认 auto 从文件/环境变量自动解析）")
     add_cwd_arg(p_adopt)
 
     p_sync = sub.add_parser("sync-runtime", help="清理 stale owner 并迁移 legacy dloop")

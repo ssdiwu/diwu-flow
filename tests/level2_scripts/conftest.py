@@ -77,19 +77,22 @@ def assert_rel_time_shape(text: str):
     )
 
 
-def run_script(script_name: str, *args, cwd=None):
+def run_script(script_name: str, *args, cwd=None, env=None):
     """I2: CLI-first 辅助 — 通过 subprocess 运行 scripts/ 下的脚本。
 
     Returns (returncode, stdout, stderr).
+    可选 env: dict，合并到默认环境变量（覆盖同名键）。
     """
     script = SCRIPTS_DIR / script_name
-    env = os.environ.copy()
-    env["DIWU_SILENT"] = "1"
+    base_env = os.environ.copy()
+    base_env["DIWU_SILENT"] = "1"
+    if env:
+        base_env.update(env)
     result = subprocess.run(
         [sys.executable, str(script)] + list(args),
         capture_output=True,
         text=True,
         cwd=cwd or str(PROJECT_ROOT),
-        env=env,
+        env=base_env,
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()

@@ -37,6 +37,8 @@ SETTINGS_FILE = '.diwu/dsettings.json'
 TASK_JSON_PATH = '.diwu/dtask.json'
 RUNTIME_STATE_PATH = '.diwu/dtask-state.json'
 
+_CWD: str = "."
+
 
 def _load(p):
     """Load JSON file, return {} on error."""
@@ -78,7 +80,7 @@ def _track_loop_completion(task_id: int, session_id: str):
     cleanup 不再影响当前 task 的 loop 计数逻辑。
     """
     task_data = _load(TASK_JSON_PATH)
-    sync_result = sync_runtime_state(".", task_data, persist=True, ensure_exists=True)
+    sync_result = sync_runtime_state(_CWD, task_data, persist=True, ensure_exists=True)
     if not sync_result.ok:
         return
     runtime_loop = sync_result.state.get("dloop") if sync_result.state else None
@@ -89,11 +91,13 @@ def _track_loop_completion(task_id: int, session_id: str):
     if task_id in current_completed:
         return  # 防重复：同一 task_id 再次 Done 不追加
     runtime_loop["completed_task_ids"] = current_completed + [task_id]
-    save_runtime_state(".", sync_result.state, remove_legacy=True)
+    save_runtime_state(_CWD, sync_result.state, remove_legacy=True)
 
 
 def main():
+    global _CWD
     event = _get_event_data()
+    _CWD = event.get("cwd", ".")
     session_id = event.get("sessionId", event.get("session_id", ""))
 
     # === 阶段 1: Fallback heuristic + clear_task_owner + loop 追踪（必须在 reminder 之前完成）===
@@ -119,10 +123,10 @@ def main():
         if isinstance(task_id, int) and not isinstance(task_id, bool):
             # 关键：先用 raw load 做 clear_task_owner，
             # 不能用 sync_runtime_state（它的 cleanup 会删除 Done 任务的 owner 条目）
-            load_result = load_runtime_state(".")
+            load_result = load_runtime_state(_CWD)
             if load_result.ok and load_result.state is not None:
                 if clear_task_owner(load_result.state, task_id):
-                    save_runtime_state(".", load_result.state, remove_legacy=True)
+                    save_runtime_state(_CWD, load_result.state, remove_legacy=True)
 
                     # === Loop 追踪（仅在 owner 清理成功后）===
                     _event_task = event.get("task")

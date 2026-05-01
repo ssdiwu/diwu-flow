@@ -17,9 +17,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import ensure_dir, load_json_or_empty  # noqa: E402
+from common import ensure_dir, load_json_or_empty, plugin_root  # noqa: E402
 
-PLUGIN_ROOT = Path(__file__).parent.parent.resolve()
+PLUGIN_ROOT = plugin_root()
 ASSETS_DIR = PLUGIN_ROOT / "assets" / "dinit" / "assets"
 RULES_SRC = ASSETS_DIR / "rules"
 MANIFEST_PATH = ASSETS_DIR / "rules-manifest.json"

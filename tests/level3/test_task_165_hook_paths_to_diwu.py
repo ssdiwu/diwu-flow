@@ -58,7 +58,7 @@ def test_hook_scripts_no_longer_reference_claude_runtime_paths():
 def test_task_created_validate_uses_relative_diwu_task_path():
     text = (HOOKS_DIR / "task_created_validate.py").read_text(encoding="utf-8")
     assert 'TASK_JSON_PATH = ".diwu/dtask.json"' in text
-    assert "/Users/diwu/Documents/codes/Githubs/diwu-workflow/.claude/dtask.json" not in text
+    assert str(PROJECT_ROOT / ".claude" / "dtask.json") not in text
 
 
 def test_hook_scripts_py_compile():

@@ -7,7 +7,7 @@ effort: low
 
 # /dend — 取消循环
 
-> 执行 `python3 scripts/dend.py --cwd <项目根目录>` 取消当前活跃的 dloop 循环。
+> 执行 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dend.py --cwd <项目根目录>` 取消当前活跃的 dloop 循环。
 
 ## 输出
 

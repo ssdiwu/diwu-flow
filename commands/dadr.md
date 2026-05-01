@@ -7,7 +7,7 @@ effort: medium
 
 # /dadr — 架构决策记录
 
-> 脚本：`python3 scripts/dadr.py <子命令> --cwd <项目根目录>`
+> 脚本：`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dadr.py <子命令> --cwd <项目根目录>`
 
 ## 子命令
 

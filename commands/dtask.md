@@ -12,7 +12,7 @@ effort: high
 - `/dtask` 只负责生成/改写 `.diwu/dtask.json` 中的任务定义，默认写入状态始终是 `InDraft`
 - `dtask.json` 是任务内容与 `status` 的真相源
 - `.diwu/dtask-state.json` 是运行态 owner / dloop 元数据真相源
-- 从 `InDraft -> InSpec`、`InSpec -> InProgress` 到 `InProgress -> InReview/Done/...` 的显式状态迁移，应通过 `python3 scripts/dtask_transition.py` 完成
+- 从 `InDraft -> InSpec`、`InSpec -> InProgress` 到 `InProgress -> InReview/Done/...` 的显式状态迁移，应通过 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py` 完成
 
 ## Step 1：接收功能描述
 
@@ -99,7 +99,7 @@ effort: high
 写入前必须运行脚本获取最大序号（优先使用脚本，手动读取为 fallback）：
 
 ```bash
-python3 scripts/common.py --max-task-id --cwd <项目根目录>
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/common.py --max-task-id --cwd <项目根目录>
 # → 输出: {"ok": true, "max_id": N, "source": "dtask.json|archive|empty"}
 ```
 
@@ -160,7 +160,7 @@ python3 scripts/common.py --max-task-id --cwd <项目根目录>
 
 1. 列出已写入的任务（id + title）
 2. 若存在 blocked_by 引用，提示：前置任务也是 InDraft，需人工先将其确认为 InSpec，依赖关系才生效
-3. 提示用户：确认需求后，用 `python3 scripts/dtask_transition.py mark-inspec --task-ids ... --cwd <proj>` 将任务锁定为 InSpec；真正开始实施前，再由 `/drun` 或 `dtask_transition.py claim` 显式进入 InProgress
+3. 提示用户：确认需求后，用 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py mark-inspec --task-ids ... --cwd <proj>` 将任务锁定为 InSpec；真正开始实施前，再由 `/drun` 或 `dtask_transition.py claim` 显式进入 InProgress
 
 ## 不做的事
 

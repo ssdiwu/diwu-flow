@@ -7,7 +7,7 @@ effort: low
 
 # /dstat — 项目状态快照
 
-> 纯读取聚合命令。执行 `python3 scripts/dstat.py [--deep] --cwd <项目根目录>` 获取结构化 JSON 输出。
+> 纯读取聚合命令。执行 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dstat.py [--deep] --cwd <项目根目录>` 获取结构化 JSON 输出。
 
 ## 用法
 
