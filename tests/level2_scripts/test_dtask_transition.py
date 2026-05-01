@@ -226,6 +226,15 @@ class TestAutoSessionIdResolution(unittest.TestCase):
         state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
         assert state["task_sessions"]["1"]["session_id"] == "explicit-sid-999"
 
+    def test_env_overrides_file_when_both_exist(self):
+        """env 和文件同时存在时，CLAUDE_SESSION_ID 优先于文件内容（防跨会话污染）。"""
+        _write_dtask(self.tmp_dir, [{"id": 1, "title": "T", "status": "InSpec"}])
+        Path("/tmp/.claude_main_session").write_text("other-session-from-file\n")
+        rc, out, _ = self._run(["--session-id", "auto"], env={"CLAUDE_SESSION_ID": "current-session-env"})
+        assert rc == 0
+        state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
+        assert state["task_sessions"]["1"]["session_id"] == "current-session-env"
+
     def test_adopt_also_supports_auto(self):
         """adopt 命令同样支持 auto 解析。"""
         _write_dtask(self.tmp_dir, [{"id": 1, "title": "T", "status": "InProgress"}])

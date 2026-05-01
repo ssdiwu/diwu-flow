@@ -435,6 +435,113 @@
       ],
       "category": "functional",
       "status": "Done"
+    },
+    {
+      "id": 50,
+      "title": "修复 drelease.sh 历史标签补推竞态：回填循环跳过当前 VERSION",
+      "description": "drelease.sh Step 1 在 origin 创建并推送 $VERSION tag（指向含 .diwu/ 的私有 HEAD）。随后 115-123 行的回填循环检查 public remote 缺少的 tags，发现 $VERSION 在 public 上不存在时将其推到 public（指向私有 commit）。当 CLEAN_SHA != HEAD_SHA 时，后续 TEMP_TAG remap push 因 remote tag 已存在而失败，或导致 public tag 指向错误 commit。需在回填循环中跳过当前 $VERSION。",
+      "acceptance": [
+        "Given CLEAN_SHA != HEAD_SHA（有敏感文件需清理）When 执行 drelease.sh v0.0.7 --push-public Then 回填循环不将 $VERSION 推到 public remote",
+        "Given CLEAN_SHA != HEAD_SHA When 执行完毕 Then public remote 上 $VERSION tag 指向 CLEAN_SHA（clean commit）而非 HEAD_SHA（私有 commit）",
+        "Given CLEAN_SHA == HEAD_SHA（已是 clean 状态） When 执行 drelease.sh v0.0.7 --push-public Then 行为与修改前一致（直接推 $VERSION）",
+        "Given 上述场景 When bash -n drelease.sh 执行 Then 语法检查通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/drelease.sh L118：在 for t in $LOCAL_TAGS 循环体内、grep 判断之前增加 `if [ \"$t\" = \"$VERSION\" ]; then continue; fi`",
+        "[建议] 验证：在临时 clone + bare remotes 中执行 drelease.sh v0.0.7 --push-public，确认 public 上 $VERSION 最终指向 CLEAN_SHA 且回填日志不含当前 VERSION"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/drelease.sh"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 51,
+      "title": "修复 auto session ID 跨会话污染：优先级调整为 env > 文件",
+      "description": "_resolve_session_id() 当前把全局共享文件 /tmp/.claude_main_session 放在 CLAUDE_SESSION_ID 环境变量之前。多 session 并发时新 session 可覆盖该文件，导致旧 session 的 claim/adopt/release 写入错误的 owner。需调整为 CLAUDE_SESSION_ID（进程级可靠）优先于文件（共享可变状态）。",
+      "acceptance": [
+        "Given CLAUDE_SESSION_ID=current-session 环境变量存在且 /tmp/.claude_main_session 存在且内容为 other-session When 执行 claim --session-id auto Then dtask-state.json.task_sessions 写入 current-session（env 优先于文件）",
+        "Given /tmp/.claude_main_session 不存在且 CLAUDE_SESSION_ID=env-sid 存在 When 执行 claim --session-id auto Then 写入 env-sid（保留原有 fallback-to-env 行为）",
+        "Given 文件和环境变量都不存在 When 执行 claim --session-id auto Then fallback 到 drun-<timestamp> 格式且 stderr 含 [SESSION_ID] 警告",
+        "Given 显式传入 --session-id explicit-sid When 执行 claim Then 忽略 auto 解析，直接使用 explicit-sid",
+        "Given 上述场景 When pytest tests/level2_scripts/test_dtask_transition.py::TestAutoSessionIdResolution -q 执行 Then 全部通过（含新增用例）"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py _resolve_session_id() 函数 L144-157：交换优先级 1 和 2 的顺序——先读 os.environ.get('CLAUDE_SESSION_ID')，再读 /tmp/.claude_main_session 文件",
+        "[锁定] 更新函数 docstring 反映新顺序：(1) CLAUDE_SESSION_ID 环境变量 → (2) /tmp/.claude_main_session 文件 → (3) drun-<timestamp> fallback",
+        "[锁定] 新增测试 test_env_overrides_file_when_both_exist 到 TestAutoSessionIdResolution 类：同时设置文件=other-session 和 env=current-session → claim 后 owner 应为 current-session",
+        "[建议] 确认 test_auto_falls_back_to_env_var_when_no_file 和 test_auto_uses_file_when_exists 仍通过（前者无文件走 env，后者无 env 走文件）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 52,
+      "title": "修复 stop_decision owner_mismatch 提示命令错误并抽 helper",
+      "description": "stop_decision.py 的 decide_default_mode(L192)和 decide_loop_mode(L238)两处重复的 action 映射逻辑对 owner_mismatch 输出 'claim' 命令，但 owner_mismatch 发生在 InProgress 任务上应使用 'adopt'。两处已重复出错一次，需抽 _repair_action(status) helper 消除复制粘贴风险。",
+      "acceptance": [
+        "Given resolution.status='owner_mismatch' When decide_default_mode 或 decide_loop_mode 生成 STOP_HINT Then hint 中包含 '请先执行 adopt' 而非 'claim'",
+        "Given resolution.status='missing_owner' When 生成 STOP_HINT Then hint 中包含 '请先执行 adopt'",
+        "Given resolution.status='invalid_runtime_state' When 生成 STOP_HINT Then hint 中包含 '请先执行 claim'",
+        "Given _repair_action('owner_mismatch') 调用 Then 返回 'adopt'；_repair_action('missing_owner') 返回 'adopt'；_repair_action('invalid_runtime_state') 返回 'claim'",
+        "Given 上述场景 When python3 -m py_compile hooks/scripts/stop_decision.py Then 编译通过"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py 中新增 _repair_action(status: str) -> str 辅助函数：返回 'adopt' if status in ('missing_owner', 'owner_mismatch') else 'claim'",
+        "[锁定] 替换 decide_default_mode L192 的 action 赋值为 _repair_action(resolution.status)",
+        "[锁定] 替换 decide_loop_mode L238 的 action 赋值为 _repair_action(resolution.status)"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 53,
+      "title": "修复 stop_decision 三处 cwd 联动缺失",
+      "description": "stop_decision.py main() 从 stdin event 正确获取了 cwd(L314)，但三处联动未完成：(1) L315-316 _load_json 仍用原始相对路径（相对于进程 cwd 而非 event cwd）；(2) L350 stop_archive.check() 未传 cwd 参数（recording archive 可能看错 repo）；(3) L358 decide() 传原始 args.task_json（loop mode 下 _save_task_data 写到进程 cwd）。需统一基于 event cwd 解析路径。",
+      "acceptance": [
+        "Given stdin event cwd=/tmp/my-project 且进程 cwd 为其他目录 When stop_decision.py 执行 Then _load_json 读取 /tmp/my-project/.diwu/dtask.json 而非进程 cwd 下的同名文件",
+        "Given event cwd 指向临时项目 When stop_archive.check() 执行 Then recording archive 检查基于 event cwd 而非进程 cwd",
+        "Given loop mode + event cwd 指向临时项目 When decide_loop_mode 执行 _save_task_data Then 写入 event cwd 下的 dtask.json 而非进程 cwd",
+        "Given 上述场景 When pytest tests/level2/test_stop_decision.py -q 执行 Then 现有测试不受影响（cwd 默认值仍为 os.getcwd() 时行为不变）"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py main() L314 之后：将 args.task_json 和 args.settings_json 基于 cwd 解析为绝对路径（os.path.join 处理相对路径，绝对路径直接使用），data/settings 改用解析后路径加载",
+        "[锁定] 修改 L350：stop_archive.check(settings=settings, tasks=tasks, cwd=cwd) 补传 cwd 参数",
+        "[锁定] 修改 L358：decide() 调用的第 4 个参数从 args.task_json 改为解析后的 task_json_path 绝对路径"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 54,
+      "title": "修复 install.sh uninstall 路径边界检查防 sibling 目录误删",
+      "description": "install.sh uninstall 的 symlink 清理使用前缀匹配 \"$normalized_root*\" 无路径边界。sibling 目录如 /tmp/diwu-flow-backup/... 也匹配 /tmp/diwu-flow* 前缀，导致指向 sibling 树内文件的 symlink 被误删。需增加路径边界检查（精确匹配或 /* 后缀匹配）。",
+      "acceptance": [
+        "Given 被扫描目录中存在 symlink 指向 .../diwu-flow-backup/...（sibling 路径） When 执行 install.sh --uninstall Then 该 symlink 不被删除",
+        "Given 被扫描目录中存在 symlink 指向 .../diwu-flow/...（本树内路径） When 执行 install.sh --uninstall Then 该 symlink 被正常删除",
+        "Given 无任何 diwu-flow 相关 symlink When 执行 install.sh --uninstall Then 不报错且不删除任何文件（幂等安全）",
+        "Given 上述场景 When bash -n install.sh 执行 Then 语法检查通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh L119：前缀匹配条件从 `== \"$normalized_root\"*` 改为 `== \"$normalized_root\" || == \"$normalized_root\"/*`（精确匹配根或 /* 子路径，排除 sibling 前缀命中）",
+        "[建议] 手动复现验证：创建 /tmp/diwu-flow-backup/ 目录并在其中建文件，在被扫描目录放 symlink 指向 backup 内文件 → uninstall 不删；再放 symlink 指向 diwu-flow 内文件 → uninstall 正常删"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+      ],
+      "category": "bugfix",
+      "status": "Done"
     }
   ]
 }

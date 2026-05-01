@@ -116,6 +116,7 @@ if [ "$PUSH_PUBLIC" = "--push-public" ]; then
     LOCAL_TAGS=$(git tag -l 'v*' 2>/dev/null)
     REMOTE_TAGS=$(git ls-remote --tags "$PUBLIC_REMOTE" 2>/dev/null | grep -oE 'refs/tags/v[^ ^]+' | sed 's|refs/tags/||')
     for t in $LOCAL_TAGS; do
+        if [ "$t" = "$VERSION" ]; then continue; fi
         if ! echo "$REMOTE_TAGS" | grep -qx "$t"; then
             git push "$PUBLIC_REMOTE" "refs/tags/${t}" 2>/dev/null || true
             echo "  补推历史 tag: $t"

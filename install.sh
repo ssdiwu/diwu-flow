@@ -115,8 +115,8 @@ uninstall() {
             if [[ "$target" = /* ]]; then
                 norm_target=$(realpath "$target" 2>/dev/null) || echo "$target"
             fi
-            # realpath 规范化后：必须在 FLOW_ROOT 树内才算 diwu-flow 的 symlink
-            if [[ "$(realpath -q -- "$norm_target" 2>/dev/null)" == "$normalized_root"* ]]; then
+            # realpath 规范化后：必须在 FLOW_ROOT 树内才算 diwu-flow 的 symlink（路径边界检查防 sibling 误删）
+            if [[ "$(realpath -q -- "$norm_target" 2>/dev/null)" == "$normalized_root" || "$(realpath -q -- "$norm_target" 2>/dev/null)" == "$normalized_root"/* ]]; then
                 rm -f "$link"
             fi
         done

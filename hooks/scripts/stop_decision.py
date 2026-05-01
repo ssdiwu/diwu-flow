@@ -27,6 +27,11 @@ from dtask_state import (  # noqa: E402
 )
 
 
+def _repair_action(status: str) -> str:
+    """返回修复命令名：missing_owner/owner_mismatch → adopt，其余 → claim"""
+    return "adopt" if status in ("missing_owner", "owner_mismatch") else "claim"
+
+
 def notify(msg):
     """Send OS notification (macOS/Linux)."""
     if os.environ.get("DIWU_SILENT") == "1":
@@ -189,7 +194,7 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
 
     if resolution.status in ("missing_owner", "owner_mismatch", "invalid_runtime_state"):
         task_id = resolution.task.get("id") if resolution.task else "?"
-        action = "adopt" if resolution.status == "missing_owner" else "claim"
+        action = _repair_action(resolution.status)
         plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "<plugin-root>")
         hint = (
             f"[STOP_HINT] {resolution.reason}。"
@@ -235,7 +240,7 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
         }
     if resolution.status in ("missing_owner", "owner_mismatch", "invalid_runtime_state"):
         task_id = resolution.task.get("id") if resolution.task else "?"
-        action = "adopt" if resolution.status == "missing_owner" else "claim"
+        action = _repair_action(resolution.status)
         plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "<plugin-root>")
         hint = (
             f"[STOP_HINT] {resolution.reason}。"
@@ -312,8 +317,10 @@ if __name__ == "__main__":
         sys.exit(0)
 
     cwd = stdin_data.get("cwd") or os.getcwd()
-    data = _load_json(args.task_json)
-    settings = _load_json(args.settings_json)
+    task_json_path = os.path.join(cwd, args.task_json) if not os.path.isabs(args.task_json) else args.task_json
+    settings_path = os.path.join(cwd, args.settings_json) if not os.path.isabs(args.settings_json) else args.settings_json
+    data = _load_json(task_json_path)
+    settings = _load_json(settings_path)
     tasks = data.get("tasks", [])
 
     sync_result = sync_runtime_state(cwd, data, persist=True)
@@ -347,7 +354,7 @@ if __name__ == "__main__":
     try:
         import stop_archive
 
-        additional_prompts = stop_archive.check(settings=settings, tasks=tasks)
+        additional_prompts = stop_archive.check(settings=settings, tasks=tasks, cwd=cwd)
     except Exception:
         pass
 
@@ -355,7 +362,7 @@ if __name__ == "__main__":
         tasks,
         settings,
         data,
-        args.task_json,
+        task_json_path,
         cwd,
         additional_prompts,
         loop_state,

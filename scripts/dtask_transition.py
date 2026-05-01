@@ -134,14 +134,19 @@ def cmd_mark_inspec(cwd: Path, task_ids: list[int]) -> dict:
 def _resolve_session_id(session_id: str) -> str:
     """解析 session_id：auto 时按优先级链获取真实 SID。
 
-    优先级：(1) /tmp/.claude_main_session 文件内容（session_start hook 写入）
-           (2) CLAUDE_SESSION_ID 环境变量
+    优先级：(1) CLAUDE_SESSION_ID 环境变量（进程级可靠）
+           (2) /tmp/.claude_main_session 文件内容（session_start hook 写入）
            (3) fallback 到 drun-<timestamp> + stderr 警告
     """
     if session_id and session_id != "auto":
         return session_id
 
-    # 优先级 1：session_start hook 写入的文件
+    # 优先级 1：环境变量（进程级，不受跨会话污染）
+    env_sid = os.environ.get("CLAUDE_SESSION_ID", "")
+    if env_sid:
+        return env_sid
+
+    # 优先级 2：session_start hook 写入的文件
     session_file = Path("/tmp/.claude_main_session")
     if session_file.exists():
         try:
@@ -150,11 +155,6 @@ def _resolve_session_id(session_id: str) -> str:
                 return content
         except OSError:
             pass
-
-    # 优先级 2：环境变量
-    env_sid = os.environ.get("CLAUDE_SESSION_ID", "")
-    if env_sid:
-        return env_sid
 
     # 优先级 3：fallback
     fallback = f"drun-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
