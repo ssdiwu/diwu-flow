@@ -1,9 +1,599 @@
 {
   "tasks": [
     {
-      "id": 1,
-      "title": "T",
+      "id": 33,
+      "title": "dloop.py 新增 --session-id 可选参数",
+      "description": "dloop start 生成的 session_id 是自造的 dloop-<timestamp>，与 stop_decision 收到的真实 session_id 永远不匹配导致循环进不了 loop mode。新增 --session-id 可选参数让调用方可传入真实 ID，配合 stop_decision 的首次绑定机制形成完整闭环。",
+      "acceptance": [
+        "Given dloop.py start 不传 --session-id When 执行 Then state 中 session_id 为 dloop-<timestamp> 格式（向后兼容）",
+        "Given dloop.py start 传入 --session-id real-sid-123 When 执行 Then state 中 session_id 为 real-sid-123",
+        "Given --session-id 参数传入非空字符串 When python3 -m py_compile scripts/dloop.py Then 编译通过无语法错误"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py 的 parser.add_argument 中新增 --session-id 参数（type=str, default=None）",
+        "[锁定] 在 cmd_start() 函数中：优先使用 args.session_id，否则保持现有 f\"dloop-{datetime.now(...)}\" 向后兼容逻辑",
+        "[建议] 验证 help 输出包含 --session-id 参数说明"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py"
+      ],
+      "category": "infra",
       "status": "Done"
+    },
+    {
+      "id": 34,
+      "title": "stop_decision.py 核心逻辑变更（session_id 三段式 + 删除任务选择注入）",
+      "description": "stop_decision.py 当前三个问题：(1) session_id 缺失时仍驱动 чужой loop（安全缺口）；(2) dummy dloop-* ID 无法自动绑定真实 SID；(3) 自行做任务选择+format_task 注入，违反薄壳定位。改为三段式处理 + 委托 /drun 提示。",
+      "acceptance": [
+        "Given 活跃 loop (dloop-* dummy SID) + Stop event 带 session_id=real-sid When decide_loop_mode 执行 Then loop_state.session_id 被替换为 real-sid 并持久化到 dtask-state.json",
+        "Given 活跃 loop + Stop event 缺失 session_id When decide 执行 Then 返回 allow stop（returncode=1），不落入 default mode 的 invalid_runtime_state 分支",
+        "Given 活跃 loop (已绑定 sid-A) + Stop event 带 session_id=sid-B (不匹配) When decide 执行 Then 退出 loop mode 走 default mode",
+        "Given loop mode + InSpec 任务存在 + 未命中停止条件 When decide_loop_mode 执行 Then reason 含 '请继续执行 /drun' 且不含具体任务名或 format_task 详情",
+        "Given loop mode + InProgress 任务 owner 匹配 When decide_loop_mode 执行 Then 仍走 format_task 断点恢复路径（例外保留）",
+        "Given 所有上述场景 When python3 -m py_compile hooks/scripts/stop_decision.py Then 编译通过",
+        "Given 现有 test_stop_decision_loop_mode_blocks_with_inSpec 测试 When pytest 执行 Then 仍通过（decision==block 且 iteration in reason）"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py 顶部定义 _DUMMY_PREFIX = \"dloop-\" 常量",
+        "[锁定] 替换第258-261行的 session_id 匹配逻辑为三段式：（1）缺失 → 显式提前返回 allow stop；（2）dummy 前缀 → 首次绑定替换并 save_runtime_state；（3）已绑定但不匹配 → loop_state=None",
+        "[锁定] 移除第18行 get_executable_tasks 的 import",
+        "[锁定] 删除 decide_loop_mode 中 get_executable_tasks 调用和 format_task(target) 注入逻辑（约第178-208行），替换为简短 '请继续执行 /drun' 提示",
+        "[锁定] completed_task_ids 在 stop_decision 中改为只读（不再写入），只用于 max_tasks 判断和阶段报告读取",
+        "[建议] 确认 InProgress owner 匹配路径（第168-176行）保持不变——断点恢复例外"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        33,
+        35
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 35,
+      "title": "task_completed.py 新增精确 loop 追踪（独立于 reminder gating）",
+      "description": "completed_task_ids 写入职责从 stop_decision 迁移到 TaskCompleted hook。只认 event.task.id 精确信号；必须在 clear_task_owner 成功分支内执行；必须独立于 recording_reminder 开关（提到 sys.exit(0) 早退之前）。",
+      "acceptance": [
+        "Given 活跃 loop + event.task.id=5 存在 + session 匹配 + clear_task_owner 成功 When task_completed 执行 Then completed_task_ids 包含 5 且仅追加一次",
+        "Given 活跃 loop + event.session_id 与 loop session_id 不匹配 When task_completed 执行 Then completed_task_ids 不变",
+        "Given 活跃 loop + event.task 缺失（只有 fallback heuristic 场景）When task_completed 执行 Then completed_task_ids 不变（不用 fallback）",
+        "Given 同一 task_id 再次触发 Done 事件 When task_completed 执行 Then completed_task_ids 不重复追加",
+        "Given recording_reminder.enabled=false When task_completed 执行 Then loop 追踪仍生效（提醒文案可不出但计数要更新）",
+        "Given 无活跃 loop 时 When task_completed 执行 Then 行为与改动前完全一致（无副作用）"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py 中将 loop 追踪逻辑移到 if settings.get('recording_reminder', {}).get('enabled') == False: sys.exit(0) 早退之前（独立于 reminder gating）",
+        "[锁定] loop 追踪代码放在 clear_task_owner 成功后的 if sync_result.ok 分支内部（第81-85行区域），不在外面",
+        "[锁定] 新增独立变量 event_task = event.get('task')（来自 stdin JSON 的原始 event.task 字段），不得复用后续 fallback heuristic 赋值的 completed_task 变量。loop 追踪只认 event_task 这个精确信号源",
+        "[锁定] 只在 event_task 存在且 isinstance(event_task.get('id'), int) 且非 bool 时才提取 task_id——严禁使用 fallback 后的 completed_task 做计数",
+        "[锁定] 四重守卫条件全部满足才追加：(1) event_task.id 合法；（2）runtime_loop 存在且 active=True；（3）loop session_id == event session_id；（4）task_id not in current_completed",
+        "[建议] 补充测试：recording_reminder=false 时 loop 追踪仍生效"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py"
+      ],
+      "category": "infra",
+      "status": "Done"
+    },
+    {
+      "id": 36,
+      "title": "dloop SKILL.md 重写为薄壳包装定义",
+      "description": "当前 SKILL.md 171 行含独立的「每轮完整流程」定义（选任务→dtask→dvfy→djug→dcorr→drec），与 drun 高度重复。重写为 ~105 行声明式文档：删除冗余协议、新增 Agent 行为规范/Session ID 绑定策略/completed_task_ids 维护说明。",
+      "acceptance": [
+        "Given 重写后 SKILL.md When yaml.safe_load 解析 frontmatter Then name=dloop, version=2.0, depends 仅含 dtask 和 drun, effort=low",
+        "Given 重写后 SKILL.md When 读取全文 Then 不含「每轮完整流程」ASCII 图或独立执行协议章节",
+        "Given 重写后 SKILL.md Then 包含「Agent 行为规范」章节（block 时发起 /drun、断点恢复例外）",
+        "Given 重写后 SKILL.md Then 包含「Session ID 绑定策略」章节（首次绑定机制和安全模型）",
+        "Given 重写后 SKILL.md Then 包含「completed_task_ids 维护」章节（由 TaskCompleted hook 精确追加）",
+        "Given 重写后 SKILL.md Then 保留停止条件表、状态文件 schema、Session 隔离、阶段报告格式、Stale-State 规则、安全限制、适用场景"
+      ],
+      "steps": [
+        "[锁定] 重写 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md：frontmatter description 改为 'drun 的薄壳循环包装'，version='2.0'，effort='low'，depends 只留 dtask+drun",
+        "[锁定] 删除原「每轮完整流程」章节（ASCII 流程图 + 说明文字约 14 行）",
+        "[锁定] 新增「Agent 行为规范」章节：block → 发起完整 /drun；不得自行选任务；断点恢复是唯一例外（InProgress owner 匹配时走 format_task 快速恢复）",
+        "[锁定] 新增「Session ID 绑定策略」章节：说明 dummy ID 首次绑定机制、缺失 SID 安全行为、三段式分支表",
+        "[锁定] 新增「completed_task_ids 维护」章节：写入方为 TaskCompleted hook、精确语义（只认 event.task.id）、stop_decision 只读",
+        "[建议] 与 commands/dloop.md 文案交叉校验一致性"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        34,
+        35
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 37,
+      "title": "commands/dloop.md 更新",
+      "description": "命令入口文档同步更新：--session-id 参数说明、session_id 绑定策略描述、stop_decision 集成描述从'注入下一任务信息'改为'/drun 委托提示'。",
+      "acceptance": [
+        "Given 更新后 commands/dloop.md When 读取 Then 用法示例包含 --session-id 可选参数",
+        "Given 更新后 commands/dloop.md Then 「与 stop_decision.py 的关系」段落描述 block 行为为 '请继续 /drun' 而非 '注入下一任务信息'",
+        "Given 更新后 commands/dloop.md Then 包含 session_id 绑定策略简要说明（可选传 / 首次自动绑定）"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md 用法示例：增加 --session-id <sid> 可选项",
+        "[锁定] 修改「与 stop_decision.py 的关系」段落（约第39-45行）：更新为委托 /drun 模式的描述",
+        "[建议] 新增一段 session_id 绑定策略说明（2-3 行即可，详情见 SKILL.md）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        33,
+        36
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 38,
+      "title": "清理 dloop 新增回归测试中的重复定义并恢复真实覆盖",
+      "description": "当前 staged 的 tests/level2/test_dloop.py 把 4 个新测试函数整块重复定义了一次，pytest 只会保留后半段定义，导致表面新增 8 个测试、实际只收集 4 个。需要去重并让 dloop review-closeout 的覆盖面与 diff 一致。",
+      "acceptance": [
+        "Given tests/level2/test_dloop.py 中新增的 4 个 dloop 回归测试 When pytest 收集 Then 每个测试名只定义一次且不会被后续同名函数覆盖",
+        "Given test_stop_decision_first_bind_replaces_dummy_id、test_stop_decision_missing_session_id_exits_loop_mode、test_stop_decision_missing_session_with_inprogress_allows_stop、test_stop_decision_loop_mode_reason_delegates_drun When pytest tests/level2/test_dloop.py -q 执行 Then 4 条测试都被真实执行",
+        "Given dloop 与 task_completed 的 review-closeout 测试清理完成 When pytest tests/level2/test_dloop.py tests/level2/test_task_completed.py -q 执行 Then 回归通过且覆盖面与代码变更一致"
+      ],
+      "steps": [
+        "[锁定] 阅读 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py，删除重复的 4 个同名测试定义，仅保留一组权威实现",
+        "[锁定] 如有必要，补一条轻量收集校验或局部说明，避免后续再次用复制粘贴覆盖测试名",
+        "[建议] 运行 pytest tests/level2/test_dloop.py tests/level2/test_task_completed.py -q，确认局部回归通过"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 39,
+      "title": "plan-guard PreToolUse hard block 实现（>=3 步方案未落 dtask 时拦截写入工具）",
+      "description": "当前 plan-guard 通过 hooks/hooks.json 注册的 PreToolUse ExitPlanMode/Edit|Write 拦截和 task_entry_guard.py 的 ~/.claude/plans 白名单路径检查，但仅输出文字警告（⚠️），模型可以无视并直接用 TaskCreate/Edit/Write。升级为真正的 hard block：检测到未落地 >=3 步方案时直接拦截 Edit/Write/TaskCreate 等工具调用，强制引导用户先 /dtask。双重检测：~/.claude/plans/ 下 plan 文件存在 OR 刚退出 plan mode 标记。",
+      "acceptance": [
+        "Given ~/.claude/plans/ 下有未执行 plan 文件（行数超过阈值）且 .diwu/dtask.json 中无对应落地任务 When Agent 调用 Edit/Write/TaskCreate Then hooks/scripts/task_entry_guard.py 或对应 PreToolUse hook 返回 block 并提示先执行 /dtask",
+        "Given 刚退出 plan mode（标记文件检测）且方案 >=3 步且未落 dtask When Agent 调用 Edit/Write/TaskCreate Then hook 返回 block",
+        "Given 已通过 /dtask 落地任务到 dtask.json（含对应 acceptance/steps）When Agent 调用 Edit/Write/TaskCreate Then hook 不拦截（正常放行）",
+        "Given <3 步的小改动（如单行 typo fix）When Agent 直接编辑文件 Then hook 不拦截（小改动豁免）",
+        "Given plan-guard hook 自身 When python3 -m py_compile 编译 Then 通过"
+      ],
+      "steps": [
+        "[锁定] 分析现有 hooks/hooks.json 和 hooks/scripts/task_entry_guard.py，确定 plan-guard 当前实现的完整链路（PreToolUse ExitPlanMode/Edit|Write 入口 + task_entry_guard.py 的 ~/.claude/plans 扫描 + UserPromptSubmit 文字注入）",
+        "[锁定] 设计检测逻辑：（A）plan 文件存在判定（扫描 ~/.claude/plans/ 下 .md 文件，行数 > 阈值，路径来自 task_entry_guard.py 第15行已有逻辑）；（B）刚退出 plan mode 判定（标记文件 .claude/.plan-active 或类似机制）；（C）dtask.json 中是否有对应落地任务的匹配检查",
+        "[锁定] 修改或新增 hook 脚本（hooks/scripts/task_entry_guard.py 或新建 hooks/scripts/plan_guard_block.py）：命中 (A|B) + >=3 步 + 未落地 → 对 Edit/Write/TaskCreate 返回 block + 错误提示含 /dtask 引导。缺失 session_id 场景同 P1-2 修复：必须显式返回 block 而非落入其他分支",
+        "[锁定] 豁免规则：<3 步改动不拦截；Read/Bash/Grep/Lookup 等只读工具永远不拦截；已落地 dtask 后不拦截；TaskList/TaskUpdate 等 task 管理工具不拦截（允许 /dtask 本身执行）",
+        "[锁定] 在测试文件中编写至少 2 条测试：（1）未落地 plan + Edit 调用 → 被 block；（2）已落地 dtask + Edit 调用 → 放行"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/hooks.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/"
+      ],
+      "category": "infra",
+      "status": "Done"
+    },
+    {
+      "id": 40,
+      "title": "修复 task_completed 提前记录 loop 完成计数的问题",
+      "description": "review 发现 task_completed.py 在确认任务真的完成前就调用 _track_loop_completion()，会把未完成任务提前写入 dtask-state.json.dloop.completed_task_ids，进而让 dloop 提前命中 max_tasks 或生成错误阶段报告。需要把 loop 计数更新收口到真正的 Done/owner-clear 成功路径，并补充负向回归用例。",
+      "acceptance": [
+        "Given 活跃 loop 且 event.task.id 存在但当前任务仍是 InProgress 或 clear_task_owner 失败 When task_completed.py 执行 Then completed_task_ids 不变",
+        "Given 活跃 loop 且 event.task.status=Done 且 owner 清理成功 When task_completed.py 执行 Then completed_task_ids 仅追加一次对应 task_id",
+        "Given recording_reminder.enabled=false 且活跃 loop 收到合法 Done 事件 When task_completed.py 执行 Then completed_task_ids 仍在完成确认后被更新而不会提前记账"
+      ],
+      "steps": [
+        "[锁定] 调整 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py：把 loop 计数更新移到确认 completed_task 为 Done 且 clear_task_owner 成功的路径中",
+        "[锁定] 保留 event.task 作为唯一精确信号源，但增加 status/owner-clear 守卫，禁止仅凭 task_id 存在就追加 completed_task_ids",
+        "[建议] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py 增加 InProgress 误报和 owner-clear 失败场景的回归测试"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 41,
+      "title": "补齐 .plan-active marker 生命周期使 hard block 可达",
+      "description": "决策：方案 B — 保留 .claude/.plan-active marker 机制。当前 task_entry_guard.py 的 hard-block 以 marker 存在为前置条件，但仓库无任何代码创建/清理它，导致 hard block 永远不可达。需在 ExitPlanMode 时创建 marker、dtask 落地（mark-inspec/claim）时清理 marker，形成完整闭环。",
+      "acceptance": [
+        "Given 用户退出 Plan Mode（ExitPlanMode 事件触发）When plan_exit_hint.py 执行 Then 在 cwd 下创建 .claude/.plan-active marker 文件且 exit 0 行为不变",
+        "Given .claude/.plan-active marker 存在 + ~/.claude/plans/ 下有 >=20 行 plan 文件 + dtask 无活跃任务 When task_entry_guard.py 收到 Edit/Write 事件 Then 返回 exit(1) + 输出 hard block 提示",
+        "Given dtask 已有活跃任务（InSpec/InProgress/InReview）When task_entry_guard.py 执行 Then 即使 marker 存在也不触发 hard block（已落地豁免）",
+        "Given 执行 mark-inspec 或 claim 使 dtask 产生首个活跃任务 When 对应命令执行 Then 清理 .claude/.plan-active marker 文件",
+        "Given 上述全流程 When python3 -m py_compile 编译 hooks/scripts/ 下的变更文件 Then 通过",
+        "Given temp HOME 场景 When pytest tests/level2/test_plan_dtask_guards.py -q 执行 Then 覆盖创建→block→清理三类场景"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py：在 main() 的 ExitPlanMode 分支中，输出原有 MESSAGE 后，额外在 cwd 下创建 .claude/.plan-active marker 文件（os.makedirs + open(marker, 'w').close()）",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py：在 cmd_mark_inspec() 成功路径末尾（save_json 之后、return 之前）和 cmd_claim() 成功路径末尾（_save_claim 之后），检查并删除 cwd/.claude/.plan-active marker（存在才删，忽略不存在）",
+        "[锁定] 确认 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py 的 _has_unlanded_plan() 逻辑不变——marker 检查 + plan 文件扫描 + dtask 活跃判断的三段式保持原样",
+        "[建议] 在 tests/level2/test_plan_dtask_guards.py 补充：(1) ExitPlanMode 创建 marker；(2) marker+大 plan+无活跃任务 → hard block；(3) mark-inspec 后 marker 被清理"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 42,
+      "title": "修复 dtask_transition mark-inspec 的非原子写入",
+      "description": "review 复现表明 cmd_mark_inspec() 先把 dtask.json 写成 InSpec，再校验 dtask-state.json；一旦 runtime state 非法，CLI 会返回 invalid_runtime_state，但 task 状态已经落盘，形成“失败但已生效”的部分提交。需要把 mark-inspec 改成先验证后落盘，保证失败时 dtask.json 保持原状。",
+      "acceptance": [
+        "Given dtask-state.json 非法 When python3 scripts/dtask_transition.py mark-inspec --task-ids ... 执行 Then 命令返回 invalid_runtime_state 且 dtask.json 中对应任务仍保持 InDraft",
+        "Given dtask-state.json 合法且任务为 InDraft When mark-inspec 执行 Then 任务状态正常切到 InSpec 且 runtime state 同步成功",
+        "Given 上述回归场景 When pytest tests/level2_scripts/test_dtask_transition.py -q 执行 Then 同时覆盖失败不落盘与成功迁移两条路径"
+      ],
+      "steps": [
+        "[锁定] 调整 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py 中 cmd_mark_inspec() 的执行顺序：先校验 runtime state，再统一持久化 dtask.json",
+        "[锁定] 如需要，增加最小的临时副本或延后 save_json，确保 invalid_runtime_state 不会留下部分写入",
+        "[建议] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py 增加 runtime-state 非法时 dtask.json 不变的回归测试"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 43,
+      "title": "修复 plan-guard 无条件 marker + 全局 plan 扫描导致误拦",
+      "description": "plan_exit_hint.py 在每次 ExitPlanMode 时无条件创建 .plan-active marker，但 task_entry_guard.py 的 _has_unlanded_plan() 扫描的是 ~/.claude/plans/ 下所有 .md 文件（全局），不区分'本次刚退出的 plan'和'历史残留 plan'。结果：HOME 里只要有一个 >=20 行的旧 plan，一次 ExitPlanMode 后所有 Edit/Write 都会被 hard block，即使当前只是小改动。需将 marker 创建改为有条件（仅当本次 plan 内容 >= 阈值时才创建），或改用时间戳/文件名关联限定扫描范围。",
+      "acceptance": [
+        "Given ExitPlanMode 且本次 plan 文件 <20 行 When plan_exit_hint.py 执行 Then 不创建 .plan-active marker（小 plan 不触发 guard）",
+        "Given ExitPlanMode 且本次 plan 文件 >=20 行 When plan_exit_hint.py 执行 Then 创建 .plan-active marker 并在 marker 中记录对应 plan 文件名或路径",
+        "Given .plan-active marker 存在但 ~/.claude/plans/ 下只有无关的旧大 plan（与 marker 记录的 plan 名不匹配）When task_entry_guard.py 执行 Then 不触发 hard block（不误拦）",
+        "Given .plan-active marker 存在且匹配的大 plan 存在 + dtask 无活跃任务 When task_entry_guard.py 收到 Edit/Write 事件 Then 返回 exit(1) hard block",
+        "Given 已有活跃 dtask 任务 When task_entry_guard.py 执行 Then 即使 marker+匹配 plan 存在也不触发 hard block",
+        "Given 上述场景 When python3 -m py_compile hooks/scripts/ 下的变更文件 Then 通过",
+        "Given 全量回归测试 When pytest tests/level2/test_plan_dtask_guards.py -q 执行 Then 小 plan 不创建、大 plan 创建、名称不匹配 bypass、名称匹配 hard block 四类场景全部 PASS"
+      ],
+      "steps": [
+        "[锁定] 定义 plan 文件信号来源：ExitPlanMode event 的 tool_input 中包含 file_path（指向 ~/.claude/plans/ 下的 plan .md 文件）；若 event 无此字段则回退到扫描 ~/.claude/plans/ 下最近修改的 .md 文件作为'本次 plan'的候选",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py：ExitPlanMode 事件中读取信号源 plan 文件的行数；仅当行数 >= _PLAN_LINE_THRESHOLD(20) 时才创建 .plan-active marker 并将文件绝对路径写入 marker 内容",
+        "[锁定] 将 plan 文件绝对路径或 basename 写入 marker 文件内部（而非空文件），使 task_entry_guard.py 能做精确匹配",
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py 的 _has_unlanded_plan()：marker 存在后，额外检查 marker 内记录的 plan 文件是否确实存在且行数仍 >= 阈值；若 marker 记录的 plan 文件不存在或不满足阈值则视为 marker 过期，返回 (False, 0) 并清理过期 marker",
+        "[锁定] 确认 dtask 活跃任务豁免逻辑不变：_has_active_task() 为 True 时直接返回 False",
+        "[建议] 更新 tests/level2/test_plan_dtask_guards.py：将现有 test_exit_plan_mode_creates_marker 改为条件化创建测试；新增 plan 名称不匹配时的 bypass 测试"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/plan_exit_hint.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_plan_dtask_guards.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 44,
+      "title": "修复 loop 完成计数仍在 owner 确认之前执行的问题",
+      "description": "Task#40 补了 status=='Done' 守卫，但 _track_loop_completion() 仍在 main() 的 clear_task_owner() 调用之前执行。执行时序：L88-92 先追加 completed_task_ids → L111-120 后确认 owner 清理。如果 owner 清理失败（如 task_sessions 缺失、状态不一致），task id 已被记账但完成从未被真正确认。dloop 可能提前命中 max_tasks 或生成错误阶段报告。需要将 loop 追踪移到 clear_task_owner 成功后的路径中，并确保 reminder 门控不阻断此路径。",
+      "acceptance": [
+        "Given 活跃 loop + event.task.status=Done + session 匹配 + 但 task 无 owner 条目（clear_task_owner 返回 False）When task_completed.py 执行 Then completed_task_ids 不变（未确认完成不计数）",
+        "Given 活跃 loop + event.task.status=Done + session 匹配 + clear_task_owner 成功 When task_completed.py 执行 Then completed_task_ids 追加对应 task_id（确认后才计数）",
+        "Given 活跃 loop + event.task.status=Done + session 匹配 + recording_reminder.enabled=false When task_completed.py 执行 Then loop 追踪仍被执行——reminder 门控必须在 clear_task_owner+loop 追踪之后才生效（或拆分为独立阶段：先追踪+清理 owner，再决定是否输出 reminder）",
+        "Given 上述场景 When pytest tests/level2/test_task_completed.py -q 执行 Then 全部通过"
+      ],
+      "steps": [
+        "[锁定] 重排 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py main() 的执行顺序为：(1) 早期 loop 追踪（仅 status=='Done' 守卫）→ (2) fallback heuristic + clear_task_owner → (3) clear_task_owner 成功分支内的 _track_loop_completion → (4) reminder 门控 + 输出。关键是步骤(3)必须在步骤(2)的 owner 清理成功路径内，且步骤(4)不能在步骤(3)之前截断执行流",
+        "[锁定] 从 main() 中移除 L87-92 的早期 _track_loop_completion() 调用（含 status=='Done' 守卫整块）",
+        "[锁定] 在 clear_task_owner 成功分支内（if sync_result.ok and clear_task_owner 返回 True 之后）插入 _track_loop_completion 调用",
+        "[锁定] 确认 recording_reminder 的 sys.exit(0) 早退在 _track_loop_completion 和 clear_task_owner 之后（即 reminder 关闭时 owner 仍被清理、loop 仍被计数）",
+        "[锁定] 确保 _track_loop_completion 本身的四重守卫不变：(1) task_id 合法；(2) runtime_loop 存在且 active；(3) session 匹配；(4) 未重复",
+        "[建议] 更新 tests/level2/test_task_completed.py：将 test_inprogress_task_no_append 改为 test_unconfirmed_done_no_append（Done 事件但 task_sessions 为空 → 不计数）；新增 test_reminder_off_still_counts（recording_reminder=false + Done 事件 → completed_task_ids 仍追加）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 45,
+      "title": "修复 install.sh --uninstall 删除无关 symlink 的破坏性行为",
+      "description": "install.sh 的 uninstall() 函数使用 find ... -type l -delete 删除 ~/.codex/skills/ 和 ~/.codex/agents/ 下所有 symlink，不区分 diwu-flow 创建的 vs 用户自己的。用户若有其他 skill/agent 的 symlink 会被一并销毁。需改为只删除指向 FLOW_ROOT 的 symlink（通过 readlink 匹配前缀），或改用记录已安装路径的方式精确清理。",
+      "acceptance": [
+        "Given ~/.codex/skills/ 下存在 diwu-flow 创建的 symlink（指向 FLOW_ROOT）和其他工具创建的无关 symlink When 执行 install.sh --uninstall Then 仅删除指向 FLOW_ROOT 的 symlink，无关 symlink保持不变",
+        "Given ~/.codex/agents/ 下存在 diwu-flow 的 agent symlink 和其他无关 symlink When 执行 install.sh --uninstall Then 仅删除 diwu-flow 的 agent symlink",
+        "Given 未执行过 install（无任何 diwu-flow symlink）When 执行 install.sh --uninstall Then 不报错且不删除任何文件（幂等安全）",
+        "Given install 后立即 uninstall When 检查 ~/.codex/skills/ 和 ~/.codex/agents/ Then diwu-flow 创建的 symlink 全部清除、无关 symlink 仍存在",
+        "Given 上述场景 When bash -n install.sh 执行 Then 语法检查通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh 的 uninstall() 函数：将 `find ... -type l -delete` 替换为遍历 symlink 并用 `readlink` 检查目标是否包含 FLOW_ROOT 路径前缀，仅匹配时才删除",
+        "[锁定] Codex 清理（~/.codex/skills/ + ~/.codex/agents/）和 OpenCode 清理（.opencode/）两处都应用相同的精确匹配逻辑",
+        "[锁定] 确保 uninstall 对未安装状态幂等：find 无匹配时不报错（现有 || true 已覆盖，但 readlink 循环中缺失 symlink 时也不应报错）",
+        "[建议] 在安装时将已创建的 symlink 路径列表写入临时文件（如 /tmp/diwu-flow-installed-$$），uninstall 时按列表精确删除——比 readlink 前缀匹配更可靠"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 46,
+      "title": "修复 dinit.py scan-repo 大目录 file_count 字符串化导致 TypeError 崩溃",
+      "description": "scripts/dinit.py 的 scan-repo 子命令在统计子目录文件数时，超过 1000 条目会将整数转为字符串 '1000+'，随后直接传入 min(file_count, 9999) 导致 TypeError（str 与 int 比较）。大目录（如 node_modules、vendor）会触发此崩溃。",
+      "acceptance": [
+        "Given 子目录含 1001 个文件 When python3 scripts/dinit.py scan-repo 执行 Then 该目录的 file_count_estimate 为 capped 整数值（如 1001 或 9999）而非崩溃",
+        "Given 子目录含 500 个文件 When scan-repo 执行 Then file_count_estimate 为准确值 500（小目录不受影响）",
+        "Given 子目录含 20000 个文件 When scan-repo 执行 Then file_count_estimate 为 9999（上限封顶）且不崩溃",
+        "Given 权限不足无法读取某子目录 When scan-repo 执行 Then 该目录显示为 '(权限限制)' 且 file_count_estimate 为 0，整体不崩溃",
+        "Given 上述场景 When python3 -m py_compile scripts/dinit.py 执行 Then 编译通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py L55-59：移除 `f\"{1000}+\"` 字符串化逻辑，改为直接使用 min(实际计数, 9999) 得到整数值",
+        "[锁定] 确保 file_count_estimate 字段始终为 int 类型，不再出现 str 或其他类型",
+        "[建议] 如需保留'1000+'的可读提示，可在 estimate 字段之外新增 display 字段（如 file_count_display='1000+'），但 estimate 必须是 int"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py"
+      ],
+      "category": "bugfix",
+      "status": "InSpec"
+    },
+    {
+      "id": 47,
+      "title": "修复 task_created_validate.py DFS 栈操作位置错误导致合法 DAG 崩溃",
+      "description": "hooks/scripts/task_created_validate.py 的 _dfs_cycle() 将 stack.pop() 放在 for 循环内部（每个 child return 后 pop），但 stack.append(tid) 只在循环前执行一次。对于出度 >1 的节点（如 1->[2,3,4]），DFS 在处理完第一个 child 后就 pop 了父节点，后续 child 处理时 stack 为空导致 IndexError。标准 DFS 应将 pop() 放在 for 循环结束后。",
+      "acceptance": [
+        "Given 合法 DAG Task#1 blocked_by=[2,3,4] 且 Task#2 blocked_by=[3,4] When task_created_validate.py 执行 Then 返回 exit 0（检测为无循环）不崩溃",
+        "Given 真实循环依赖 A->B->C->A When task_created_validate.py 执行 Then 返回 exit 1 并输出循环依赖错误信息",
+        "Given 单依赖链 A->B->C（无分叉）When task_created_validate.py 执行 Then 返回 exit 0 不崩溃",
+        "Given 无 blocked_by 的任务 When task_created_validate.py 执行 Then 返回 exit 0 不崩溃",
+        "Given 上述场景 When python3 -m py_compile hooks/scripts/task_created_validate.py 执行 Then 编译通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_created_validate.py 的 _dfs_cycle() 函数（L59-70）：将 stack.pop() 从 for 循环内部移到 for 循环之后（标准后序 DFS 模式）",
+        "[锁定] 正确的 DFS 结构应为：visited.add → stack.append → for each dep: recurse → if cycle return True → stack.pop → return False",
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ 中创建或更新 validate hook 的单元测试文件，覆盖三种拓扑：(1) 扇出 DAG（1->[2,3,4], 2->[3,4]）→ exit 0 不崩溃；(2) 单链 A->B->C → exit 0；(3) 真实循环 A->B->C→A → exit 1 + 错误输出"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_created_validate.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 48,
+      "title": "修复插件内硬编码路径问题并创建防回归测试",
+      "description": "插件安装后位于 ~/.claude/plugins/marketplaces/ssdiwu/，但 commands/*.md 用相对路径 scripts/ 引用插件内部脚本（用户在自家项目执行时解析到错误位置）；部分 hook 脚本用 os.getcwd() 或硬编码 '.' 做路径拼接（hook 执行时 cwd 不一定可靠）；dinit.py 重复实现 PLUGIN_ROOT 而不复用 common.plugin_root()；stop_decision.py 遇 missing_owner 时返回非法 decision 值导致 CC schema 校验失败暴露内部错误。需全面修复并创建测试杜绝后续再犯。",
+      "acceptance": [
+        "Given hooks/scripts/stop_archive.py When 读取源码 Then _load_settings/_load_tasks/check_recording_archive 均通过 _resolve() 或 cwd 参数获取路径，不含 os.getcwd() 直接调用",
+        "Given hooks/scripts/task_completed.py When 读取源码 Then sync_runtime_state/load_runtime_state/save_runtime_state 均使用 _CWD 变量而非硬编码 '.'，main() 从 event.cwd 初始化 _CWD",
+        "Given scripts/dinit.py When 读取源码 Then PLUGIN_ROOT 来自 common.plugin_root() 而非独立 Path(__file__).parent.parent 实现",
+        "Given commands/*.md 中引用 python3 scripts/ 的行 When 检查 Then 全部包含 ${CLAUDE_PLUGIN_ROOT} 前缀",
+        "Given pytest tests/level3/test_task_168_no_hardcoded_paths.py 执行 Then 5 条测试全部 PASS（绝对路径检测 + getcwd 检测 + commands plugin-root 检测）",
+        "Given hooks/scripts/stop_decision.py 遇 missing_owner/owner_mismatch/invalid_runtime_state When 执行 Then 返回空 dict（合法格式）+ stderr 输出 STOP_HINT 引导 claim/adopt，不再返回非法 decision 值"
+      ],
+      "steps": [
+        "[锁定] 修改 hooks/scripts/stop_archive.py：新增 _CWD 全局变量和 _resolve() 辅助函数，_load_settings/_load_tasks/check_recording_archive 改用 _resolve()；check() 增加 cwd 参数；__main__ 从 stdin event.cwd 初始化",
+        "[锁定] 修改 hooks/scripts/task_completed.py：新增 _CWD 全局变量；sync_runtime_state/load_runtime_state/save_runtime_state 调用改用 _CWD；main() 从 event.get('cwd') 初始化 _CWD",
+        "[锁定] 修改 scripts/dinit.py：from common import plugin_root；PLUGIN_ROOT = plugin_root() 替换独立实现",
+        "[锁定] 修复 tests/level3/test_task_165_hook_paths_to_diwu.py 第61行：硬编码 /Users/diwu/... 改为 str(PROJECT_ROOT / '.claude' / 'dtask.json')",
+        "[锁定] 新建 tests/level3/test_task_168_no_hardcoded_paths.py：5 条测试覆盖 (1) hook 无绝对路径 (2) scripts 无绝对路径 (3) hook 无裸 os.getcwd() (4) commands 用 ${CLAUDE_PLUGIN_ROOT} (5) commands 无裸 python3 scripts/",
+        "[锁定] 批量修改 commands/*.md（drun/dtask/dinit/dloop/dend/dadr/dstat 共 7 文件 10 处）：python3 scripts/ → python3 ${CLAUDE_PLUGIN_ROOT}/scripts/",
+        "[锁定] 修改 hooks/scripts/stop_decision.py：missing_owner/owner_mismatch/invalid_runtime_state 不再返回非法 decision 值，改为空 dict + stderr STOP_HINT 引导 AI 执行 claim/adopt；同步更新 tests/level2/test_stop_decision.py 断言"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_archive.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_task_165_hook_paths_to_diwu.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_task_168_no_hardcoded_paths.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dinit.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dloop.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dend.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dadr.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dstat.md"
+      ],
+      "category": "infra",
+      "status": "Done"
+    },
+    {
+      "id": 49,
+      "title": "drun claim 步骤使用真实 CC session ID 替代手造 $(date)",
+      "description": "当前 /drun Preflight 第5步 claim 使用 drun-$(date '+%Y%m%d-%H%M%S') 手造 session ID，与 CC 真实 session ID（如 e7398b54-86f9-45f1-ab9b-304da0e50937）不匹配，导致断点恢复时 Stop hook 持续报 owner_mismatch。session_start.py 已将真实 SID 写入 /tmp/.claude_main_session 但无任何脚本读取。需建立非 hook 场景获取真实 session ID 的完整链路。",
+      "acceptance": [
+        "Given dtask_transition.py claim 执行时未传 --session-id 或传入 'auto' When 命令执行 Then 自动从 /tmp/.claude_main_session 读取真实 SID 作为 session_id（文件存在时）",
+        "Given /tmp/.claude_main_session 不存在且未传 --session-id When claim 执行 Then fallback 到 $(date) 格式并输出 stderr 警告提示 session ID 非真实",
+        "Given /tmp/.claude_main_session 存在且内容为合法 UUID 格式 When claim 执行 Then task_sessions 中写入该真实 SID",
+        "Given 上述场景 When python3 -m py_compile scripts/dtask_transition.py Then 编译通过",
+        "Given 上述场景 When python3 -m pytest tests/level2_scripts/test_dtask_transition.py -q -k claim Then 现有 claim 测试不受影响（auto/fallback 为新增行为）"
+      ],
+      "steps": [
+        "[锁定] 修改 scripts/dtask_transition.py：cmd_claim() 的 --session-id 参数从 required 改为 optional（default='auto'），当值为 'auto' 时按优先级链获取：(1) /tmp/.claude_main_session 文件内容（非空）→ (2) 读取环境变量 CLAUDE_SESSION_ID → (3) fallback 到 f'drun-{datetime.now()}' 并 stderr 警告",
+        "[锁定] 同步修改 cmd_adopt() 的 --session-id 参数：同样的 auto 优先级链",
+        "[锁定] 新增 _resolve_session_id(cwd) 辅助函数在 dtask_transition.py 或 dtask_state.py 中，统一供 cmd_claim/cmd_adopt/cmd_release 调用；优先级：文件 > 环境变量 > date fallback + 警告",
+        "[锁定] 更新 skills/drun/SKILL.md 的 Preflight 第5步 claim 示例：--session-id 参数改为可选，说明 auto 行为（优先读文件、fallback 到日期格式+警告）",
+        "[锁定] 更新 commands/drun.md 的 claim 示例：同步 --session-id auto 说明",
+        "[建议] 在 tests/level2_scripts/test_dtask_transition.py 补充 auto session_id 解析测试：(1) 文件存在时用文件值 (2) 文件不存在时 fallback (3) 显式传入 --session-id 时覆盖 auto"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py"
+      ],
+      "category": "functional",
+      "status": "Done"
+    },
+    {
+      "id": 50,
+      "title": "修复 drelease.sh 历史标签补推竞态：回填循环跳过当前 VERSION",
+      "description": "drelease.sh Step 1 在 origin 创建并推送 $VERSION tag（指向含 .diwu/ 的私有 HEAD）。随后 115-123 行的回填循环检查 public remote 缺少的 tags，发现 $VERSION 在 public 上不存在时将其推到 public（指向私有 commit）。当 CLEAN_SHA != HEAD_SHA 时，后续 TEMP_TAG remap push 因 remote tag 已存在而失败，或导致 public tag 指向错误 commit。需在回填循环中跳过当前 $VERSION。",
+      "acceptance": [
+        "Given CLEAN_SHA != HEAD_SHA（有敏感文件需清理）When 执行 drelease.sh v0.0.7 --push-public Then 回填循环不将 $VERSION 推到 public remote",
+        "Given CLEAN_SHA != HEAD_SHA When 执行完毕 Then public remote 上 $VERSION tag 指向 CLEAN_SHA（clean commit）而非 HEAD_SHA（私有 commit）",
+        "Given CLEAN_SHA == HEAD_SHA（已是 clean 状态） When 执行 drelease.sh v0.0.7 --push-public Then 行为与修改前一致（直接推 $VERSION）",
+        "Given 上述场景 When bash -n drelease.sh 执行 Then 语法检查通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/drelease.sh L118：在 for t in $LOCAL_TAGS 循环体内、grep 判断之前增加 `if [ \"$t\" = \"$VERSION\" ]; then continue; fi`",
+        "[建议] 验证：在临时 clone + bare remotes 中执行 drelease.sh v0.0.7 --push-public，确认 public 上 $VERSION 最终指向 CLEAN_SHA 且回填日志不含当前 VERSION"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/drelease.sh"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 51,
+      "title": "修复 auto session ID 跨会话污染：优先级调整为 env > 文件",
+      "description": "_resolve_session_id() 当前把全局共享文件 /tmp/.claude_main_session 放在 CLAUDE_SESSION_ID 环境变量之前。多 session 并发时新 session 可覆盖该文件，导致旧 session 的 claim/adopt/release 写入错误的 owner。需调整为 CLAUDE_SESSION_ID（进程级可靠）优先于文件（共享可变状态）。",
+      "acceptance": [
+        "Given CLAUDE_SESSION_ID=current-session 环境变量存在且 /tmp/.claude_main_session 存在且内容为 other-session When 执行 claim --session-id auto Then dtask-state.json.task_sessions 写入 current-session（env 优先于文件）",
+        "Given /tmp/.claude_main_session 不存在且 CLAUDE_SESSION_ID=env-sid 存在 When 执行 claim --session-id auto Then 写入 env-sid（保留原有 fallback-to-env 行为）",
+        "Given 文件和环境变量都不存在 When 执行 claim --session-id auto Then fallback 到 drun-<timestamp> 格式且 stderr 含 [SESSION_ID] 警告",
+        "Given 显式传入 --session-id explicit-sid When 执行 claim Then 忽略 auto 解析，直接使用 explicit-sid",
+        "Given 上述场景 When pytest tests/level2_scripts/test_dtask_transition.py::TestAutoSessionIdResolution -q 执行 Then 全部通过（含新增用例）"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py _resolve_session_id() 函数 L144-157：交换优先级 1 和 2 的顺序——先读 os.environ.get('CLAUDE_SESSION_ID')，再读 /tmp/.claude_main_session 文件",
+        "[锁定] 更新函数 docstring 反映新顺序：(1) CLAUDE_SESSION_ID 环境变量 → (2) /tmp/.claude_main_session 文件 → (3) drun-<timestamp> fallback",
+        "[锁定] 新增测试 test_env_overrides_file_when_both_exist 到 TestAutoSessionIdResolution 类：同时设置文件=other-session 和 env=current-session → claim 后 owner 应为 current-session",
+        "[建议] 确认 test_auto_falls_back_to_env_var_when_no_file 和 test_auto_uses_file_when_exists 仍通过（前者无文件走 env，后者无 env 走文件）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dtask_transition.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dtask_transition.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 52,
+      "title": "修复 stop_decision owner_mismatch 提示命令错误并抽 helper",
+      "description": "stop_decision.py 的 decide_default_mode(L192)和 decide_loop_mode(L238)两处重复的 action 映射逻辑对 owner_mismatch 输出 'claim' 命令，但 owner_mismatch 发生在 InProgress 任务上应使用 'adopt'。两处已重复出错一次，需抽 _repair_action(status) helper 消除复制粘贴风险。",
+      "acceptance": [
+        "Given resolution.status='owner_mismatch' When decide_default_mode 或 decide_loop_mode 生成 STOP_HINT Then hint 中包含 '请先执行 adopt' 而非 'claim'",
+        "Given resolution.status='missing_owner' When 生成 STOP_HINT Then hint 中包含 '请先执行 adopt'",
+        "Given resolution.status='invalid_runtime_state' When 生成 STOP_HINT Then hint 中包含 '请先执行 claim'",
+        "Given _repair_action('owner_mismatch') 调用 Then 返回 'adopt'；_repair_action('missing_owner') 返回 'adopt'；_repair_action('invalid_runtime_state') 返回 'claim'",
+        "Given 上述场景 When python3 -m py_compile hooks/scripts/stop_decision.py Then 编译通过"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py 中新增 _repair_action(status: str) -> str 辅助函数：返回 'adopt' if status in ('missing_owner', 'owner_mismatch') else 'claim'",
+        "[锁定] 替换 decide_default_mode L192 的 action 赋值为 _repair_action(resolution.status)",
+        "[锁定] 替换 decide_loop_mode L238 的 action 赋值为 _repair_action(resolution.status)"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 53,
+      "title": "修复 stop_decision 三处 cwd 联动缺失",
+      "description": "stop_decision.py main() 从 stdin event 正确获取了 cwd(L314)，但三处联动未完成：(1) L315-316 _load_json 仍用原始相对路径（相对于进程 cwd 而非 event cwd）；(2) L350 stop_archive.check() 未传 cwd 参数（recording archive 可能看错 repo）；(3) L358 decide() 传原始 args.task_json（loop mode 下 _save_task_data 写到进程 cwd）。需统一基于 event cwd 解析路径。",
+      "acceptance": [
+        "Given stdin event cwd=/tmp/my-project 且进程 cwd 为其他目录 When stop_decision.py 执行 Then _load_json 读取 /tmp/my-project/.diwu/dtask.json 而非进程 cwd 下的同名文件",
+        "Given event cwd 指向临时项目 When stop_archive.check() 执行 Then recording archive 检查基于 event cwd 而非进程 cwd",
+        "Given loop mode + event cwd 指向临时项目 When decide_loop_mode 执行 _save_task_data Then 写入 event cwd 下的 dtask.json 而非进程 cwd",
+        "Given 上述场景 When pytest tests/level2/test_stop_decision.py -q 执行 Then 现有测试不受影响（cwd 默认值仍为 os.getcwd() 时行为不变）"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py main() L314 之后：将 args.task_json 和 args.settings_json 基于 cwd 解析为绝对路径（os.path.join 处理相对路径，绝对路径直接使用），data/settings 改用解析后路径加载",
+        "[锁定] 修改 L350：stop_archive.check(settings=settings, tasks=tasks, cwd=cwd) 补传 cwd 参数",
+        "[锁定] 修改 L358：decide() 调用的第 4 个参数从 args.task_json 改为解析后的 task_json_path 绝对路径"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 54,
+      "title": "修复 install.sh uninstall 路径边界检查防 sibling 目录误删",
+      "description": "install.sh uninstall 的 symlink 清理使用前缀匹配 \"$normalized_root*\" 无路径边界。sibling 目录如 /tmp/diwu-flow-backup/... 也匹配 /tmp/diwu-flow* 前缀，导致指向 sibling 树内文件的 symlink 被误删。需增加路径边界检查（精确匹配或 /* 后缀匹配）。",
+      "acceptance": [
+        "Given 被扫描目录中存在 symlink 指向 .../diwu-flow-backup/...（sibling 路径） When 执行 install.sh --uninstall Then 该 symlink 不被删除",
+        "Given 被扫描目录中存在 symlink 指向 .../diwu-flow/...（本树内路径） When 执行 install.sh --uninstall Then 该 symlink 被正常删除",
+        "Given 无任何 diwu-flow 相关 symlink When 执行 install.sh --uninstall Then 不报错且不删除任何文件（幂等安全）",
+        "Given 上述场景 When bash -n install.sh 执行 Then 语法检查通过"
+      ],
+      "steps": [
+        "[锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh L119：前缀匹配条件从 `== \"$normalized_root\"*` 改为 `== \"$normalized_root\" || == \"$normalized_root\"/*`（精确匹配根或 /* 子路径，排除 sibling 前缀命中）",
+        "[建议] 手动复现验证：创建 /tmp/diwu-flow-backup/ 目录并在其中建文件，在被扫描目录放 symlink 指向 backup 内文件 → uninstall 不删；再放 symlink 指向 diwu-flow 内文件 → uninstall 正常删"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+      ],
+      "category": "bugfix",
+      "status": "Done"
+    },
+    {
+      "id": 55,
+      "title": "/drun 细粒度子代理委托机制（按步骤动态派发 explorer/implementer/verifier）",
+      "description": "当前 /drun 的子代理派发是粗粒度的（整个任务一次性交给 implementer）。需要改为 B 细粒度模式：根据每个步骤的改动幅度×不确定性×验证需求，动态决定是否拆为 explorer→implementer→verifier 三阶段流水线，或单节点直做。决策矩阵写入 skills/drun/SKILL.md，commands/drun.md 同步更新调用协议。",
+      "acceptance": [
+        "Given 步骤预估 <200 行 + 结果可预期 + 差异一句话说清 When /drun 执行该步骤 Then 单个 implementer 节点直接完成（不拆分）",
+        "Given 步骤预估 >=200 行 或 依赖外部系统 或 首次做的新能力 When /drun 执行该步骤 Then 拆为 explorer(调研) → implementer(实施) → verifier(验收) 三阶段",
+        "Given 步骤涉及 API 契约变更 或 单文件改动>2000行 When /drun 执行该步骤 Then 必须包含 verifier 独立验收阶段且输出 REVIEW 请求",
+        "Given 多步骤间无共享写文件冲突 When /drun 并行执行独立步骤 Then 各步骤的子代理互不干扰（不同文件路径）",
+        "Given 更新后 skills/drun/SKILL.md When yaml.safe_load 解析 frontmatter Then 包含子代理决策矩阵章节（三维度：幅度/不确定性/验证需求）",
+        "Given 更新后 commands/drun.md When 读取 Then 调用协议包含细粒度派发说明（与粗粒度的区别、触发条件、回退路径）"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md 中新增「细粒度子代理委托」章节：定义决策矩阵（改动幅度 × 不确定性 × 验证需求 → 派发策略），含四象限表和每个象限的 agent 组合",
+        "[锁定] 定义三阶段流水线协议：(1) explorer 输出交接报告（发现+风险评估）→ (2) implementer 基于报告实施 → (3) verifier 独立验收（不读 recording/），每阶段有明确的输入输出契约",
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md 的 Preflight 或实施阶段中嵌入派发决策点：每个 steps[i] 执行前先过矩阵判断是否需要拆分",
+        "[锁定] 更新 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md：同步细粒度委托的调用示例和约束表（业务边界/时序约束/跨命令关系/感知信号）",
+        "[建议] 在 agents/ 目录下确认 explorer/implementer/verifier 的 SKILL.md 已包含细粒度模式的交接协议（输入输出格式、失败退化路径）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md"
+      ],
+      "category": "functional",
+      "status": "InDraft"
+    },
+    {
+      "id": 56,
+      "title": "/dtask Step 3 common.py 路径兼容性修复（非插件项目 cwd 支持）",
+      "description": "/dtask Step 3 通过 shell subprocess 调用 python3 scripts/common.py --max-task-id --cwd <proj>，但脚本路径 scripts/common.py 是相对于当前工作目录解析的。在非插件项目（如 Curio）中执行 /dtask 时 cwd 是用户项目目录，scripts/common.py 不存在导致 FileNotFoundError。需改为通过 CLAUDE_PLUGIN_ROOT 解析脚本绝对路径，或在 Skill 中增加 fallback 逻辑。",
+      "acceptance": [
+        "Given 用户在 Curio 项目（非 diwu-flow 插件目录）执行 /dtask When Step 3 获取 max task ID Then 能正确找到并执行 common.py（不报 FileNotFoundError）",
+        "Given 用户在 diwu-flow 插件目录自身执行 /dtask When Step 3 执行 Then 行为与修改前完全一致（向后兼容）",
+        "Given CLAUDE_PLUGIN_ROOT 环境变量不存在时（非 CC 插件安装场景）When /dtask Step 3 执行 Then fallback 到相对路径查找或输出明确错误提示（而非隐式崩溃）",
+        "Given 修复后 When python3 -m py_compile scripts/common.py Then 编译通过",
+        "Given 修复后 When pytest tests/ -q -k common 执行 Then 现有 common.py 测试不受影响"
+      ],
+      "steps": [
+        "[锁定] 分析 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md 中 Step 3 的 shell 命令模板：确认当前是 python3 scripts/common.py 相对路径调用",
+        "[锁定] 修改 Step 3 命令模板：将 python3 scripts/common.py 改为通过 ${CLAUDE_PLUGIN_ROOT}/scripts/common.py 调用（CC 插件场景下环境变量可用）",
+        "[锁定] 增加 fallback 逻辑：当 CLAUDE_PLUGIN_ROOT 不存在或指向路径下无 common.py 时，尝试相对于 dtask.json 所在位置的 ../scripts/common.py（向上级目录找插件脚本库），或输出明确错误提示引导用户检查插件安装",
+        "[建议] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/common.py 中增加 --self-test 参数：输出自身路径和可访问性信息，用于诊断路径问题",
+        "[建议] 更新 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md 中关于 Step 3 的说明：补充路径解析策略说明"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/common.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md"
+      ],
+      "category": "bugfix",
+      "status": "InDraft"
     }
   ]
 }
