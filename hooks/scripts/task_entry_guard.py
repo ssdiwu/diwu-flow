@@ -103,6 +103,19 @@ def _has_active_task(task_json_path):
     return False
 
 
+def _has_active_dloop(state_path):
+    """Return True when dtask-state.json has dloop.active=True — fail-fast guard."""
+    if not os.path.exists(state_path):
+        return False
+    try:
+        with open(state_path, encoding="utf-8") as f:
+            state = json.load(f)
+        dloop = state.get("dloop")
+        return isinstance(dloop, dict) and dloop.get("active") is True
+    except (json.JSONDecodeError, OSError):
+        return False
+
+
 def _has_unlanded_plan(cwd):
     """Return (True, line_count) when ~/.claude/plans/ has plan file above threshold
     but dtask.json has no active tasks — meaning plan was never /dtask'd.
@@ -180,6 +193,16 @@ def main():
 
     if _has_active_task(task_json_path):
         sys.exit(0)
+
+    # === Fail-fast: block writes when dloop is still active ===
+    if _has_active_dloop(os.path.join(cwd, WORKFLOW_DTASK_STATE)):
+        print(
+            "[diwu-dloop-guard] 🛑 BLOCK：检测到活跃的 dloop 运行时（dtask-state.json.dloop.active=true）。\n\n"
+            "Edit/Write 操作可能污染运行态快照或与循环执行冲突。\n"
+            "请先执行 /dend 取消循环，或确认 dloop 已自然停止后再继续。",
+            file=sys.stderr,
+        )
+        sys.exit(1)  # Hard block: prevent write during active loop
 
     # === Hard block: unlanded >=3-step plan exists ===
     unlanded, plan_lines = _has_unlanded_plan(cwd)
