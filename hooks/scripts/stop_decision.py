@@ -27,6 +27,18 @@ from dtask_state import (  # noqa: E402
 )
 
 
+def _verify_dloop_cleared(cwd: str) -> None:
+    """安全网：确认 dtask-state.json 落盘中 dloop 已清空，防止 active=true 被 commit。"""
+    try:
+        state_path = os.path.join(cwd, ".diwu", "dtask-state.json")
+        with open(state_path, "r", encoding="utf-8") as f:
+            saved = json.load(f)
+        if saved.get("dloop") is not None and saved.get("dloop", {}).get("active") is True:
+            print("[DLOOP_WARN] dtask-state.json 仍含 active=True 的 dloop 状态，commit 前请确认已清理", file=sys.stderr)
+    except (OSError, json.JSONDecodeError):
+        pass
+
+
 def _repair_action(status: str) -> str:
     """返回修复命令名：missing_owner/owner_mismatch → adopt，其余 → claim"""
     return "adopt" if status in ("missing_owner", "owner_mismatch") else "claim"
@@ -262,6 +274,8 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
         report = _generate_phase_report(loop_state, stop_reason, tasks)
         clear_loop_state(runtime_state)
         save_runtime_state(cwd, runtime_state, remove_legacy=True)
+        # 安全网：确认落盘文件中 dloop 已被清空（防止 active=true 被 commit）
+        _verify_dloop_cleared(cwd)
         print(report, file=sys.stderr)
         return False, {}
 

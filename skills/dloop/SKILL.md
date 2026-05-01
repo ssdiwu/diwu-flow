@@ -118,6 +118,17 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 2. **清空 `dtask-state.json.dloop`**
 3. 允许 session 正常结束
 
+## 结束检查清单（必做）
+
+循环结束后（无论自然停止、`/dend` 手动取消、或 `stop_decision` 阶段报告清理）**commit 前**必须确认：
+
+| # | 检查项 | 方法 |
+|---|--------|------|
+| 1 | `dtask-state.json.dloop` 为 `None` 或不存在 | `python3 -c "import json; s=json.load(open('.diwu/dtask-state.json')); assert s.get('dloop') is None"` |
+| 2 | 无残留 `active: true` 的 loop 状态 | 同上，或 `grep 'active.*true' .diwu/dtask-state.json` 应无输出 |
+
+> **为什么重要**：`dtask-state.json` 是 tracked 文件。若 `dloop.active=true` 被 commit，任何 clone 该仓库的人执行 `/dloop status` 会看到虚假的"运行中"循环，`/dloop start` 会被 `already_running` 拦截。
+
 ## 安全限制
 
 - `--max-tasks N`（0=无限）：防止无限循环失控
