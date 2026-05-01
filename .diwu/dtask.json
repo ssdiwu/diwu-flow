@@ -567,6 +567,33 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md"
       ],
       "category": "functional",
+      "status": "Done"
+    },
+    {
+      "id": 57,
+      "title": "归档 marker 机制：/darc 合法缩减 dtask.json 时 guard 放行",
+      "description": "/darc 归档操作会合法地从 dtask.json 中移除 Done/Cancelled 任务（缩减文件内容），但 task_entry_guard.py 的 _has_active_task() 和后续检查可能将此缩减误判为异常清空并触发 exit(2) 硬阻止。需引入 .diwu/.archiving-in-progress marker：归档前创建、归档后删除；guard 检测到 marker 且目标为 dtask.json 时跳过所有检查直接放行。",
+      "acceptance": [
+        "Given .diwu/.archiving-in-progress marker 存在 + 目标文件为 .diwu/dtask.json When task_entry_guard.py 收到 Edit/Write 事件 Then 返回 exit(0) 直接放行（跳过 dloop guard / active task check / unlanded plan check）",
+        "Given .diwu/.archiving-in-progress marker 存在 + 目标文件非 dtask.json（如 src/foo.ts）When task_entry_guard.py 收到 Edit/Write 事件 Then 仍执行正常 guard 检查（marker 仅豁免 dtask.json 写入）",
+        "Given 无 .diwu/.archiving-in-progress marker + dtask.json 无活跃任务 When task_entry_guard.py 收到 Edit/Write 事件 Then 行为与改动前完全一致（soft warning 或 hard block 不变）",
+        "Given 归档完成后 .diwu/.archiving-in-progress marker 被删除 When 后续正常 session 执行 Edit/Write Then marker 已不存在，guard 恢复正常拦截",
+        "Given 上述场景 When python3 -m py_compile hooks/scripts/task_entry_guard.py Then 编译通过",
+        "Given temp HOME 场景 When pytest tests/level2/test_archiving_marker_guard.py -q 执行 Then 覆盖 marker 存在+dtask 放行、marker 存在+非 dtask 不放行、无 marker 行为不变三类场景"
+      ],
+      "steps": [
+        "[锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py 顶部新增常量 _ARCHIVING_MARKER = os.path.join('.diwu', '.archiving-in-progress')",
+        "[锁定] 新增 _is_archiving_in_progress(cwd) -> bool 函数：检测 .diwu/.archiving-in-progress marker 文件是否存在（os.path.exists，不读内容）",
+        "[锁定] 在 main() 函数中、_is_workflow_file() 检查之后、dloop guard 检查之前插入 early return：若 _is_archiving_in_progress(cwd) 为 True 且 file_path 规范化后等于 task_json_path 则 sys.exit(0) 放行（仅对 dtask.json 本身放行，其他文件继续走正常 guard 链路）",
+        "[锁定] 更新 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/darc/SKILL.md 的手动执行步骤：在步骤 2（Task 归档）之前新增步骤 '1.5 创建 marker'（touch .diwu/.archiving-in-progress）；在步骤 4（踩坑聚合）之后、步骤 5（验证清单）之前新增步骤 '4.5 删除 marker'（rm -f .diwu/.archiving-in-progress）",
+        "[建议] 在 tests/level2/ 下新建 test_archiving_marker_guard.py：至少 3 条测试——(1) marker 存在 + 写 dtask.json → exit(0)；(2) marker 存在 + 写其他文件 → 走正常 guard；(3) 无 marker → 行为不变"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_entry_guard.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/darc/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/"
+      ],
+      "category": "infra",
       "status": "InDraft"
     },
     {
@@ -593,7 +620,7 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md"
       ],
       "category": "bugfix",
-      "status": "InDraft"
+      "status": "Done"
     }
   ]
 }

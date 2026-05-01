@@ -162,13 +162,33 @@ def max_task_id(cwd: Path) -> dict:
     return {"ok": True, "max_id": max_id, "source": source}
 
 
+def self_test() -> dict:
+    """--self-test: 输出自身路径和可访问性诊断信息。"""
+    self_path = Path(__file__).resolve()
+    plugin = plugin_root()
+    return {
+        "ok": True,
+        "self_path": str(self_path),
+        "plugin_root": str(plugin),
+        "exists": self_path.exists(),
+        "readable": os.access(self_path, os.R_OK),
+        "claude_plugin_root_env": os.environ.get("CLAUDE_PLUGIN_ROOT", "(not set)"),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="diwu-flow common utilities")
     parser.add_argument("--max-task-id", action="store_true", help="输出最大任务 ID")
+    parser.add_argument("--self-test", action="store_true", help="输出自身路径和可访问性信息")
     parser.add_argument("--cwd", type=str, default=".", help="工作目录")
     args = parser.parse_args()
 
     cwd = Path(args.cwd).resolve()
+
+    if args.self_test:
+        result = self_test()
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        sys.exit(0)
 
     if args.max_task_id:
         result = max_task_id(cwd)

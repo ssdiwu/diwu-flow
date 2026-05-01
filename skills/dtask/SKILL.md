@@ -158,6 +158,35 @@ argument-hint: "[功能描述] [category] [blocked_by]"
 ### 任务粒度标准
 代码 < 2000 行；有明确 acceptance（GWT）；有清晰 steps（绝对路径）；不依赖未完成任务或在 blocked_by 标注。
 
+### Step 3：确定新任务 ID
+
+写入前必须运行脚本获取最大序号（优先使用脚本，手动读取为 fallback）。
+
+**路径解析策略**（按优先级尝试）：
+
+```bash
+# 优先级 1：CC 插件环境（CLAUDE_PLUGIN_ROOT 可用）
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/common.py --max-task-id --cwd <项目根目录>
+
+# 优先级 2：相对于 dtask.json 向上找插件脚本库
+# （dtask.json 在 .diwu/ 下，插件根目录通常是 .diwu/ 的上级或上两级）
+python3 $(dirname $(dirname $(realpath .diwu/dtask.json)))/scripts/common.py --max-task-id --cwd <项目根目录>
+
+# 优先级 3：fallback 手动读取
+# 1. 读取 .diwu/dtask.json 中所有任务的最大 id
+# 2. 用 glob 匹配 .diwu/archive/task_archive*.json 中最大 id
+# 3. 取两者最大值 + 1
+```
+
+> **跨平台兼容说明**：
+> - Claude Code 插件安装：`${CLAUDE_PLUGIN_ROOT}` 自动可用，优先级 1 必中
+> - Codex CLI / OpenCode：通过 symlink 安装后脚本位于 `~/.codex/scripts/common.py` 或 `.opencode/scripts/common.py`
+> - 非插件项目（如 Curio）：优先级 1 失败时自动降级到优先级 2 或 3；若均失败则输出明确错误提示「无法定位 common.py，请确认 diwu-flow 插件已正确安装」而非隐式崩溃
+
+脚本返回值格式：`{"ok": true, "max_id": N, "source": "dtask.json|archive|empty"}`
+
+取 `max_id` + 1 作为新任务起始 id（严禁 id 复用）。
+
 ### task.json 写入规则
 状态一律 InDraft；ID 递增不复用；category: functional/ui/bugfix/refactor/infra；追加到列表末尾；必须含 acceptance（GWT）；steps 必须自包含。
 

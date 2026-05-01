@@ -40,3 +40,18 @@ effort: low
 - `完成并收尾`：通过 `dtask_transition.py release` 将当前 `InProgress` 显式切到 `Done` 或 `InReview`。
 - `PENDING REVIEW`：超前实施达到上限，停止并等待人工验收。
 - `invalid runtime state`：`dtask-state.json` 缺失 owner、损坏或与 `dtask.json` 冲突；此时不会自动恢复 чужой 任务。
+
+## 细粒度子代理委托
+
+> 完整决策矩阵和流水线协议见 `skills/drun/SKILL.md` §细粒度子代理委托。
+
+**核心原则**：按每个步骤独立判断是否拆分，默认 S1（直做），仅命中 B/C 维度时升级。
+
+| 策略 | 触发条件简述 | Agent 组合 |
+|------|------------|-----------|
+| S1 直做 | <200 行 + 高把握 + 自审够 | 主代理直接执行 |
+| S2 探索+实施 | 不确定代码结构/首次接触 | explorer → implementer |
+| S3 实施+验证 | API 变更 / >2000行 / 需独立验收 | implementer → verifier |
+| S4 完整流水线 | 重量级 + 高不确定 + 强验证需求 | explorer → implementer → verifier |
+
+**退化安全**：任何 agent 失败退化回主代理闭环，不阻塞任务推进。

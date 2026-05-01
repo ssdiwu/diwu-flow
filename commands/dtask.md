@@ -99,16 +99,23 @@ effort: high
 写入前必须运行脚本获取最大序号（优先使用脚本，手动读取为 fallback）：
 
 ```bash
+# 优先级 1：CC 插件环境变量
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/common.py --max-task-id --cwd <项目根目录>
+
+# 优先级 1 失败时降级：相对于 dtask.json 定位插件根目录
+COMMON_SCRIPT="$(cd $(dirname $(realpath .diwu/dtask.json 2>/dev/null || echo .diwu/dtask.json))/../.. && pwd)/scripts/common.py"
+if [ -f "$COMMON_SCRIPT" ]; then
+  python3 "$COMMON_SCRIPT" --max-task-id --cwd <项目根目录>
+else
+  # 优先级 3：fallback 手动读取
+  echo '{"ok":false,"error":"无法定位 common.py"}' >&2
+fi
 # → 输出: {"ok": true, "max_id": N, "source": "dtask.json|archive|empty"}
 ```
 
 取返回的 `max_id` + 1 作为新任务起始 id（严禁 id 复用）。
 
-> **fallback**：若 `scripts/common.py` 尚未实现（Task#9 未完成），则手动：
-> 1. 读取 `.diwu/dtask.json` 中所有任务的最大 `id`
-> 2. 用 glob 匹配读取 `.diwu/archive/task_archive*.json` 中所有任务的最大 `id`
-> 3. 取两者最大值 + 1
+> **跨平台兼容**：`${CLAUDE_PLUGIN_ROOT}` 在 CC 插件环境自动可用；Codex/OpenCode 通过 symlink 安装后路径不同；非插件项目需依赖优先级 2/3 的 fallback 链。若全部失败输出明确错误提示而非隐式 FileNotFoundError。
 
 ## Step 4：生成并写入任务
 
