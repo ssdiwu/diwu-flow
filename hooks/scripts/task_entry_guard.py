@@ -191,10 +191,9 @@ def main():
     if _is_doc_file(file_path):
         sys.exit(0)
 
-    if _has_active_task(task_json_path):
-        sys.exit(0)
-
     # === Fail-fast: block writes when dloop is still active ===
+    # Must check BEFORE _has_active_task — real dloop always has active tasks,
+    # so _has_active_task would exit(0) early and skip this guard.
     if _has_active_dloop(os.path.join(cwd, WORKFLOW_DTASK_STATE)):
         print(
             "[diwu-dloop-guard] 🛑 BLOCK：检测到活跃的 dloop 运行时（dtask-state.json.dloop.active=true）。\n\n"
@@ -203,6 +202,9 @@ def main():
             file=sys.stderr,
         )
         sys.exit(1)  # Hard block: prevent write during active loop
+
+    if _has_active_task(task_json_path):
+        sys.exit(0)
 
     # === Hard block: unlanded >=3-step plan exists ===
     unlanded, plan_lines = _has_unlanded_plan(cwd)
