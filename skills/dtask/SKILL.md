@@ -160,32 +160,28 @@ argument-hint: "[功能描述] [category] [blocked_by]"
 
 ### Step 3：确定新任务 ID
 
-写入前必须运行脚本获取最大序号（优先使用脚本，手动读取为 fallback）。
-
-**路径解析策略**（按优先级尝试）：
+写入前必须运行脚本获取最大序号（优先使用脚本，手动读取为 fallback）：
 
 ```bash
-# 优先级 1：CC 插件环境（CLAUDE_PLUGIN_ROOT 可用）
+# 优先级 1（唯一可靠路径）：CC 插件环境变量
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/common.py --max-task-id --cwd <项目根目录>
 
-# 优先级 2：相对于 dtask.json 向上找插件脚本库
-# （dtask.json 在 .diwu/ 下，插件根目录通常是 .diwu/ 的上级或上两级）
-python3 $(dirname $(dirname $(realpath .diwu/dtask.json)))/scripts/common.py --max-task-id --cwd <项目根目录>
-
-# 优先级 3：fallback 手动读取
-# 1. 读取 .diwu/dtask.json 中所有任务的最大 id
-# 2. 用 glob 匹配 .diwu/archive/task_archive*.json 中最大 id
-# 3. 取两者最大值 + 1
+# 优先级 1 失败时的诊断与降级：
+#   CLAUDE_PLUGIN_ROOT 未设置 → 非 CC 插件环境或未安装
+#   common.py 位于插件仓库内，非插件项目无法通过相对路径定位
+#   降级策略：手动读取 dtask.json + archive/ 获取 max_id
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/common.py" ]; then
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common.py" --max-task-id --cwd <项目根目录>
+else
+  echo '[dtask] WARNING: CLAUDE_PLUGIN_ROOT 未设置或 common.py 不存在，无法自动获取 max-id' >&2
+  echo '{"ok":false,"error":"需要通过 CLAUDE_PLUGIN_ROOT 访问 common.py，或手动读取 .diwu/dtask.json + archive/"}' >&2
+fi
+# → 输出: {"ok": true, "max_id": N, "source": "dtask.json|archive|empty"}
 ```
 
-> **跨平台兼容说明**：
-> - Claude Code 插件安装：`${CLAUDE_PLUGIN_ROOT}` 自动可用，优先级 1 必中
-> - Codex CLI / OpenCode：通过 symlink 安装后脚本位于 `~/.codex/scripts/common.py` 或 `.opencode/scripts/common.py`
-> - 非插件项目（如 Curio）：优先级 1 失败时自动降级到优先级 2 或 3；若均失败则输出明确错误提示「无法定位 common.py，请确认 diwu-flow 插件已正确安装」而非隐式崩溃
+取返回的 `max_id` + 1 作为新任务起始 id（严禁 id 复用）。
 
-脚本返回值格式：`{"ok": true, "max_id": N, "source": "dtask.json|archive|empty"}`
-
-取 `max_id` + 1 作为新任务起始 id（严禁 id 复用）。
+> **跨平台兼容**：`${CLAUDE_PLUGIN_ROOT}` 在 CC 插件环境自动可用；Codex/OpenCode 通过 symlink 安装后路径不同；非插件项目需依赖优先级 2/3 的 fallback 链。若全部失败输出明确错误提示而非隐式 FileNotFoundError。
 
 ### task.json 写入规则
 状态一律 InDraft；ID 递增不复用；category: functional/ui/bugfix/refactor/infra；追加到列表末尾；必须含 acceptance（GWT）；steps 必须自包含。

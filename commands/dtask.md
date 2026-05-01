@@ -99,16 +99,18 @@ effort: high
 写入前必须运行脚本获取最大序号（优先使用脚本，手动读取为 fallback）：
 
 ```bash
-# 优先级 1：CC 插件环境变量
+# 优先级 1（唯一可靠路径）：CC 插件环境变量
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/common.py --max-task-id --cwd <项目根目录>
 
-# 优先级 1 失败时降级：相对于 dtask.json 定位插件根目录
-COMMON_SCRIPT="$(cd $(dirname $(realpath .diwu/dtask.json 2>/dev/null || echo .diwu/dtask.json))/../.. && pwd)/scripts/common.py"
-if [ -f "$COMMON_SCRIPT" ]; then
-  python3 "$COMMON_SCRIPT" --max-task-id --cwd <项目根目录>
+# 优先级 1 失败时的诊断与降级：
+#   CLAUDE_PLUGIN_ROOT 未设置 → 非 CC 插件环境或未安装
+#   common.py 位于插件仓库内，非插件项目无法通过相对路径定位
+#   降级策略：手动读取 dtask.json + archive/ 获取 max_id
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/common.py" ]; then
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common.py" --max-task-id --cwd <项目根目录>
 else
-  # 优先级 3：fallback 手动读取
-  echo '{"ok":false,"error":"无法定位 common.py"}' >&2
+  echo '[dtask] WARNING: CLAUDE_PLUGIN_ROOT 未设置或 common.py 不存在，无法自动获取 max-id' >&2
+  echo '{"ok":false,"error":"需要通过 CLAUDE_PLUGIN_ROOT 访问 common.py，或手动读取 .diwu/dtask.json + archive/"}' >&2
 fi
 # → 输出: {"ok": true, "max_id": N, "source": "dtask.json|archive|empty"}
 ```

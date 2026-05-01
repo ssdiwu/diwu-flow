@@ -20,7 +20,6 @@ WORKFLOW_DLOOP_STATE = ".diwu/dloop-state.json"
 _PLAN_DIR = os.path.normpath(os.path.expanduser("~/.claude/plans"))
 _PLAN_LINE_THRESHOLD = 20  # 行数超过此阈值视为“>=3 步方案”
 _PLAN_GUARD_MARKER = os.path.join(".claude", ".plan-active")
-_ARCHIVING_MARKER = os.path.join(".diwu", ".archiving-in-progress")
 _DUMMY_PREFIX = "dloop-"  # dloop.py start 写入的 dummy session_id 前缀，首次 Stop 绑定前使用
 _BLOCK_HARD_MESSAGE = (
     "[diwu-plan-guard] 🛑 HARD BLOCK：检测到未落地的 >=3 步实施方案。\n\n"
@@ -87,15 +86,6 @@ def _is_doc_file(target_path):
     if not target_path:
         return False
     return target_path.endswith('.md')
-
-
-def _is_archiving_in_progress(cwd):
-    """Return True when /darc archiving marker exists.
-
-    /darc creates this marker before shrinking dtask.json and removes it after.
-    When present, writes to dtask.json are allowed (legitimate archive operation).
-    """
-    return os.path.exists(os.path.join(cwd, _ARCHIVING_MARKER))
 
 
 def _has_active_task(task_json_path):
@@ -222,13 +212,6 @@ def main():
 
     if _is_doc_file(file_path):
         sys.exit(0)
-
-    # === Archiving marker: /darc legitimately shrinks dtask.json ===
-    if _is_archiving_in_progress(cwd):
-        target_norm = _norm(file_path)
-        task_json_norm = _norm(os.path.join(cwd, WORKFLOW_DTASK))
-        if target_norm == task_json_norm:
-            sys.exit(0)  # /darc archive in progress — allow dtask.json writes
 
     # === Fail-fast: block non-owner writes when dloop is still active ===
     # Must check BEFORE _has_active_task — real dloop always has active tasks,
