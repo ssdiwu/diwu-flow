@@ -208,7 +208,7 @@ def test_exit_plan_mode_big_plan_creates_marker_with_path(tmp_path):
 
 
 def test_marker_with_big_plan_triggers_hard_block(tmp_path):
-    """marker(含有效 plan 路径) + 大 plan 文件 + 无活跃任务 → hard block (exit 1)。"""
+    """marker(含有效 plan 路径) + 大 plan 文件 + 无活跃任务 → hard block (exit 2)。"""
     # 创建大 plan 文件
     plan_dir = Path.home() / ".claude" / "plans"
     plan_dir.mkdir(parents=True, exist_ok=True)
@@ -226,7 +226,7 @@ def test_marker_with_big_plan_triggers_hard_block(tmp_path):
     (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
 
     result = _run_guard(tmp_path)
-    assert result.returncode == 1, f"应 hard block 但 got {result.returncode}"
+    assert result.returncode == 2, f"应 hard block (exit 2) 但 got {result.returncode}"
     assert "HARD BLOCK" in result.stderr
 
     # 清理

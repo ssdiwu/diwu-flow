@@ -224,7 +224,7 @@ def main():
             "请先执行 /dend 取消循环，或使用 dloop owner session 继续执行。",
             file=sys.stderr,
         )
-        sys.exit(1)  # Hard block: prevent non-owner write during active loop
+        sys.exit(2)  # Hard block: PreToolUse exit(2) = deny tool invocation
 
     if _has_active_task(task_json_path):
         sys.exit(0)
@@ -233,7 +233,7 @@ def main():
     unlanded, plan_lines = _has_unlanded_plan(cwd)
     if unlanded:
         print(_BLOCK_HARD_MESSAGE.format(threshold=_PLAN_LINE_THRESHOLD), file=sys.stderr)
-        sys.exit(1)  # Hard block: prevent write
+        sys.exit(2)  # Hard block: PreToolUse exit(2) = deny tool invocation
 
     print(BLOCK_SOFT_MESSAGE, file=sys.stderr)
     sys.exit(0)  # Soft warning: advise but don't block
