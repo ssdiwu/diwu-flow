@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/ssdiwu/diwu-flow)
 
-多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 **12 个核心 Skill**。（v0.0.6）
+多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 **12 个核心 Skill**。（v0.0.7）
 
 ---
 
@@ -566,7 +566,7 @@ git remote -v # 哪个 remote？
 
 ## Version
 
-v0.0.6 — Agent 核心收缩至 3 个 + 新增 dstat/dloop/dend 三个 Command + 多平台架构重构。
+v0.0.7 — Agent 核心收缩至 3 个 + 新增 dstat/dloop/dend 三个 Command + 多平台架构重构。
 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License
