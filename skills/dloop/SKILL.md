@@ -136,6 +136,16 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 - session_id 隔离防止跨 session 干扰
 - 被 blocked_by 阻塞的 InSpec 任务立即停止（不重试）
 
+## 已知限制：dummy SID 窗口
+
+`/dloop start` 写入 `dloop-<timestamp>` 格式的 **dummy session_id**，真实 SID 要到第一次 `Stop` 事件才由 `stop_decision.py` 绑定。在此窗口内：
+
+- `task_entry_guard.py` 的 dloop fail-fast guard **无法区分 owner 与 foreign session**（dummy SID 不匹配任何真实 SID）
+- 当前设计选择**放行**所有 Edit/Write（避免误拦启动 loop 的 agent 自身）
+- **residual risk**：foreign session 在此极短窗口内可写入项目文件
+
+> 这是可用性优先的安全权衡。若需消除此窗口，需修改 `dloop.py start` 使其在启动时即接受/推导真实 session ID（独立架构改动，不在当前范围内）。测试锁定了此行为：`TestDloopGuard::test_3_dummy_sid_with_foreign_also_allows`。
+
 ## Stale-State 自动清理
 
 `/dloop start` 和 `status` 执行时自动检测 terminal stale state 并清理：
