@@ -103,15 +103,25 @@ def _has_active_task(task_json_path):
     return False
 
 
-def _has_active_dloop(state_path):
-    """Return True when dtask-state.json has dloop.active=True — fail-fast guard."""
+def _should_block_dloop(state_path, session_id=""):
+    """Return True when dloop is active AND the caller is NOT the loop's owner session.
+
+    Active loop + matching session_id → loop's own task execution, allow.
+    Active loop + mismatched/missing session_id → external write, block.
+    """
     if not os.path.exists(state_path):
         return False
     try:
         with open(state_path, encoding="utf-8") as f:
             state = json.load(f)
         dloop = state.get("dloop")
-        return isinstance(dloop, dict) and dloop.get("active") is True
+        if not isinstance(dloop, dict) or dloop.get("active") is not True:
+            return False
+        # Loop is active — allow only if this IS the loop's own session
+        loop_sid = dloop.get("session_id", "")
+        if session_id and loop_sid and session_id == loop_sid:
+            return False  # Loop owner: allow normal task execution
+        return True  # Non-owner or unknown: block
     except (json.JSONDecodeError, OSError):
         return False
 
@@ -191,17 +201,18 @@ def main():
     if _is_doc_file(file_path):
         sys.exit(0)
 
-    # === Fail-fast: block writes when dloop is still active ===
+    # === Fail-fast: block non-owner writes when dloop is still active ===
     # Must check BEFORE _has_active_task — real dloop always has active tasks,
     # so _has_active_task would exit(0) early and skip this guard.
-    if _has_active_dloop(os.path.join(cwd, WORKFLOW_DTASK_STATE)):
+    event_session_id = event.get("session_id") or event.get("sessionId", "")
+    if _should_block_dloop(os.path.join(cwd, WORKFLOW_DTASK_STATE), session_id=event_session_id):
         print(
             "[diwu-dloop-guard] 🛑 BLOCK：检测到活跃的 dloop 运行时（dtask-state.json.dloop.active=true）。\n\n"
-            "Edit/Write 操作可能污染运行态快照或与循环执行冲突。\n"
-            "请先执行 /dend 取消循环，或确认 dloop 已自然停止后再继续。",
+            "当前 session 非 dloop owner，Edit/Write 可能污染运行态快照。\n"
+            "请先执行 /dend 取消循环，或使用 dloop owner session 继续执行。",
             file=sys.stderr,
         )
-        sys.exit(1)  # Hard block: prevent write during active loop
+        sys.exit(1)  # Hard block: prevent non-owner write during active loop
 
     if _has_active_task(task_json_path):
         sys.exit(0)
