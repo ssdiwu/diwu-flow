@@ -1,7 +1,7 @@
 # 项目踩坑聚合表
 
 > 按 Layer 2 类别标签聚类。来源列写具体 session 文件名。
-> 最后更新：2026-05-01 00:50
+> 最后更新：2026-05-02 00:32（Task 归档 #25 个任务）
 
 ## 环境漂移
 
@@ -75,3 +75,71 @@
 | shell for 循环变量展开错误导致多个 skill 名被拼成一个长文件名 | SKILLS 变量包含空格分隔的多个 skill 名未被正确 word-split | 确保循环变量赋值和展开均无空格干扰，或用 while IFS= read -r | session-2026-04-30-213630.md |
 | smoke.sh 中变量直接写成 $SKILL_COUNT）被全角标点污染 | set -u + 全角标点上下文里触发坏变量名 | shell 输出里统一使用 ${VAR} 包裹变量，避免与中文/全角标点相邻 | session-2026-04-30-221947.md |
 | 按旧 Task 实施时 Task 边界不清晰 | Task#28 里混着已验过的 finding 和新迁移工作 | 先把 dtask 任务边界收口到可执行状态再实现，避免计划层与实现层互相污染 | session-2026-04-30-221947.md |
+
+---
+
+## 归档批次：2026-05-02（Task #33-#57，25 个任务）
+
+### 环境漂移（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| drelease.sh 验证在真实 origin/public 上跑污染 remote | 未隔离测试环境 | drelease.sh 验证必须在临时 clone + bare remotes 中隔离执行 | session-2026-05-01-195628.md |
+| 测试残留 /tmp/.claude_main_session 文件导致 release 时 owner_mismatch | tearDown 写错路径（双 main 拼写）且清理不完整 | 测试 tearDown 应清理完整路径，含所有可能的临时文件变体 | session-2026-05-01-135130.md |
+| drelease.sh worktree 内 cd 导致相对路径 public remote 失效 | 验证时未用绝对路径配置 remote | 验证时必须用绝对路径配置 remote 或在 ORIGINAL_DIR 下操作 | session-2026-05-01-182642.md |
+
+### 读层现象（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| Agent Explore 子 API 报错（MiniMax M2.7 invalid params） | 大型信息收集任务完全依赖子 agent | 核心数据源应直接 Read/Glob/Grep，不应完全依赖子 agent | session-2026-05-01-195640.md |
+| awk 计数 Skills 表格显示 11 而非 12 | awk 范式匹配边界误差 | 多种计数方式交叉验证更可靠 | session-2026-05-01-195640.md |
+| scan-repo 的 file_count bug 在批量修复期间已被顺带修复但缺少回归测试 | 顺带修复未被显式验证锁定 | 补充回归测试锁定行为，防止未来回退 | session-2026-05-01-235505.md |
+| SKILL.md H1 标题用 diwu-xxx 但文件夹/frontmatter 用 dxxx | 命名空间不一致 | 统一为与注册名一致的短格式 | session-2026-05-01-035028.md |
+| dtask_state.py ACTIVE_TASK_STATUSES 含拼写错误 InProcess | 代码缺陷未被早期发现 | 定期 grep 六态定义常量与实际使用是否一致 | session-2026-04-30-221947.md |
+
+### 分层未拆清（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| Task#57 marker 设计未分析 guard 执行链顺序就实现 | 代码写在 _is_workflow_file() exit(0) 之后，永远不可达 | 先画完整执行链路图确认插入点可达性再编码 | session-2026-05-02 00:11:35 |
+| 5 轮迭代修一个 guard 函数 | 每轮只解决上一轮回归，未穷举输入空间真值表 | 设计阶段先穷举 (状态×输入) 组合 → 标注期望行为 → 一次性实现 | session-2026-05-01-204342.md, session-2026-05-01-215721.md, session-2026-05-01-220204.md |
+| Task#44 发现两层 bug 叠加：表面问题修了但深层问题仍在 | 只追踪代码位置未追踪完整数据流 | 复现时必须追踪完整数据流而非仅看代码位置 | session-2026-05-01-034711.md |
+| 操作纪律不落地 = 下次必犯（dloop active=true 被 commit） | 仅靠"记住"不可靠 | 必须同时写 SKILL.md 检查清单 + 代码安全网双重兜底 | session-2026-05-01-195628.md |
+| Task#41 和 #42 共享 dtask_transition.py 并行 agent 冲突 | 共享文件的任务并行会冲突 | 共享文件的任务必须串行或合并为一个 agent 执行 | session-2026-05-01-032552.md |
+| Fix#1 阈值判定作用域错误——判断"目录下有没有大文件"而非"这个 plan 是否够大" | 变量命名不精确反映语义（plan_lines vs max_lines） | 变量命名要精确反映语义和判定域 | session-2026-05-01-040416.md |
+| 上轮修复只解决可达性没考虑语义正确性 | 两步问题拆成两次修，设计阶段未列全输入组合 | 设计阶段就列出所有输入组合的真值表 | session-2026-05-01-202846.md |
+| 三次修复都指向同一模式：过宽的匹配范围 | 全局扫表/子串匹配/无契约字段回退 | 每次修复后必须验证"不匹配边界"而非仅验证"匹配边界" | session-2026-05-01-040416.md |
+| Task#41 acceptance 含糊（三种可能修复方向未锁定） | 审查阶段未要求决策者明确选择就落 InDraft | 审查阶段应要求明确决策方向再落 InDraft | session-2026-05-01-032552.md |
+| drec 写入时追加到已有 session 文件而非新建独立文件 | 违反每次 session 必须新建独立文件的规则 | 每次必须新建独立文件，文件名由当前时间戳决定 | session-2026-05-01-195640.md |
+
+### 路由护栏契约（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| baa064d 误清 dtask.json 的 22 条 Done 任务 | 普通 session 直接覆盖 status 真相源，违反只有 /darc 能归档的规则 | 补 guard 检测（任务数大幅缩减时 exit(2)）+ /darc 归档前 marker 放行 | session-2026-05-01-234739.md, session-2026-05-01-235505.md |
+| Guard 检查顺序即优先级：精确拦截被宽泛放行覆盖 | _has_active_task（宽泛放行）在 dloop guard（精确拦截）之前 | fail-fast guard 必须放在宽泛放行条件之前 | session-2026-05-01-201911.md |
+| 安全守卫判别维度只有"是否活跃"没有"谁在操作" | active=true 是状态标记不是权限标记 | Guard 判别维度不能只有状态必须有 caller 身份 | session-2026-05-01-202846.md |
+| Hook 阻止机制用错退出码：exit(1) 非 exit(2) | PreToolUse exit(1)=non-blocking, exit(2)=deny, exit(0)=allow | 改 hook 前必须先确认平台文档的退出码语义 | session-2026-05-01-205841.md, session-2026-05-01-215721.md, session-2026-05-01-220204.md |
+| dummy 窗口 foreign session 放行的 tradeoff 未正式落盘 | 藏在代码注释/测试 docstring 里 | 已知 tradeoff 必须写进 SKILL.md 并用测试锁定行为 | session-2026-05-01-215721.md, session-2026-05-01-220204.md |
+| dloop 有三阶段生命周期但 guard 假设单一 active 状态 | stop_decision.py 延迟绑定架构产生 dummy→real 过渡 | guard 必须分别处理三阶段而非假设单一状态 | session-2026-05-01-204342.md |
+| Task#43 plan 文件信号来源在 hook contract 中未定义 | event 无标准字段携带 plan 路径 | 实现时需定义回退策略不能假设信号存在 | session-2026-05-01-034711.md |
+
+### 验证误读（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| 脚本级 returncode 断言 ≠ hook 运行时行为验证 | pytest 只证明脚本返回了什么码不证明 CC 是否真的拦截 | 测试断言必须与平台文档的退出码语义对齐 | session-2026-05-01-205841.md, session-2026-05-01-215721.md, session-2026-05-01-220204.md |
+| _run() 返回值从 (rc,out) 改为 (rc,out,err) 后部分调用点未同步解包 | 只改了部分调用点导致 ValueError | 改函数签名后必须 grep 所有调用点统一修改再跑测试 | session-2026-05-01-135130.md |
+| Bug 2 调整优先级后只改现有用例断言没锁住新行为回归 | 调整优先级后需新增"两者同时存在时的优先权"独立用例 | 行为变更必须新增独立用例锁住新语义 | session-2026-05-01-182642.md, session-2026-05-01-195628.md |
+| Task#45 acceptance 初版要求"目录为空"与"保留无关 symlink"矛盾 | destructive 行为更容易满足 acceptance 但恰恰是要防止的 | acceptance 必须显式排除 destructive 路径 | session-2026-05-01-034711.md |
+| 手动验证脚本路径用相对路径导致 FileNotFoundError | 未先用绝对路径排除环境问题 | 应先用绝对路径排除环境问题再断言业务逻辑 | session-2026-05-01-201911.md |
+| Edit 工具上下文压缩后 "String to replace not found" 反复失败 | 依赖压缩后的缓存而非当前精确内容 | Edit 前必须 Read 获取当前精确内容，不能依赖上下文缓存 | session-2026-05-02 00:11:35 |
+
+### 数据缺口（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| v0.0.3 tag 指向孤立 clean commit 从未推送到 public | 早期 drelease.sh worktree 产物生成了 clean commit 但未推送 public | 发版后必须 git ls-remote --tags public 独立验证，不信任 origin 状态 | session-2026-05-01-043916.md |
+| drelease.sh 原 Step 3 只推当前版本 tag 不处理历史遗留 | public tag 可能指向 origin commit（含敏感文件历史） | public tag 必须指向 clean commit 且每次发版顺带同步缺失历史 tags | session-2026-05-01-043916.md |
+| dtask SKILL.md 缺少 Step 3 命令模板导致非 CC 平台找不到 common.py | Skill 和 Command 中关键命令模板不同步 | 应在 Skill（跨平台底层）和 Command（CC 专属）中同步维护关键命令模板 | session-2026-05-01-234739.md |
