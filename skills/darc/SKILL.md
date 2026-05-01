@@ -48,6 +48,10 @@ argument-hint: "[归档类型]"
 ## 手动执行步骤
 
 ```
+0. 创建归档标记（guard 放行）：
+   touch .diwu/.archiving-in-progress
+   → 通知 task_entry_guard.py：后续对 dtask.json 的写入是合法归档操作，不触发 exit(2) 硬阻止
+
 1. 判断：查看 [ARCHIVE_CHECK] 消息
 2. Task 归档：
    a. 读取 .diwu/dtask，筛选 status=Done/Cancelled 的任务
@@ -67,6 +71,9 @@ argument-hint: "[归档类型]"
    d. 追加写入 .diwu/project-pitfalls.md（不覆盖已有条目，追加新条目）
    e. **来源列必须写具体 session 文件名**（如 session-2026-04-18-213522.md），禁止写占位符如"聚合来源"
    f. 如无踩坑数据则跳过，在 summary 中标注 "0 new pitfalls"
+4.5 删除归档标记（guard 恢复正常拦截）：
+   rm -f .diwu/.archiving-in-progress
+   → 归档完成，guard 恢复对 dtask.json 写入的正常检查
 5. 验证清单：
    [ ] dtask 中无残留的 Done/Cancelled 任务（超出保留阈值的部分）
    [ ] recording/ 文件数 < threshold

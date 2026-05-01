@@ -343,7 +343,7 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py"
       ],
       "category": "bugfix",
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 47,
@@ -594,7 +594,7 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/"
       ],
       "category": "infra",
-      "status": "InDraft"
+      "status": "Done"
     },
     {
       "id": 56,
