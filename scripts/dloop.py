@@ -112,7 +112,7 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
             f"dloop 已启动 (max_tasks: {'∞(无限)' if effective_max == 0 else effective_max}, "
             f"source: {'auto' if max_tasks is None else 'manual'})\n"
             f"{cleanup_note}"
-            f"首轮开始：Task#{first_task['id']} {first_task.get('title', '')}"
+            f"请立即发起 /drun 完成首轮任务（Task#{first_task['id']} {first_task.get('title', '')}）"
         ),
         "formatted_text": (
             f"🔄 dloop 已启动\n"
@@ -120,7 +120,7 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
             f"   活跃任务数: {active_count}\n"
             f"   最大任务数: {'∞(无限)' if effective_max == 0 else effective_max}\n"
             f"   来源: {'自动(活跃任务快照)' if max_tasks is None else '手动指定'}\n"
-            f"   首轮开始: Task#{first_task['id']} {first_task.get('title', '')}"
+            f"   请立即发起 /drun 完成首轮任务（Task#{first_task['id']} {first_task.get('title', '')}）"
         ),
     }
 

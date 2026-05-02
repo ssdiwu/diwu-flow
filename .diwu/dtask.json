@@ -1,1 +1,72 @@
-{"tasks": []}
+{
+  "tasks": [
+    {
+      "id": 58,
+      "title": "dloop start 返回文案增加 /drun 调用指令",
+      "description": "dloop 设计意图是 while(未停止){ /drun }，但 dloop.py start 返回的 formatted_text 写了「首轮开始: Task#N」，误导 Agent 直接上手实施而非调用 /drun。需在 start 返回文案中明确要求 Agent 发起 /drun。",
+      "acceptance": [
+        "Given dloop.py start 成功返回 When Agent 收到 formatted_text Then 文案中包含「请立即发起 /drun」或等效明确指令",
+        "Given dloop.py start 成功返回 When 非 dloop Agent 读到 message 字段 Then 不产生误解（message 字段也需同步更新）"
+      ],
+      "steps": [
+        "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py，找到 cmd_start 函数中 formatted_text 和 message 的构造位置（约第 107-125 行）",
+        "2. [锁定] 修改 formatted_text：将「首轮开始: Task#{id} {title}」替换为「请立即发起 /drun 完成首轮任务（Task#{id} {title}）」",
+        "3. [建议] 同步修改 message 字段，使其也包含 /drun 调用提示",
+        "4. 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py"
+      ],
+      "category": "bugfix",
+      "blocked_by": [],
+      "status": "Done"
+    },
+    {
+      "id": 59,
+      "title": "project-pitfalls.md 摘要注入 + 截断上限调大",
+      "description": "session_start.py 当前以全文截断方式注入 project-pitfalls.md（MAX_PITFALLS_LEN=4000），大文件（15K+）丢失前 70% 条目。改为：上限调到 8000 + 按二级标题类别生成摘要（每类列出全部现象列，一行一条+计数）+ 末尾提示「详细条目见 .diwu/project-pitfalls.md」。",
+      "acceptance": [
+        "Given project-pitfalls.md 含 12 个类别 100+ 条记录 When SessionStart hook 注入 Then additionalSystemPrompt 包含每个类别的名称、条目计数、所有现象描述摘要",
+        "Given 摘要总长度超过 8000 字符 When 生成摘要 Then 从旧类别开始截断，保留最近类别完整",
+        "Given 摘要注入完成 When Agent 读到注入内容 Then 末尾包含「详细条目见 .diwu/project-pitfalls.md」提示",
+        "Given project-pitfalls.md 为纯模板（无真实数据）When SessionStart 执行 Then 不注入（保持现有行为不变）"
+      ],
+      "steps": [
+        "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/session_start.py，确认当前 pitfalls 注入逻辑（第 59-136 行）",
+        "2. [锁定] MAX_PITFALLS_LEN 从 4000 改为 8000",
+        "3. [锁定] 替换全文截断注入逻辑为摘要模式：解析 markdown 按 ## 类别分段 → 每类提取表头后的所有现象列 → 组装为「类别名（N条）:\n- 现象1\n- 现象2...」格式",
+        "4. [锁定] 摘要末尾追加「详细条目见 .diwu/project-pitfalls.md」提示行",
+        "5. [锁定] 超 8000 字符时从前往后截断类别（旧类别先被截），保留最近类别完整",
+        "6. 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/session_start.py"
+      ],
+      "category": "functional",
+      "blocked_by": [],
+      "status": "InSpec"
+    },
+    {
+      "id": 60,
+      "title": "darc 踩坑聚合增加去重合并步骤",
+      "description": "darc SKILL.md 第 4 步（踩坑聚合）当前只追加不整理。同一 session 内同类别下多个条目实为同一根因的不同描述时，会产生冗余。增加去重合并步骤：同 session 来源 + 同类别的条目合并为一条。不清理过期条目，不跨 session 去重（保留复发信号）。",
+      "acceptance": [
+        "Given 同一 session 的 recording 含 3 条「验证误读」类踩坑 When 执行归档第 4 步 Then 3 条合并为 1 条，保留所有现象描述要点",
+        "Given 不同 session 含相同现象的踩坑 When 执行归档第 4 步 Then 各自保留独立条目（不跨 session 去重）",
+        "Given 某 session 无踩坑数据 When 执行归档第 4 步 Then 跳过，summary 标注「0 new pitfalls」"
+      ],
+      "steps": [
+        "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/darc/SKILL.md，确认第 4 步踩坑聚合的当前描述（约第 63-66 行）",
+        "2. [锁定] 在第 4 步中增加去重合并子步骤：扫描每个 session 的踩坑段落 → 按类别标签分组 → 同类别的条目以「现象列要点列表」形式合并为一条",
+        "3. [锁定] 明确标注不去重的范围：不跨 session 去重（不同 session 遇到同一问题是复发信号，保留）；不过期清理（保留所有历史条目）",
+        "4. 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/darc/SKILL.md"
+      ],
+      "category": "functional",
+      "blocked_by": [],
+      "status": "InSpec"
+    }
+  ]
+}
