@@ -110,7 +110,7 @@ if [ "$PUSH_PUBLIC" = "--push-public" ]; then
     echo ""
     echo "=== Step 3: 推送到公开仓库 ==="
     echo "→ 推送 clean commit 到 $PUBLIC_REMOTE/main"
-    git push "$PUBLIC_REMOTE" "${CLEAN_SHA}:refs/heads/main"
+    git push --force "$PUBLIC_REMOTE" "${CLEAN_SHA}:refs/heads/main"
 
     # 同步历史 tags（防止遗漏）——仅推送 public 缺少的
     LOCAL_TAGS=$(git tag -l 'v*' 2>/dev/null)
