@@ -11,7 +11,7 @@
 | 阶段 | 动作 | 触发位置 |
 |------|------|---------|
 | **创建** | 从 `project-pitfalls.md.template` 初始化 | `/dinit` 命令 |
-| **读取** | Preflight 第 4 步预加载历史误判 | `mindset.md` + `drun` SKILL.md |
+| **读取** | SessionStart hook 自动注入到 system prompt（含模板跳过+长度裁剪） | `hooks/scripts/session_start.py` |
 | **追加** | 归档时写入新踩坑条目 | `drec` SKILL.md + `darc` SKILL.md |
 | **维护** | 定期回顾和清理过时条目 | 人工或归档触发 |
 

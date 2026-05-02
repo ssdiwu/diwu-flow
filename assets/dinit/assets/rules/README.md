@@ -14,7 +14,7 @@
 | **session.md** | Session 生命周期管理（启动/结束/continuous_mode/checkpoint） | dsess + drecord | Session 开始、结束时 |
 | **verification.md** | 证据优先级体系（L1-L5）、Done 判定门槛、无法验证处理 | dverify | 选择证据等级、判定完成标准时 |
 | **correction.md** | 纠偏体系：退化信号检测、四行重写、止损序列 | dcorr | 检测到退化信号、需要纠偏时 |
-| **pitfalls.md** | 误判防护：Layer 1 泛化模式 / Layer 2 项目高频 / Layer 3 接口预留 | dcorr | Preflight 误判表预加载、归档聚合时 |
+| **pitfalls.md** | 误判防护：Layer 1 泛化模式 / Layer 2 项目高频 / Layer 3 接口预留 | dcorr | SessionStart 自动注入（已实现）、归档聚合时 |
 | **exceptions.md** | 异常处理与 BLOCKED 判定、阻塞恢复流程 | *参考文件* | 遇到阻塞、需要人工介入时 |
 | **templates.md** | 格式模板与可调参数（BLOCKED/REVIEW/DECISION TRACE 等） | drecord | 输出标准格式、查配置参数时 |
 | **file-layout.md** | .claude/ 目录结构、归档规则、查找历史 | *参考文件* | 了解文件组织、归档、查历史时 |

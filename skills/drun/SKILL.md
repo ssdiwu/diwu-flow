@@ -52,7 +52,7 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 4. 进入实施前最少要拿到哪些判别依据？
 5. 完成后用哪类高等级证据判断结果成立？
 
-**误判表预加载**：进入实施前先看当前现象是否落在历史高频误判中（project-pitfalls.md 或 exceptions.md）。
+**误判表预加载**：project-pitfalls.md 已由 SessionStart hook 自动注入到上下文（见 `## 项目历史踩坑经验` 段落），执行时直接对照检查即可，无需再手动读取；exceptions.md 仍需按需读取。
 
 **其他检查**：git status 确认工作区状态；recording/ 最新 session 中是否有未解决阻塞记录。
 

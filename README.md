@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/ssdiwu/diwu-flow)
 
-多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 **12 个核心 Skill**。（v0.0.7）
+多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 **12 个核心 Skill**。（v0.0.8）
 
 ---
 
@@ -154,7 +154,7 @@ claude plugin add /path/to/diwu-flow
 | `PreToolUse(Edit\|Write)` | task_entry_guard.py | 实施入口守卫 |
 | `Stop` | stop_decision.py（内联 stop_archive.py） | 调度器：完整性检查 → 归档聚合 → continuous_mode 决策 |
 | `PreCompact` | pre_compact.py | 压缩前保存 checkpoint 到 recording/ |
-| `SessionStart` | session_start.py | 写 session ID；注入环境变量 |
+| `SessionStart` | session_start.py | 写 session ID；注入环境变量；自动注入 project-pitfalls.md（跳过纯模板+长度裁剪） |
 
 ---
 

@@ -132,7 +132,7 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 | 01:30:05 | Bash | npm install E403 | 2 | 使用镜像源 | 环境漂移 |
 ```
 
-表格是四段式的机器可读版本；两者互为补充。表格方便跨 session 聚合查询，四段式适合人类阅读和 Stop hook 验证。跨 session 错误模式自动注入（`inject_errors_decisions.py`）**待实现**——当前需手动回顾历史文件。
+表格是四段式的机器可读版本；两者互为补充。表格方便跨 session 聚合查询，四段式适合人类阅读和 Stop hook 验证。基础版踩坑预注入已由 `session_start.py`（SessionStart hook）实现——每次 session 启动时自动读取 `.diwu/project-pitfalls.md` 并注入 system prompt；高级版跨 session 错误模式自动检测与聚合注入（`inject_errors_decisions.py`，P-004）**仍待实现**。
 
 ---
 
