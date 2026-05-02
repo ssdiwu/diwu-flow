@@ -177,9 +177,52 @@ def cmd_sync_rules(cwd: Path) -> dict:
     }
 
 
+def _find_skills_dir() -> Path | None:
+    """探测 CC 实际使用的 skills 目录。
+
+    优先级：
+    1. CLAUDE_PLUGIN_ROOT 环境变量所在插件的 skills/
+    2. .claude/plugins/marketplaces/ 下匹配插件的 skills/（CC 安装后的标准位置）
+    3. PLUGIN_ROOT/skills/（开发时 fallback）
+    """
+    import glob as _g
+
+    # 1. 环境变量
+    env_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
+    if env_root:
+        env_skills = Path(env_root) / "skills"
+        if (env_skills / "drec" / "SKILL.md").exists():
+            return env_skills
+
+    # 2. Marketplace: 找到包含 skills/drec/SKILL.md 的 marketplace 目录
+    plugins_dir = Path.home() / ".claude" / "plugins" / "marketplaces"
+    if plugins_dir.is_dir():
+        for mp in sorted(plugins_dir.iterdir()):
+            mp_skills = mp / "skills"
+            if (mp_skills / "drec" / "SKILL.md").exists():
+                return mp_skills
+
+    # 3. Cache: .claude/plugins/cache/ 下匹配
+    cache_dir = Path.home() / ".claude" / "plugins" / "cache"
+    if cache_dir.is_dir():
+        for cp in sorted(cache_dir.iterdir()):
+            cp_skills = cp / "skills"
+            if (cp_skills / "drec" / "SKILL.md").exists():
+                return cp_skills
+
+    # 4. Fallback: PLUGIN_ROOT (仓库根目录)
+    fallback = PLUGIN_ROOT / "skills"
+    if (fallback / "drec" / "SKILL.md").exists():
+        return fallback
+
+    return None
+
+
 def cmd_sync_skills(cwd: Path) -> dict:
     """创建 .agents/skills/ 下各 skill 的 symlink 指向 plugin skills 目录。"""
-    skills_src = PLUGIN_ROOT / "skills"
+    skills_src = _find_skills_dir()
+    if skills_src is None:
+        skills_src = PLUGIN_ROOT / "skills"  # 最终 fallback
     target_dir = cwd / ".agents" / "skills"
 
     if not skills_src.is_dir():
@@ -484,7 +527,7 @@ def cmd_validate(cwd: Path) -> dict:
 
     # Skills
     skills_dir = cwd / ".agents" / "skills"
-    skills_src = PLUGIN_ROOT / "skills"
+    skills_src = _find_skills_dir() or (PLUGIN_ROOT / "skills")
     skill_count = 0
     if skills_src.is_dir():
         for sd in skills_src.iterdir():
