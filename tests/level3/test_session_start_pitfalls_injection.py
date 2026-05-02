@@ -179,6 +179,42 @@ def test_multi_section_long_content_truncated():
         assert ("已裁剪" in injected or "类别19" in injected)
 
 
+def test_truncation_never_cuts_newest_category_mid_section():
+    """P1 修复验证：裁剪多类别后最新类别必须完整，不能切成半段"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        diwu = os.path.join(tmpdir, ".diwu")
+        os.makedirs(diwu)
+        pitfalls = os.path.join(diwu, "project-pitfalls.md")
+        # 10 个类别，每类 30 条现象（摘要远超 8000），最新类别命名为 z-最新类
+        lines = ["# 项目踩坑聚合表"]
+        for cat_i in range(10):
+            lines.append(f"\n## 类别{cat_i}\n\n| 现象 | 根因 | 正确做法 | 来源 |")
+            lines.append("|------|------|---------|------|")
+            for j in range(30):
+                lines.append(
+                    f"| 类别{cat_i}-现象-{j} 这是一段足够长的描述文本用于填满摘要空间 |"
+                    f" 根因-{cat_i}-{j} | 做法-{cat_i}-{j} | s{cat_i}-{j}.md |"
+                )
+        long_content = "\n".join(lines)
+        assert len(long_content) > MAX_PITFALLS_LEN * 2
+        Path(pitfalls).write_text(long_content, encoding="utf-8")
+
+        output = _run_session_start(tmpdir)
+        prompt = output.get("additionalSystemPrompt", "")
+        injected = _extract_injected(prompt)
+        assert injected
+        assert "已裁剪早期类别" in injected, "多类别应触发裁剪标记"
+
+        # 最新类别（类别9）必须完整出现——所有 30 条现象无一丢失
+        for j in range(30):
+            assert f"类别9-现象-{j}" in injected, (
+                f"最新类别条目 类别9-现象-{j} 不应被截断丢失"
+            )
+
+        # 最早类别应已被裁剪
+        assert "类别0-现象-0" not in injected, "最早类别应已被裁剪"
+
+
 def test_coexists_with_existing_prompt():
     """pitfalls 内容使用 get+拼接模式，不覆盖已有 additionalSystemPrompt"""
     source = Path(SESSION_START).read_text(encoding="utf-8")

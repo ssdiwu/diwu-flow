@@ -152,21 +152,25 @@ if cwd:
                             summary_lines.append("")
                         summary_text = "\n".join(summary_lines).strip()
                         if len(summary_text) > MAX_PITFALLS_LEN:
-                            trunc_pos = summary_text.rfind(
-                                "\n\n", 0, len(summary_text) - MAX_PITFALLS_LEN
-                            )
-                            if trunc_pos > 0:
-                                summary_text = (
-                                    "[... 已裁剪早期类别 ...]\n\n"
-                                    + summary_text[trunc_pos + 2:]
+                            # 从最旧的类别开始逐类裁剪，保证保留的类别完整
+                            _CROP_MARKER = "[... 已裁剪早期类别 ...]\n\n"
+                            while len(summary_text) > MAX_PITFALLS_LEN:
+                                # 跳过已有的 crop marker，避免重复命中自身 \n\n
+                                search_start = (
+                                    len(_CROP_MARKER)
+                                    if summary_text.startswith(_CROP_MARKER)
+                                    else 0
                                 )
-                            else:
+                                boundary = summary_text.find("\n\n", search_start)
+                                if boundary < 0:
+                                    # 只剩一个类别仍超长，保留该类别开头 + 标注
+                                    summary_text = (
+                                        summary_text[:MAX_PITFALLS_LEN - 50]
+                                        + "\n[...]"
+                                    )
+                                    break
                                 summary_text = (
-                                    summary_text[:MAX_PITFALLS_LEN - 50] + "\n[...]"
-                                )
-                            if len(summary_text) > MAX_PITFALLS_LEN:
-                                summary_text = (
-                                    summary_text[:MAX_PITFALLS_LEN - 50] + "\n[...]"
+                                    _CROP_MARKER + summary_text[boundary + 2:]
                                 )
                         existing = result.get("additionalSystemPrompt", "")
                         pitfalls_section = (
