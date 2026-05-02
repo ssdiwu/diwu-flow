@@ -211,6 +211,7 @@ def _check_recording_reminder(cwd):
         return ""
     import glob as _glob
     import subprocess as _sp
+    import time
 
     # Check for code changes (exclude .diwu/ internal state files)
     try:
@@ -219,8 +220,14 @@ def _check_recording_reminder(cwd):
             cwd=cwd, capture_output=True, text=True, timeout=10
         )
         lines = result.stdout.strip().split("\n") if result.stdout.strip() else []
-        # Filter: count non-.diwu/ changes
-        code_changes = [l for l in lines if l and not l.startswith(".diwu/")]
+        # git status --short 格式: "XY path/to/file"（XY 为两字符状态码 + 空格）
+        # 提取路径部分（第3列起），过滤 .diwu/ 内部状态文件
+        code_changes = []
+        for l in lines:
+            if len(l) > 3:
+                path = l[3:]  # 跳过 "XY " 前缀
+                if path and not path.startswith(".diwu/"):
+                    code_changes.append(path)
         if not code_changes:
             return ""
     except (OSError, _sp.TimeoutExpired):
@@ -247,10 +254,33 @@ def _check_recording_reminder(cwd):
             "（详见 drec §原子 Commit 职责）"
         )
 
-    # Compare timestamps: if recording is older than 5 minutes, likely stale
+    # Compare timestamps: 如果最新 recording 早于代码变更（recording 过时），则提醒
+    # 取代码变更文件中最近修改时间与 recording 时间对比
     import time
-    latest_mtime = os.path.getmtime(sessions[0])
-    if time.time() - latest_mtime > 300:
+    latest_recording_mtime = os.path.getmtime(sessions[0])
+    # 用 git diff --name-only 获取变更文件，取最新 mtime
+    try:
+        diff_result = _sp.run(
+            ["git", "diff", "--name-only"],
+            cwd=cwd, capture_output=True, text=True, timeout=10
+        )
+        changed_files = diff_result.stdout.strip().split("\n") if diff_result.stdout.strip() else []
+        latest_code_mtime = 0
+        for f in changed_files:
+            f = f.strip()
+            if f and not f.startswith(".diwu/"):
+                fpath = os.path.join(cwd, f)
+                if os.path.exists(fpath):
+                    latest_code_mtime = max(latest_code_mtime, os.path.getmtime(fpath))
+        # 如果没有可比较的文件变更时间，退回到绝对时间窗口判断
+        if latest_code_mtime == 0:
+            is_stale = (time.time() - latest_recording_mtime > 120)
+        else:
+            is_stale = (latest_code_mtime > latest_recording_mtime)
+    except (OSError, _sp.TimeoutExpired):
+        is_stale = (time.time() - latest_recording_mtime > 120)
+
+    if is_stale:
         return (
             "\n"
             "检测到代码变更，最近 recording 已超过 5 分钟，建议先 /drec 更新记录 "
@@ -413,15 +443,18 @@ if __name__ == "__main__":
     runtime_state = sync_result.state
     loop_state = runtime_loop_state(runtime_state)
 
-    # Fallback: task_completed.py (TaskCompleted event) 和 stop_decision.py (Stop event)
+    # Fallback: task_completed.py (TaskCompleted 事件) 和 stop_decision.py (Stop 事件)
     # 由 CC 框架在不同事件上触发，执行顺序不确定。如果 stop_decision 先于
     # task_completed 执行，completed_task_ids 可能尚未包含最新 Done 任务。
-    # 此处扫描 dtask.json 中 Done 任务作为兜底补充，确保不丢失。
-    current_completed = loop_state.get("completed_task_ids", []) if loop_state else []
-    done_ids_from_json = {t["id"] for t in tasks if t.get("status") == "Done"}
-    missing_ids = [tid for tid in done_ids_from_json if tid not in current_completed]
-    if missing_ids:
-        loop_state["completed_task_ids"] = current_completed + missing_ids
+    # 仅在 dloop 模式下生效（loop_state 非 None）。
+    # 已知限制：首轮迭代可能包含历史 Done 任务（无法区分「本轮完成」vs「早已完成」），
+    # 这可能导致 max_tasks 在首轮偏激进地触发停止；后续迭代不受影响。
+    if loop_state is not None:
+        current_completed = loop_state.get("completed_task_ids", [])
+        done_ids_from_json = {t["id"] for t in tasks if t.get("status") == "Done"}
+        missing_ids = [tid for tid in done_ids_from_json if tid not in current_completed]
+        if missing_ids:
+            loop_state["completed_task_ids"] = current_completed + missing_ids
     session_id = hook_session_id(stdin_data)
 
     if loop_state is not None:

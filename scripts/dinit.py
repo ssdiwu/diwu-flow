@@ -203,7 +203,14 @@ def cmd_sync_skills(cwd: Path) -> dict:
         try:
             expected_target = str(real_target.relative_to(target_dir))
         except ValueError:
-            expected_target = str(real_target.resolve())
+            # 目标不在 target_dir 子树中（跨目录场景如 tmp_project_dir）
+            # 使用 os.path.relpath() 计算同文件系统上的最短相对路径
+            rel = os.path.relpath(str(real_target.resolve()), str(target_dir.resolve()))
+            if rel.startswith("..") or ("/" in rel and not rel.startswith(".")):
+                expected_target = rel
+            else:
+                # 同目录或异常情况，退回绝对路径（仅当跨文件系统时触发）
+                expected_target = str(real_target.resolve())
 
         if link_path.exists() or link_path.is_symlink():
             if link_path.is_symlink():
