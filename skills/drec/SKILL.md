@@ -182,3 +182,73 @@ CONTINUOUS MODE COMPLETE - 所有可执行任务已完成
 已完成: Task#A, Task#B  |  剩余: Task#X(InDraft), Task#Y(BLOCKED)
 本轮连续完成 N 个任务
 ```
+
+---
+
+## 原子 Commit 职责
+
+> **（R2）**：drec 是项目状态存档的**唯一入口**。写完 recording 后必须执行原子 commit，不得由调用方（drun 等）自行 commit。
+
+### Commit 行为规范
+
+| 条件 | 动作 |
+|------|------|
+| 工作区有变更（代码 + .diwu/ 状态文件） | `git add -A` 全量添加 → `git commit` 一次性提交 |
+| 工作区无变更 | 跳过 commit，不报错，返回提示「无变更需提交」 |
+
+### Commit Message 格式
+
+单任务：
+```
+[recording] Session YYYY-MM-DD HH:MM:SS — Task#N {title} ({status})
+```
+
+多任务（同一 session 完成多个）：
+```
+[recording] Session YYYY-MM-DD HH:MM:SS — Task#A (Done), Task#B (InReview)
+```
+
+纯记录（无具体任务关联，如中间 checkpoint）：
+```
+[recording] Session YYYY-MM-DD HH:MM:SS — {简述}
+```
+
+### Git Add 范围
+
+**全量 `git add -A`**：包含所有工作区变更——代码文件、`.diwu/recording/`、`.diwu/dtask.json`、`.diwu/dtask-state.json` 等全部状态文件。一个 commit = 一次完整快照。
+
+> **为什么全量而非仅 .diwu/**：recording 记录的是"发生了什么"，代码变更是"改了什么"，两者属于同一次 session 的产出，应原子提交避免历史分裂。
+
+### 执行步骤
+
+1. 按 Session 文件格式模板写入 `.diwu/recording/session-{timestamp}.md`
+2. 运行 `date '+%Y-%m-%d %H:%M:%S'` 获取时间戳用于 commit message
+3. 检查 `git status --short` 是否有变更
+4. 有变更 → `git add -A && git commit -m "[recording] Session {timestamp} ..."`
+5. 无变更 → 输出跳过提示，返回成功
+6. 将 commit hash 作为输出返回给调用方
+
+---
+
+## 调用契约
+
+### 输入
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| session 内容摘要 | 字符串 | 是 | 本次 session 的核心内容：处理了哪些任务、做了什么改动、验收结果、下一步计划 |
+| 关联任务列表 | 数组 | 否 | 本 session 涉及的任务 ID 和状态，用于生成 commit message |
+
+### 输出
+
+| 返回值 | 说明 |
+|--------|------|
+| recording 文件路径 | `.diwu/recording/session-{timestamp}.md` 的绝对路径 |
+| commit hash | git commit 的 SHA（无变更时为空字符串） |
+
+### 调用方职责（drun / dloop / 手动）
+
+- **准备阶段**：整理 session 内容摘要（任务状态、实施内容、验收证据）
+- **调用阶段**：将摘要传入 `/drec`，由 drec 负责：写入文件 → 格式校验 → 原子 commit
+- **调用后**：读取返回的 commit hash，确认存档成功
+- **禁止**：调用方自行执行 `git commit` 包含 recording 或 .diwu/ 状态文件

@@ -1,5 +1,14 @@
 {
   "version": 1,
   "task_sessions": {},
-  "dloop": null
+  "dloop": {
+    "active": true,
+    "session_id": "5ff2cc2d-b0d6-4673-adb9-d753ebf35cea",
+    "started_at": "2026-05-02T16:03:53.336167+00:00",
+    "completed_task_ids": [],
+    "current_iteration": 2,
+    "max_tasks": 3,
+    "stopped_at": null,
+    "stop_reason": null
+  }
 }

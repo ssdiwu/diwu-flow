@@ -13,9 +13,9 @@
 
 ### 提交原子性铁律
 
-**dtask.json 状态变更必须与对应代码变更同一 commit**。禁止将 status 更新（如 InSpec→Done）单独成 commit。正确顺序：实施完成 → 标记 Done → 写 recording → `git add` 全部文件（代码 + recording + dtask.json）→ 一次性 commit。
+**dtask.json 状态变更必须与对应代码变更同一 commit**。禁止将 status 更新（如 InSpec→Done）单独成 commit。
 
-**recording 必须随同本轮代码变更一并 commit**，不得单独成 commit。正确做法：先写 recording → 再 `git add` 代码+recording 一起提交。
+**recording 与代码变更的 commit 必须通过 `/drec` 统一完成**——drec 是项目状态存档的唯一入口，负责写入 recording 文件后执行 `git add -A`（全量变更：代码+.diwu/ 状态文件）+ 原子 `git commit`。调用方（drun 等）不得自行 commit 包含 recording 或 .diwu/ 状态文件。正确顺序：实施完成 → 标记 Done → 调用 `/drec`（传入 session 摘要）→ drec 写入 recording + 全量 commit。
 
 ### recording 时间戳铁律
 
