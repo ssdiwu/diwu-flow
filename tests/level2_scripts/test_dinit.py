@@ -124,7 +124,9 @@ class TestDinitSyncSkills:
         for item in skills_dir.iterdir():
             if item.is_symlink():
                 target = os.readlink(str(item))
-                assert target.startswith("../../skills/")
+                resolved = Path(item.parent / target).resolve()
+                assert resolved.exists(), f"broken symlink: {item.name} -> {target} -> {resolved} 不存在"
+                assert (resolved / "SKILL.md").exists(), f"symlink target 缺少 SKILL.md: {resolved}"
 
 
 class TestDinitCreateConfig:

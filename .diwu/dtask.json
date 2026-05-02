@@ -144,6 +144,55 @@
         62
       ],
       "status": "Done"
+    },
+    {
+      "id": 64,
+      "title": "dinit.py sync-skills 修复 symlink 目标路径错误 + 检测增强",
+      "description": "根因：cmd_sync_skills() 第 202 行写死 expected_target = '../../skills/{name}'（相对路径），仅在插件仓库自身结构下正确。用户项目中 .agents/skills/{name} → ../../skills/{name} 解析到用户项目的 skills/ 目录（不存在），产生 broken symlink。次因：sync-skills 和 validate 均不检查 symlink 目标可达性，broken symlink 被误报 SKIPPED/PASS。",
+      "acceptance": [
+        "Given 用户项目执行 dinit sync-skills When 创建 symlink Then target 指向 PLUGIN_ROOT/skills/{name}（正确跨项目路径），非 ../../skills/{name}",
+        "Given .agents/skills/drec 为 broken symlink（旧错误路径） When 执行 cmd_sync_skills() Then 检测到 BROKEN 并自动删除重建为正确路径",
+        "Given .agents/skills/drec 为 healthy symlink（新正确路径） When 执行 cmd_sync_skills() Then 报告 SKIPPED（回归兼容）",
+        "Given 存在 broken symlink When 执行 cmd_validate() Then 对应 skill 检查项 FAIL，message 含 'broken symlink' 或 'target not reachable'",
+        "Given diwu-flow 插件仓库自身执行 dinit sync-skills When symlink 创建成功 Then 目标指向仓库内 skills/ 目录（自兼容）"
+      ],
+      "steps": [
+        "1. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py 第 202 行 expected_target：从硬编码 '../../skills/{name}' 改为基于 PLUGIN_ROOT 计算的正确路径——使用 (PLUGIN_ROOT / 'skills' / name).relative_to(target_dir) 或 str(PLUGIN_ROOT / 'skills' / name)，确保用户项目和插件仓库均可用",
+        "2. [锁定] cmd_sync_skills() SKIPPED 分支（第 206-209 行）：增加 os.path.exists(link_path.parent / current_target) 可达性检查；不可达时标记 BROKEN 并触发重建（unlink + os.symlink 正确目标）",
+        "3. [锁定] cmd_validate() 第 475-478 行 is_symlink() 分支：增加 target 存在性检查，不存在则 check() 标记 FAIL 并附 message 说明 broken 原因",
+        "4. [建议] symlinks_report 新增 BROKEN 状态计数，formatted_text 体现 broken 数量",
+        "5. 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py"
+      ],
+      "category": "bugfix",
+      "blocked_by": [],
+      "status": "Done"
+    },
+    {
+      "id": 65,
+      "title": "Stop hook 触发顺序保障：task_completed 与 stop_decision 时序确定性",
+      "description": "task_completed.py（TaskCompleted 事件，负责往 dloop completed_task_ids 追加）和 stop_decision.py（Stop 事件，负责 iteration 递增+继续/停止判定）由 CC 框架在不同事件上触发，执行顺序不确定。当 stop_decision.py 先于 task_completed.py 执行时，iteration 递增但 completed_task_ids 尚未更新，可能导致停止条件误判或 iteration 计数与实际完成数不一致。需确保 stop_decision 读取到的 completed_task_ids 是最新的。",
+      "acceptance": [
+        "Given Task#N 被 release 为 Done When task_completed.py 和 stop_decision.py 都触发后 Then stop_decision 读到的 completed_task_ids 必然包含 N（无论触发顺序）",
+        "Given dloop active 且刚完成一个任务 When Stop hook 触发 Then iteration 递增与 completed_task_ids 追加的最终状态一致（无丢失）",
+        "Given 无 dloop 活跃时（默认模式） When Stop hook 触发 Then 行为不变（不影响默认模式性能）"
+      ],
+      "steps": [
+        "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py 和 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py，梳理两者的数据流：task_completed 写 dtask-state.json.dloop.completed_task_ids，stop_decision 读同一字段",
+        "2. [锁定] 方案选择：在 stop_decision.py 的 decide_loop_mode() 读取 runtime_state 前，先调用 sync_runtime_state() 强制从磁盘 reload 最新 dtask-state.json（而非使用内存缓存），确保读到 task_completed 可能已写入的最新 completed_task_ids",
+        "3. [锁定] 或备选方案：在 stop_decision.py 中读取 completed_task_ids 后，额外扫描 dtask.json 中 Done 任务作为 fallback 兜底（与 task_completed.py 的 fallback heuristic 对齐）",
+        "4. [建议] 在 hooks 配置或代码注释中记录两个 hook 的预期执行顺序依赖关系，方便后续维护者理解",
+        "5. 运行 pytest tests/ 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py"
+      ],
+      "category": "bugfix",
+      "blocked_by": [],
+      "status": "Done"
     }
   ]
 }

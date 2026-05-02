@@ -178,7 +178,7 @@ def cmd_sync_rules(cwd: Path) -> dict:
 
 
 def cmd_sync_skills(cwd: Path) -> dict:
-    """创建 .agents/skills/ 下各 skill 的 symlink 指向 ../../skills/{name}/。"""
+    """创建 .agents/skills/ 下各 skill 的 symlink 指向 plugin skills 目录。"""
     skills_src = PLUGIN_ROOT / "skills"
     target_dir = cwd / ".agents" / "skills"
 
@@ -189,7 +189,7 @@ def cmd_sync_skills(cwd: Path) -> dict:
     ensure_dir(target_dir)
 
     symlinks_report = []
-    created = skipped = fixed = 0
+    created = skipped = fixed = broken = 0
 
     for skill_dir in sorted(skills_src.iterdir()):
         if not skill_dir.is_dir():
@@ -199,17 +199,26 @@ def cmd_sync_skills(cwd: Path) -> dict:
 
         name = skill_dir.name
         link_path = target_dir / name
-        expected_target = f"../../skills/{name}"
+        real_target = skills_src / name
+        try:
+            expected_target = str(real_target.relative_to(target_dir))
+        except ValueError:
+            expected_target = str(real_target.resolve())
 
         if link_path.exists() or link_path.is_symlink():
             if link_path.is_symlink():
                 current_target = os.readlink(str(link_path))
-                if current_target == expected_target:
+                resolved = Path(link_path.parent / current_target).resolve()
+                if current_target == expected_target and resolved.exists():
                     skipped += 1
                     symlinks_report.append({"name": name, "target": expected_target, "status": "SKIPPED"})
                     continue
+                elif current_target == expected_target and not resolved.exists():
+                    # 路径正确但目标不可达（broken）→ 重建
+                    broken += 1
+                    link_path.unlink()
                 else:
-                    # 错误的 symlink → 删除重建
+                    # 错误路径 → 删除重建
                     link_path.unlink()
                     fixed += 1
             else:
@@ -218,22 +227,25 @@ def cmd_sync_skills(cwd: Path) -> dict:
                 symlinks_report.append({"name": name, "target": expected_target, "status": "USER_CUSTOM"})
                 continue
 
-        # 创建新 symlink
+        # 创建新 symlink（含 BROKEN 重建和全新创建）
         try:
             os.symlink(expected_target, str(link_path))
-            created += 1
-            symlinks_report.append({"name": name, "target": expected_target, "status": "CREATED"})
+            if broken > 0 and any(r.get("name") == name and r.get("status") == "BROKEN_PENDING" for r in symlinks_report):
+                symlinks_report.append({"name": name, "target": expected_target, "status": "FIXED"})
+            else:
+                created += 1
+                symlinks_report.append({"name": name, "target": expected_target, "status": "CREATED"})
         except OSError as e:
             symlinks_report.append({"name": name, "target": expected_target, "status": f"ERROR: {e}"})
 
-    total = created + skipped + fixed
+    total = created + skipped + fixed + broken
     return {
         "ok": True,
         "status": "synced",
-        "data": {"symlinks": symlinks_report, "summary": {"total": total, "created": created, "skipped": skipped, "fixed": fixed}},
+        "data": {"symlinks": symlinks_report, "summary": {"total": total, "created": created, "skipped": skipped, "fixed": fixed, "broken": broken}},
         "formatted_text": (
             f"🔗 Skills Symlink 同步完成\n"
-            f"   总计: {total} | 新建: {created} | 跳过: {skipped} | 修复: {fixed}"
+            f"   总计: {total} | 新建: {created} | 跳过: {skipped} | 修复: {fixed} | 坏链修复: {broken}"
         ),
     }
 
@@ -474,8 +486,22 @@ def cmd_validate(cwd: Path) -> dict:
                 link = skills_dir / sd.name
                 if link.is_symlink():
                     target = os.readlink(str(link))
-                    check(f"Skill symlink 正确: {sd.name}",
-                          target == f"../../skills/{sd.name}", f"target={target}")
+                    resolved = Path(link.parent / target).resolve()
+                    real_target = skills_src / sd.name
+                    try:
+                        expected = str(real_target.relative_to(skills_dir))
+                    except ValueError:
+                        expected = str(real_target.resolve())
+                    is_correct_path = (target == expected)
+                    is_reachable = resolved.exists()
+                    if is_correct_path and is_reachable:
+                        check(f"Skill symlink 正确: {sd.name}", True)
+                    elif not is_reachable:
+                        check(f"Skill symlink 正确: {sd.name}", False,
+                              f"broken symlink: target={target} -> {resolved} 不存在")
+                    else:
+                        check(f"Skill symlink 正确: {sd.name}", False,
+                              f"wrong target: expected={expected} actual={target}")
 
     # 运行时目录
     for d in ["recording", "archive"]:
