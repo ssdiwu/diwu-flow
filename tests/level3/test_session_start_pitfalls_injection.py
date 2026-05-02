@@ -8,7 +8,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 SESSION_START = PROJECT_ROOT / "hooks" / "scripts" / "session_start.py"
-MAX_PITFALLS_LEN = 4000  # 与 session_start.py 中的上限一致
+MAX_PITFALLS_LEN = 8000  # 与 session_start.py 中的上限一致
 
 
 def _run_session_start(cwd: str, stdin_data: dict = None) -> dict:
@@ -102,7 +102,7 @@ def test_template_header_with_real_data_injected():
         prompt = output.get("additionalSystemPrompt", "")
         assert "项目历史踩坑经验" in prompt
         assert "CI 超时" in prompt
-        assert "session-001.md" in prompt
+        assert "环境漂移" in prompt
 
 
 def test_real_pitfalls_injected():
@@ -122,19 +122,19 @@ def test_real_pitfalls_injected():
         prompt = output.get("additionalSystemPrompt", "")
         assert "项目历史踩坑经验" in prompt
         assert "环境漂移" in prompt
-        assert "CI 缺代理" in prompt
+        assert "测试通过但 CI 超时" in prompt
 
 
 def test_long_content_hard_capped():
-    """超长内容硬上限严格不超过 MAX_PITFALLS_LEN + 固定包装头开销（P3 修复验证）"""
+    """超长内容硬上限严格不超过 MAX_PITFALLS_LEN + 固定包装头开销（摘要模式）"""
     with tempfile.TemporaryDirectory() as tmpdir:
         diwu = os.path.join(tmpdir, ".diwu")
         os.makedirs(diwu)
         pitfalls = os.path.join(diwu, "project-pitfalls.md")
-        # 单个超大 section（6500 字符），模拟极端情况
+        # 单 section 超大数据集（摘要模式下现象列含增长后缀，远超 8000）
         lines = ["# 项目踩坑聚合表\n\n## 巨型类别\n\n| 现象 | 根因 | 正确做法 | 来源 |"]
         lines.append("|------|------|---------|------|")
-        for j in range(200):
+        for j in range(300):
             lines.append(f"| 超长现象描述-{j} {j * 'word'} | 根因-{j} | 做法-{j} | session-big-{j}.md |")
         long_content = "\n".join(lines)
         assert len(long_content) > MAX_PITFALLS_LEN * 1.5
@@ -145,14 +145,11 @@ def test_long_content_hard_capped():
         injected = _extract_injected(prompt)
         assert injected, "应有注入内容"
 
-        # 包装头固定开销（标题行 + 说明行 ≈ 80 字符）
-        WRAPPER_HEADER_LEN = 90
-        # 硬断言：总注入长度不超过 数据上限 + 包装头
+        # 包装头固定开销（标题行 + 说明行 + 底部提示）
+        WRAPPER_HEADER_LEN = 150
         assert len(injected) <= MAX_PITFALLS_LEN + WRAPPER_HEADER_LEN, (
             f"注入长度 {len(injected)} 超过数据上限 {MAX_PITFALLS_LEN} + 包装头 {WRAPPER_HEADER_LEN}"
         )
-        # 额外验证：尾部条目被裁剪（单 section 无法按 ## 边界切，走 head 截断）
-        assert "session-big-199" not in injected, "尾部条目应被裁剪掉"
         assert "[...]" in injected or "已裁剪" in injected, "应有裁剪标记"
 
 

@@ -105,33 +105,79 @@ if cwd:
                     pass  # 纯模板/占位文件，不注入
 
                 else:
-                    # P2: 长度裁剪——硬上限 4000 字符，保留最近内容
-                    MAX_PITFALLS_LEN = 4000
-                    content = raw
-                    # 剥离 HTML 注释行（模板头残留），避免 prompt 噪音
+                    # P2: 按类别生成摘要注入——上限 8000 字符
+                    MAX_PITFALLS_LEN = 8000
+                    # 剥离 HTML 注释行
                     content = "\n".join(
-                        l for l in content.split("\n")
+                        l for l in raw.split("\n")
                         if not l.strip().startswith("<!--")
                     ).strip()
-                    _TRUNCATE_MARKER = "\n[...]"
-                    if len(content) > MAX_PITFALLS_LEN:
-                        # 从后往前找最近的 ## 段落标题作为截断点
-                        search_start = max(0, len(content) - MAX_PITFALLS_LEN)
-                        cut_pos = content.rfind("\n## ", 0, search_start)
-                        if cut_pos > 0:
-                            content = "[... 已裁剪早期条目 ...]\n\n" + content[cut_pos + 1:]
-                        else:
-                            content = content[:MAX_PITFALLS_LEN - len(_TRUNCATE_MARKER)] + _TRUNCATE_MARKER
-                        # 硬兜底：确保不超上限（含标记开销）
-                        if len(content) > MAX_PITFALLS_LEN:
-                            content = content[:MAX_PITFALLS_LEN - len(_TRUNCATE_MARKER)] + _TRUNCATE_MARKER
-                    existing = result.get("additionalSystemPrompt", "")
-                    pitfalls_section = (
-                        "\n\n## 项目历史踩坑经验（project-pitfalls.md 自动注入）\n"
-                        "以下为本项目积累的误判模式，执行任务时优先对照检查：\n\n"
-                        + content
-                    )
-                    result["additionalSystemPrompt"] = existing + pitfalls_section
+                    # 按 ## 类别分段，提取每类现象摘要
+                    sections = content.split("\n## ")
+                    summary_parts = []
+                    for section in sections:
+                        sec_lines = section.strip().split("\n")
+                        if not sec_lines:
+                            continue
+                        cat_name = sec_lines[0].strip().lstrip("#").strip()
+                        if not cat_name or cat_name.lower().startswith("source:"):
+                            continue
+                        phenomena = []
+                        for line in sec_lines[1:]:
+                            stripped = line.strip()
+                            if (not stripped.startswith("|")
+                                    or stripped.startswith("|--")
+                                    or stripped.startswith("|-")):
+                                continue
+                            cells = [c.strip() for c in stripped.split("|")[1:-1]]
+                            if not cells:
+                                continue
+                            first_cell = cells[0]
+                            if len(first_cell) <= 4 and any(
+                                kw in first_cell for kw in ("现象", "Pattern", "Symptom")
+                            ):
+                                continue
+                            if first_cell.startswith("**Source:"):
+                                continue
+                            phenomena.append(first_cell)
+                        if phenomena:
+                            summary_parts.append((cat_name, phenomena))
+                    if summary_parts:
+                        summary_lines = []
+                        for cat_name, phenomena in summary_parts:
+                            summary_lines.append(f"{cat_name}（{len(phenomena)}条）:")
+                            for p in phenomena:
+                                display = p if len(p) <= 100 else p[:97] + "..."
+                                summary_lines.append(f"- {display}")
+                            summary_lines.append("")
+                        summary_text = "\n".join(summary_lines).strip()
+                        if len(summary_text) > MAX_PITFALLS_LEN:
+                            trunc_pos = summary_text.rfind(
+                                "\n\n", 0, len(summary_text) - MAX_PITFALLS_LEN
+                            )
+                            if trunc_pos > 0:
+                                summary_text = (
+                                    "[... 已裁剪早期类别 ...]\n\n"
+                                    + summary_text[trunc_pos + 2:]
+                                )
+                            else:
+                                summary_text = (
+                                    summary_text[:MAX_PITFALLS_LEN - 50] + "\n[...]"
+                                )
+                            if len(summary_text) > MAX_PITFALLS_LEN:
+                                summary_text = (
+                                    summary_text[:MAX_PITFALLS_LEN - 50] + "\n[...]"
+                                )
+                        existing = result.get("additionalSystemPrompt", "")
+                        pitfalls_section = (
+                            "\n\n## 项目历史踩坑经验"
+                            "（project-pitfalls.md 自动注入，摘要模式）\n"
+                            "以下为本项目积累的误判模式摘要，"
+                            "执行任务时优先对照检查：\n\n"
+                            + summary_text
+                            + "\n\n详细条目见 .diwu/project-pitfalls.md"
+                        )
+                        result["additionalSystemPrompt"] = existing + pitfalls_section
         except OSError:
             pass
 
