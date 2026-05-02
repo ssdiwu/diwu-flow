@@ -64,9 +64,14 @@ argument-hint: "[归档类型]"
    a. 扫描本次归档的 recording + 剩余 recording 中所有 ### 本次踩坑/经验 段落
    b. 归档文件内按 ## Source: session-xxx.md 分隔符追踪每条踩坑所属的具体 session
    c. 按 Layer 2 类别标签聚类（验证误读/分层未拆清/环境漂移/路由护栏契约等）
-   d. 追加写入 .diwu/project-pitfalls.md（不覆盖已有条目，追加新条目）
-   e. **来源列必须写具体 session 文件名**（如 session-2026-04-18-213522.md），禁止写占位符如"聚合来源"
-   f. 如无踩坑数据则跳过，在 summary 中标注 "0 new pitfalls"
+   d. **[去重合并]** 每个 session 内部，同类别的多条踩坑合并为一条：
+      - 同一 session + 同一类别标签 → 合并，现象描述要点保留并用「; 」连接
+      - 示例：session-001 有 3 条「验证误读」→ 合并为 1 条，现象列为「现象A; 现象B; 现象C」
+   e. **[禁止跨 session 去重]** 不同 session 遇到同一问题是复发信号，各自保留独立条目
+   f. **[禁止过期清理]** 保留所有历史条目，不按时间或代码状态清理
+   g. 追加写入 .diwu/project-pitfalls.md（不覆盖已有条目，追加新条目）
+   h. **来源列必须写具体 session 文件名**（如 session-2026-04-18-213522.md），禁止写占位符如"聚合来源"
+   i. 如无踩坑数据则跳过，在 summary 中标注 "0 new pitfalls"
 5. 验证清单：
    [ ] dtask 中无残留的 Done/Cancelled 任务（超出保留阈值的部分）
    [ ] recording/ 文件数 < threshold
