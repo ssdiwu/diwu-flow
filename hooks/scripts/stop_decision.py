@@ -1,4 +1,11 @@
-"""Stop hook: default single-task mode + dloop mode."""
+"""Stop hook: default single-task mode + dloop mode.
+
+执行顺序依赖（dloop 模式）：
+  task_completed.py (TaskCompleted 事件) → 写 dloop.completed_task_ids
+  stop_decision.py   (Stop 事件)            → 读 completed_task_ids + iteration 递增
+两个 hook 由 CC 框架在不同事件上触发，执行顺序不确定。
+decide_loop_mode() 中已增加 fallback：扫描 dtask.json Done 任务补充 completed_task_ids。
+"""
 
 from __future__ import annotations
 
@@ -405,6 +412,16 @@ if __name__ == "__main__":
 
     runtime_state = sync_result.state
     loop_state = runtime_loop_state(runtime_state)
+
+    # Fallback: task_completed.py (TaskCompleted event) 和 stop_decision.py (Stop event)
+    # 由 CC 框架在不同事件上触发，执行顺序不确定。如果 stop_decision 先于
+    # task_completed 执行，completed_task_ids 可能尚未包含最新 Done 任务。
+    # 此处扫描 dtask.json 中 Done 任务作为兜底补充，确保不丢失。
+    current_completed = loop_state.get("completed_task_ids", []) if loop_state else []
+    done_ids_from_json = {t["id"] for t in tasks if t.get("status") == "Done"}
+    missing_ids = [tid for tid in done_ids_from_json if tid not in current_completed]
+    if missing_ids:
+        loop_state["completed_task_ids"] = current_completed + missing_ids
     session_id = hook_session_id(stdin_data)
 
     if loop_state is not None:
