@@ -197,6 +197,62 @@ def _check_decision_reminder(cwd):
     return ""
 
 
+def _check_recording_reminder(cwd):
+    """If working directory has code changes but .diwu/recording/ has no recent session,
+    return an info-level reminder suggesting /drec. Non-blocking."""
+    if not cwd:
+        return ""
+    import glob as _glob
+    import subprocess as _sp
+
+    # Check for code changes (exclude .diwu/ internal state files)
+    try:
+        result = _sp.run(
+            ["git", "status", "--short"],
+            cwd=cwd, capture_output=True, text=True, timeout=10
+        )
+        lines = result.stdout.strip().split("\n") if result.stdout.strip() else []
+        # Filter: count non-.diwu/ changes
+        code_changes = [l for l in lines if l and not l.startswith(".diwu/")]
+        if not code_changes:
+            return ""
+    except (OSError, _sp.TimeoutExpired):
+        return ""
+
+    # Check latest recording session file
+    recording_dir = os.path.join(cwd, ".diwu", "recording")
+    if not os.path.isdir(recording_dir):
+        return (
+            "\n"
+            "检测到代码变更，建议先 /drec 记录本次 session "
+            "（详见 drec §原子 Commit 职责）"
+        )
+
+    sessions = sorted(
+        _glob.glob(os.path.join(recording_dir, "session-*.md")),
+        key=os.path.getmtime,
+        reverse=True,
+    )
+    if not sessions:
+        return (
+            "\n"
+            "检测到代码变更，建议先 /drec 记录本次 session "
+            "（详见 drec §原子 Commit 职责）"
+        )
+
+    # Compare timestamps: if recording is older than 5 minutes, likely stale
+    import time
+    latest_mtime = os.path.getmtime(sessions[0])
+    if time.time() - latest_mtime > 300:
+        return (
+            "\n"
+            "检测到代码变更，最近 recording 已超过 5 分钟，建议先 /drec 更新记录 "
+            "（详见 drec §原子 Commit 职责）"
+        )
+
+    return ""
+
+
 def decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state, session_id, cwd=None):
     extra = _prompt_suffix(additional_prompts)
     resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, session_id or "")
@@ -235,6 +291,11 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
     decision_hint = _check_decision_reminder(cwd)
     if decision_hint:
         print(f"\n{decision_hint}", file=sys.stderr)
+
+    # Soft reminder: check if code changes exist without recent recording
+    recording_hint = _check_recording_reminder(cwd)
+    if recording_hint:
+        print(recording_hint, file=sys.stderr)
 
     return False, {}
 

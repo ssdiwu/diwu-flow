@@ -87,8 +87,8 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 
 在 session 结束前（含 context window 接近上限时）：
 
-1. 写入 recording/session 文件（必须运行 date 获取真实时间戳），记录 Session 标题、处理的任务及状态、验收验证结果、下次应该做什么
-2. **将 recording 与本轮代码变更一并 commit**（不单独成 commit）
+1. 整理 session 内容摘要（处理了哪些任务、实施内容、验收验证结果、下一步计划）
+2. **调用 `/drec` 完成 recording 写入与原子 commit**（详见 drec §原子 Commit 职责 §调用契约），由 drec 统一负责：写入文件 → git add -A 全量变更 → git commit
 
 > **（R1）**：写入 session 文件前必须 Read 当前 session 文件尾部，确认追加位置正确。
 
