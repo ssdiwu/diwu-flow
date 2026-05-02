@@ -1,6 +1,6 @@
 # diwu-flow
 
-**插件版本：0.0.8**
+**插件版本：0.0.9**
 
 ## 核心原则
 
@@ -55,6 +55,15 @@
 ## 公开版本发布流程
 
 > 私有仓库 → 公开仓库，只需配置一次 remote：
+
+**发版前检查清单**：
+
+| # | 检查项 | 方法 |
+|---|--------|------|
+| 1 | `pytest tests/` 全量通过 | `python3 -m pytest tests/ -q` |
+| 2 | CHANGELOG.md 已追加新版本条目 | 人工确认 |
+| 3 | 版本号已同步到三处 | plugin.json、marketplace.json、install.sh OpenCode stub |
+| 4 | dloop runtime 已清空 | `python3 -c "import json; s=json.load(open('.diwu/dtask-state.json')); assert s.get('dloop') is None"` |
 
 ```bash
 # 前置配置（只需一次）

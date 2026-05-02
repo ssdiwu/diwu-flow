@@ -2,6 +2,24 @@
 
 All notable changes to diwu-flow will be documented in this file.
 
+## [0.0.9] - 2026-05-02
+
+### dloop start 返回文案修正（Task#58）
+
+- **修复**：`dloop.py start` 的 `formatted_text` 和 `message` 从"首轮开始: Task#N"改为"请立即发起 /drun 完成首轮任务"，消除 Agent 绕过 /drun 直接实施的问题
+
+### project-pitfalls.md 摘要注入模式（Task#59）
+
+- **截断上限**：`MAX_PITFALLS_LEN` 4000 → 8000
+- **摘要模式**：替换全文截断为按 `## ` 类别分段生成摘要——每类列出全部现象列（一行一条 + 计数），末尾提示"详细条目见 .diwu/project-pitfalls.md"
+- **截断策略**：从最旧类别开始逐类裁剪，保证保留的最新类别完整（P1 补丁修复了初版实现的无限循环 bug）
+- **测试**：新增 `test_truncation_never_cuts_newest_category_mid_section` 验证多类别裁剪后最新类别完整性
+
+### darc 踩坑聚合去重合并（Task#60）
+
+- **去重合并**：归档踩坑聚合时，同一 session + 同一类别标签的条目合并为一条
+- **不去重范围**：不跨 session 去重（保留复发信号），不过期清理（保留所有历史条目）
+
 ## [0.0.8] - 2026-05-02
 
 ### project-pitfalls.md 自动注入（SessionStart hook）
