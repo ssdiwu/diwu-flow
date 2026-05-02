@@ -56,14 +56,22 @@ All notable changes to diwu-flow will be documented in this file.
 - **verifier 增强**：新增 Failure Mode 和 Authority 声明，明确权限边界
 - **理由**：agent 设计从角色驱动转向能力驱动，按任务节点的能力需求派发；领域方法论内容应归 skills/rules 层，而不是自动调度执行单元
 
-## [0.0.4] - 2026-04-29
+## [0.0.3] - 2026-04-29
 
-### Agent Taxonomy v2：核心收缩
+### 工作流资产初始化
 
-- **领域 Agent 移除**：删除 ui-designer、frontend-architect、backend-architect、devops-architect、performance-optimizer、api-tester、legal-compliance 共 7 个领域 agent
-- **核心 Agent 保留**：explorer（只读探索）、implementer（代码实施）、verifier（独立验证）成为唯一执行 primitive
-- **verifier 增强**：新增 Failure Mode 和 Authority 声明，明确权限边界
-- **理由**：agent 设计从角色驱动转向能力驱动，按任务节点的能力需求派发；领域方法论内容应归 skills/rules 层，而不是自动调度执行单元
+- **版本号同步**：0.0.1 → 0.0.3（triple bump，跳过已废弃的 0.0.2 中间状态）
+- **CLAUDE.md 同步**：更新插件版本号和索引表
+- **worktree 资产**：新增 `.diwu/checks/smoke.sh`（基线环境验证脚本）、`.diwu/archive/.gitkeep`、`dsettings.json`、`dtask.json`、`decisions.md`
+- **初始 session 记录**：4 个历史 session 文件归档
+
+## [0.0.2] - 2026-04-29
+
+### 公开仓库适配 + Checkpoint 修正
+
+- **公开仓库地址更新**：diwu-flow-public → diwu-flow
+- **/dinit 刷新**：rules + skills symlink + smoke.sh 统一初始化路径
+- **Checkpoint 修正**：仅在有 InProgress 任务时创建 checkpoint 文件；文件前缀改为 `checkpoint-` 避免命名冲突
 
 ## [0.0.1] - 2026-04-29
 
