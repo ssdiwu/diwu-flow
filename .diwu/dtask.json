@@ -428,7 +428,7 @@
       ],
       "category": "refactor",
       "blocked_by": [],
-      "status": "InDraft"
+      "status": "Done"
     },
     {
       "id": 73,
@@ -464,7 +464,7 @@
       "blocked_by": [
         72
       ],
-      "status": "InDraft"
+      "status": "Done"
     },
     {
       "id": 74,
@@ -510,7 +510,7 @@
       "blocked_by": [
         73
       ],
-      "status": "InDraft"
+      "status": "Done"
     },
     {
       "id": 75,

@@ -17,9 +17,9 @@ AGENTS_DIR = "agents"
 ALL_AGENTS = ["explorer", "implementer", "verifier"]
 
 CORE_AGENT_MODEL_EXPECTATIONS = {
-    "explorer": {"allowed_models": [None, "haiku", "sonnet"], "reason": "只读探索，快速廉价"},
-    "implementer": {"allowed_models": [None, "sonnet", "inherit"], "reason": "代码实施需质量保证"},
-    "verifier": {"allowed_models": [None, "haiku", "sonnet", "inherit"], "reason": "独立验收需推理与验证能力"},
+    "explorer": {"required_model": "haiku", "reason": "只读探索，必须用快速廉价模型"},
+    "implementer": {"required_model": "sonnet", "reason": "代码实施，必须用质量保证模型"},
+    "verifier": {"allowed_models": [None, "haiku", "sonnet", "inherit"], "reason": "独立验收需推理与验证能力（继承父会话）"},
 }
 
 AGENT_REQUIRED_FIELDS = {
@@ -94,10 +94,16 @@ class TestCoreAgentModelSuitability:
         fm = _load_agent_frontmatter(path)
         expectation = CORE_AGENT_MODEL_EXPECTATIONS[agent_name]
         actual_model = fm.get("model")
-        assert actual_model in expectation["allowed_models"], (
-            f"{agent_name}.md 的 model='{actual_model}' 不在允许范围内 "
-            f"{expectation['allowed_models']}。{expectation['reason']}"
-        )
+        if "required_model" in expectation:
+            assert actual_model == expectation["required_model"], (
+                f"{agent_name}.md 的 model 必须为 '{expectation['required_model']}'"
+                f"（实际='{actual_model}'）。{expectation['reason']}"
+            )
+        else:
+            assert actual_model in expectation["allowed_models"], (
+                f"{agent_name}.md 的 model='{actual_model}' 不在允许范围内 "
+                f"{expectation['allowed_models']}。{expectation['reason']}"
+            )
 
 
 class TestExplorerToolsReadonly:

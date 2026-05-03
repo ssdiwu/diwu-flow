@@ -585,7 +585,7 @@ git remote -v # 哪个 remote？
 
 ## Version
 
-v0.0.10 — 精简完成（删除 djug/darc/ddemo 4 个废弃能力）+ diwu-workflow 残留清理 + dref 需求细化清单 + dvfy 验证证据体系独立化。
+v0.0.11 — dadr 并入 ddoc（Commands 12→11）+ Agent 模型分级 + drun verifier 终验门控。
 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License

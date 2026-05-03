@@ -57,6 +57,18 @@ def _readme_path(adr_dir: Path) -> Path:
     return adr_dir / ADR_README
 
 
+def _extract_status(adr_file: Path) -> str:
+    """从 ADR 文件正文提取 **Status** 行的值，未找到时返回 Proposed。"""
+    try:
+        for line in adr_file.read_text(encoding="utf-8").splitlines():
+            m = re.match(r"^\*\*Status\*\*:\s*(.+)", line)
+            if m:
+                return m.group(1).strip()
+    except Exception:
+        pass
+    return "Proposed"
+
+
 def _parse_readme_index(readme_path: Path) -> list[dict]:
     """解析 README.md 索引表格，返回 [{number, title, status, summary}]。
 
@@ -79,7 +91,7 @@ def _parse_readme_index(readme_path: Path) -> list[dict]:
                 continue
             parts = [p.strip() for p in stripped.split("|")[1:-1]]
             if parts and parts[0] and parts[0].startswith("ADR-"):
-                m = re.match(r"(\d+)", parts[0])
+                m = re.search(r"(\d+)", parts[0])
                 if m:
                     rows.append({
                         "number": int(m.group(1)),
@@ -172,7 +184,7 @@ def cmd_create(cwd: Path, title: str, number: int | None = None,
                     "number": int(m.group(1)),
                     "full_id": f"ADR-{m.group(1)}",
                     "title": t.replace("-", " ") if t else m.group(2),
-                    "status": "Proposed",
+                    "status": _extract_status(f),
                     "summary": "",
                 })
         rows.sort(key=lambda r: r["number"])
