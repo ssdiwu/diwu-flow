@@ -1,6 +1,6 @@
 # diwu-flow
 
-**插件版本：0.0.10**
+**插件版本：0.0.11**
 
 ## 核心原则
 
@@ -76,7 +76,7 @@ git remote add public git@github.com:ssdiwu/diwu-flow.git
 
 ## 项目结构
 
-- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, dadr, ddoc, drec, dref, dcorr, dstat, dloop, dend）
+- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, ddoc, drec, dref, dcorr, dstat, dloop, dend）
 - `skills/` — 技能文件（dtask, drun, dcorr, dvfy, drec, dprd, ddoc, dref, dstat, dloop）
 - `scripts/` — 共享脚本工具库（common.py 含 plugin_root/load_json/save_json/max_task_id 等函数），新增 script-backed 执行通道
 - `rules/` — 方法论规则文件

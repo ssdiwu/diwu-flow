@@ -1,3 +1,17 @@
+## [v0.0.11] - 2026-05-04
+
+### Changed
+- **dadr 并入 ddoc**：独立 `/dadr` Command 删除，功能作为第三种 `adr` 模式并入 `/ddoc`
+- **scripts/dadr.py → scripts/ddoc_adr.py**：重命名为 ddoc 的 ADR 子模式后端
+- **skills/ddoc/SKILL.md**：新增 ADR 模式完整章节（工作流/5步骤/AI保留步骤/骨架模板/边界情况）
+- **commands/ddoc.md**：重写为 forward/reverse/adr 三模式入口，含 ADR 子命令表和约束表
+- **Commands 12 → 11**：plugin.json/marketplace.json/install.sh/README.md 全量同步
+
+### Removed
+- **commands/dadr.md**：独立 ADR 命令（功能无损移位至 /ddoc --mode adr）
+
+---
+
 ## [v0.0.10] - 2026-05-03
 
 ### Added

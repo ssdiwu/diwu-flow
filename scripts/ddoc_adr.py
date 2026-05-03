@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""diwu-flow dadr: 架构决策记录脚本化（编号分配 + 文件骨架 + 索引维护）。
+"""diwu-flow ddoc: ADR 子模式脚本（编号分配 + 文件骨架 + 索引维护）。
 
-AI 保留 Step 1-2（澄清问题 + 内容撰写）。
-T3: cancel 归 dend.py；T11: README 缺失时扫描重建索引；T19: 固定语义 {ok, status, data?}。
+作为 /ddoc --mode adr 的后端，提供 next-number/create/update-status 三个子命令。
+AI 保留 Step 1-2（澄清问题 + 内容撰写）由 SKILL.md 定义。
+T11: README 缺失时扫描重建索引；固定语义 {ok, status, data?}。
 """
 
 import argparse
