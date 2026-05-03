@@ -1,5 +1,25 @@
 {
   "version": 1,
   "task_sessions": {},
-  "dloop": null
+  "dloop": {
+    "active": true,
+    "session_id": "dloop-2026-05-03-083005",
+    "started_at": "2026-05-03T08:30:05.081530+00:00",
+    "completed_task_ids": [],
+    "initial_done_ids": [
+      64,
+      65,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
+    ],
+    "current_iteration": 0,
+    "max_tasks": 0,
+    "stopped_at": null,
+    "stop_reason": null
+  },
+  "pending_recording": null
 }

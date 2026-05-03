@@ -1,7 +1,6 @@
 """L2 tests for plan-guard hard block + marker lifecycle."""
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -142,6 +141,7 @@ def test_task_entry_guard_allows_runtime_state_write(tmp_path):
 
 def _run_guard(tmp_path, tool_name="Edit", file_path=None, event_overrides=None):
     payload = {
+        "session_id": "test-session",
         "hook_event_name": "PreToolUse",
         "tool_name": tool_name,
         "cwd": str(tmp_path),
@@ -159,8 +159,15 @@ def _run_guard(tmp_path, tool_name="Edit", file_path=None, event_overrides=None)
     return result
 
 
-def _run_plan_exit(tmp_path):
-    payload = {"tool_name": "ExitPlanMode", "cwd": str(tmp_path)}
+def _run_plan_exit(tmp_path, plan_text, session_id="test-session", event_overrides=None):
+    payload = {
+        "session_id": session_id,
+        "tool_name": "ExitPlanMode",
+        "cwd": str(tmp_path),
+        "tool_input": {"plan": plan_text},
+    }
+    if event_overrides:
+        payload.update(event_overrides)
     result = subprocess.run(
         [sys.executable, str(PLAN_EXIT_SCRIPT)],
         input=json.dumps(payload),
@@ -173,73 +180,29 @@ def _run_plan_exit(tmp_path):
 
 def test_exit_plan_mode_small_plan_no_marker(tmp_path):
     """ExitPlanMode + 小 plan（<20 行）-> 不创建 marker。"""
-    plan_dir = Path.home() / ".claude" / "plans"
-    plan_dir.mkdir(parents=True, exist_ok=True)
-    plan_file = plan_dir / "test-small-plan.md"
-    plan_file.write_text("\n".join(["# Plan line"] * 10), encoding="utf-8")
-
-    payload = {
-        "tool_name": "ExitPlanMode",
-        "cwd": str(tmp_path),
-        "tool_input": {"file_path": str(plan_file)},
-    }
-    result = subprocess.run(
-        [sys.executable, str(PLAN_EXIT_SCRIPT)],
-        input=json.dumps(payload),
-        capture_output=True,
-        text=True,
-        cwd=str(tmp_path),
-    )
+    result = _run_plan_exit(tmp_path, "\n".join(["# Plan line"] * 10))
     assert result.returncode == 0
     marker = tmp_path / ".claude" / ".plan-active"
     assert not marker.exists(), "小 plan 不应创建 marker"
 
-    # 清理
-    plan_file.unlink()
-
 
 def test_exit_plan_mode_big_plan_creates_marker_with_path(tmp_path):
-    """ExitPlanMode + 大 plan（>=20 行）-> 创建 marker 且内容为路径。"""
-    plan_dir = Path.home() / ".claude" / "plans"
-    plan_dir.mkdir(parents=True, exist_ok=True)
-    plan_file = plan_dir / "test-big-plan.md"
-    plan_file.write_text("\n".join(["# Plan line"] * 25), encoding="utf-8")
-
-    payload = {
-        "tool_name": "ExitPlanMode",
-        "cwd": str(tmp_path),
-        "tool_input": {"file_path": str(plan_file)},
-    }
-    result = subprocess.run(
-        [sys.executable, str(PLAN_EXIT_SCRIPT)],
-        input=json.dumps(payload),
-        capture_output=True,
-        text=True,
-        cwd=str(tmp_path),
-    )
+    """ExitPlanMode + 大 plan（>=20 行）-> 创建 marker JSON。"""
+    result = _run_plan_exit(tmp_path, "\n".join(["# Plan line"] * 25))
     assert result.returncode == 0
     marker = tmp_path / ".claude" / ".plan-active"
     assert marker.exists(), "大 plan 应创建 marker"
-    content = marker.read_text().strip()
-    assert content == str(plan_file), f"marker 内容应为 plan 路径，实际: {content}"
-
-    # 清理
-    plan_file.unlink()
+    content = json.loads(marker.read_text(encoding="utf-8"))
+    assert content["version"] == 2
+    assert content["source"] == "tool_input.plan"
+    assert content["session_id"] == "test-session"
+    assert content["line_count"] == 25
 
 
 def test_marker_with_big_plan_triggers_hard_block(tmp_path):
-    """marker(含有效 plan 路径) + 大 plan 文件 + 无活跃任务 → hard block (exit 2)。"""
-    # 创建大 plan 文件
-    plan_dir = Path.home() / ".claude" / "plans"
-    plan_dir.mkdir(parents=True, exist_ok=True)
-    plan_file = plan_dir / "test-big-plan.md"
-    plan_file.write_text("\n".join(["# Plan line"] * 25), encoding="utf-8")
-
-    # 创建 marker，写入 plan 路径
-    marker = tmp_path / ".claude" / ".plan-active"
-    marker.parent.mkdir(exist_ok=True)
-    marker.write_text(str(plan_file) + "\n", encoding="utf-8")
-
+    """ExitPlanMode 写入 marker 后，同 session 无活跃任务 → hard block (exit 2)。"""
+    result = _run_plan_exit(tmp_path, "\n".join(["# Plan line"] * 25))
+    assert result.returncode == 0
     # 无活跃任务的 dtask
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
@@ -249,13 +212,9 @@ def test_marker_with_big_plan_triggers_hard_block(tmp_path):
     assert result.returncode == 2, f"应 hard block (exit 2) 但 got {result.returncode}"
     assert "HARD BLOCK" in result.stderr
 
-    # 清理
-    plan_file.unlink()
-
 
 def test_stale_plan_no_block(tmp_path):
-    """marker 记录的 plan 文件已不存在 → 不触发 hard block。"""
-    # 创建 marker 指向一个不存在的 plan
+    """legacy path marker 指向不存在文件 → 不触发 hard block。"""
     marker = tmp_path / ".claude" / ".plan-active"
     marker.parent.mkdir(exist_ok=True)
     fake_plan = "/tmp/nonexistent-stale-plan.md"
@@ -287,17 +246,46 @@ def test_stale_marker_empty_no_block(tmp_path):
     assert result.returncode == 0, f"空 marker 不应 hard block，got {result.returncode}"
 
 
-def test_active_task_bypasses_hard_block(tmp_path):
-    """有活跃任务时即使 marker 存在也不触发 hard block。"""
-    # 创建一个真实存在的 plan 文件供 marker 引用
-    plan_dir = Path.home() / ".claude" / "plans"
-    plan_dir.mkdir(parents=True, exist_ok=True)
-    plan_file = plan_dir / "test-bypass-plan.md"
+def test_legacy_path_marker_with_big_plan_still_blocks(tmp_path):
+    """legacy path marker 指向真实大 plan 时，仍应 hard block。"""
+    plan_file = tmp_path / "legacy-plan.md"
     plan_file.write_text("\n".join(["# Plan line"] * 25), encoding="utf-8")
 
     marker = tmp_path / ".claude" / ".plan-active"
     marker.parent.mkdir(exist_ok=True)
     marker.write_text(str(plan_file) + "\n", encoding="utf-8")
+
+    diwu = tmp_path / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+
+    result = _run_guard(tmp_path)
+    assert result.returncode == 2, f"legacy path marker 应继续 hard block，got {result.returncode}"
+    assert "HARD BLOCK" in result.stderr
+
+
+def test_marker_from_other_session_is_cleaned(tmp_path):
+    """JSON marker 属于旧 session 时，应清理并放行。"""
+    marker = tmp_path / ".claude" / ".plan-active"
+    marker.parent.mkdir(exist_ok=True)
+    marker.write_text(
+        json.dumps({"version": 2, "source": "tool_input.plan", "session_id": "old-session", "line_count": 25}),
+        encoding="utf-8",
+    )
+
+    diwu = tmp_path / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+
+    result = _run_guard(tmp_path, event_overrides={"session_id": "new-session"})
+    assert result.returncode == 0, f"旧 session marker 不应 hard block，got {result.returncode}"
+    assert not marker.exists(), "跨 session 的 stale marker 应被自动清理"
+
+
+def test_active_task_bypasses_hard_block(tmp_path):
+    """有活跃任务时即使 marker 存在也不触发 hard block。"""
+    result = _run_plan_exit(tmp_path, "\n".join(["# Plan line"] * 25))
+    assert result.returncode == 0
 
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)

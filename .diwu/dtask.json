@@ -193,6 +193,209 @@
       "category": "bugfix",
       "blocked_by": [],
       "status": "Done"
+    },
+    {
+      "id": 66,
+      "title": "ddoc 重构：skill 自包含化 + command 薄壳化",
+      "description": "当前 commands/ddoc.md 225行包含全部执行步骤，skills/ddoc 只是索引。需重构为：skills/ddoc/SKILL.md 成为自包含规范源（合并 CONTEXT.md/quick.md/四层示范/output-structure.md/constraints.md），commands/ddoc.md 精简为~30行薄壳。删除 5 个文件，保留 4 个 references/。",
+      "acceptance": [
+        "Given skills/ddoc/SKILL.md 完成后 When 读取 Then 包含完整的两种模式概述、快速决策树、四层示范、输出结构决策树、五约束维度定义、R1 写入约束",
+        "Given commands/ddoc.md 完成后 When 读取 Then 不超过 40 行，只含 frontmatter + Step 0 参数检测 + Step 1 四问 + 指向 skill",
+        "Given 重构完成 When 检查 skills/ddoc/ 目录 Then CONTEXT.md/quick.md/references/output-structure.md/references/constraints.md/references/INDEX.md 已删除，forward-mode.md/reverse-mode.md/completeness.md/templates.md 保留"
+      ],
+      "steps": [
+        "1. 读取 skills/ddoc/SKILL.md、CONTEXT.md、quick.md、commands/ddoc.md、references/output-structure.md、references/constraints.md 确认当前完整内容",
+        "2. [锁定] 重写 skills/ddoc/SKILL.md：合并上述全部内容为自包含规范源，保留 frontmatter 定义，按 核心原则 → 两种模式概述 → 快速决策树 → 正逆向核心步骤 → 四层示范 → 输出结构选择 → 五约束维度 → 两层完整性检查 → FAQ → References 章节组织",
+        "3. [锁定] 重写 commands/ddoc.md：保留 frontmatter + Step 0 参数检测规则 + Step 1 四问 + 指向 skills/ddoc/SKILL.md 的引用，删除所有详细执行步骤",
+        "4. [锁定] 删除 CONTEXT.md、quick.md、references/output-structure.md、references/constraints.md、references/INDEX.md"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "InSpec"
+    },
+    {
+      "id": 67,
+      "title": "删除 djug Skill + rules 三副本同步（mindset/workflow）",
+      "description": "djug 内容与 rules/judgments.md 完全重复，无独立方法论价值。删除 skills/djug/ 目录，清理 drun/dtask 的 depends 引用和 inline 引用，同步更新 rules/ + .claude/rules/ + assets/dinit/assets/rules/ 三副本中的 mindset.md 和 workflow.md。",
+      "acceptance": [
+        "Given djug 删除后 When 检查 skills/ 目录 Then djug/ 不存在",
+        "Given djug 删除后 When 读取 skills/drun/SKILL.md depends 列表 Then 不包含 djug，inline 调用顺序为 dtask → dvfy → dcorr",
+        "Given djug 删除后 When 读取 skills/dtask/SKILL.md depends 列表 Then 不包含 djug",
+        "Given rules 同步完成 When diff rules/mindset.md .claude/rules/mindset.md assets/dinit/assets/rules/mindset.md Then 三文件一致，均不含 djug 引用",
+        "Given rules 同步完成 When diff rules/workflow.md .claude/rules/workflow.md assets/dinit/assets/rules/workflow.md Then 三文件一致，均不含 djug 引用"
+      ],
+      "steps": [
+        "1. 删除 skills/djug/ 目录（rm -rf）",
+        "2. [锁定] skills/drun/SKILL.md：depends 列表移除 djug，inline 调用顺序 dtask → dvfy → djug(判定) → dcorr 改为 dtask → dvfy → dcorr",
+        "3. [锁定] skills/dtask/SKILL.md：depends 列表移除 djug",
+        "4. [锁定] rules/mindset.md：移除 djug 命名示例（如 drun、dvfy、djug 等 → 如 drun、dvfy 等）",
+        "5. [锁定] rules/workflow.md：移除两处 djug 引用（lines 3, 28）",
+        "6. [锁定] 同步 .claude/rules/mindset.md、.claude/rules/workflow.md",
+        "7. [锁定] 同步 assets/dinit/assets/rules/mindset.md、assets/dinit/assets/rules/workflow.md"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/workflow.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "InSpec"
+    },
+    {
+      "id": 68,
+      "title": "删除 darc Skill + 并入 drec + 新建 commands/drec.md",
+      "description": "darc 是纯手动步骤清单。删除 skills/darc/，将归档规范完整迁移到 skills/drec/SKILL.md 的归档聚合指引章节。新建 commands/drec.md 薄壳，使 /drec 成为真实 command 入口。所有 /darc 引用统一改为 /drec。",
+      "acceptance": [
+        "Given darc 删除后 When 检查 skills/ 目录 Then darc/ 不存在",
+        "Given drec SKILL.md 更新后 When 读取归档聚合指引章节 Then 包含双轨总览、触发条件、手动步骤5步、产物格式3种、验证清单5项、约束5条",
+        "Given commands/drec.md 新建后 When 读取 Then ~15行薄壳，指向 skills/drec/SKILL.md",
+        "Given /darc 引用迁移完成 When grep 全仓库 Then 无残留 /darc 提示（commands/dstat.md、hooks/scripts/stop_archive.py、rules/pitfalls.md 均已改为 /drec 或等效表述）",
+        "Given rules 同步完成 When diff rules/pitfalls.md .claude/rules/pitfalls.md assets/dinit/assets/rules/pitfalls.md Then 三文件一致，darc 引用已移除"
+      ],
+      "steps": [
+        "1. 删除 skills/darc/ 目录（rm -rf）",
+        "2. [锁定] 读取 skills/drec/SKILL.md 当前归档聚合指引章节，扩展迁移：双轨总览表、触发条件(threshold+retention_days)、手动步骤5步、产物格式(task_archive/recording_archive/last_summary)、验证清单5项、约束5条、归档检测函数签名",
+        "3. [锁定] 新建 commands/drec.md：frontmatter(description/argument-hint/allowed-tools:Read/effort:low) + 定位说明 + 3-4步执行提示 + 完整规范指向 skills/drec/SKILL.md",
+        "4. [锁定] commands/dstat.md line 27：/darc → /drec",
+        "5. [锁定] hooks/scripts/stop_archive.py 3处：/darc → 归档（/drec）",
+        "6. [锁定] rules/pitfalls.md：drec + darc → drec",
+        "7. [锁定] 同步 .claude/rules/pitfalls.md 和 assets/dinit/assets/rules/pitfalls.md"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drec.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dstat.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_archive.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/pitfalls.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/pitfalls.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/pitfalls.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "InSpec"
+    },
+    {
+      "id": 69,
+      "title": "删除 ddemo Skill + Command + 清理所有引用",
+      "description": "ddemo 核心概念已被 rules/mindset.md（不确定性门控）和 dprd（可预期/不可预期判断）覆盖。删除 skills/ddemo/ + commands/ddemo.md，清理 commands/dprd/commands/ddoc/commands/dtask/rules/judgments/rules/mindset/skills/dprd/install.sh 中的 ddemo 引用。同步 rules 三副本（judgments.md + mindset.md）。注意：rules/mindset.md 在 Task#67 已改过，本任务在此基础上继续改。",
+      "acceptance": [
+        "Given ddemo 删除后 When 检查 skills/ 和 commands/ Then ddemo/ 和 commands/ddemo.md 不存在",
+        "Given ddemo 引用清理后 When grep 全仓库 Then 无残留 /ddemo 或 ddemo 引用（除 CHANGELOG 历史记录外）",
+        "Given commands/dprd.md 更新后 When 读取 Demo 提示 Then 写「手动验证或用 /dprd 重新评估」，不引用 /ddemo",
+        "Given rules/judgments.md 更新后 When 读取 Then 「先 /ddemo」已改为「先验证」",
+        "Given rules/mindset.md 更新后 When 读取 Then 不含 /ddemo 或 djug 引用",
+        "Given rules 三副本同步 When diff judgments.md + mindset.md Then 三位置内容一致"
+      ],
+      "steps": [
+        "1. 删除 skills/ddemo/ 目录和 commands/ddemo.md",
+        "2. [锁定] commands/dprd.md line 227：使用 /ddemo {demo-名称} → 手动验证或用 /dprd 重新评估",
+        "3. [锁定] commands/ddoc.md：移除 ddemo 引用（line 216）",
+        "4. [锁定] commands/dtask.md lines 33,37：示例 ddemo.md → ddoc.md",
+        "5. [锁定] rules/judgments.md：先 /ddemo → 先验证（lines 25,26 两处）",
+        "6. [锁定] rules/mindset.md：移除 /ddemo 引用（line 86），注意此文件在 Task#67 已改过 djug 部分",
+        "7. [锁定] skills/dprd/SKILL.md line 109：移除 /ddemo 输入参数引用",
+        "8. [锁定] install.sh：移除 OpenCode stub 中 ddemo 行",
+        "9. [锁定] 同步 .claude/rules/judgments.md、.claude/rules/mindset.md",
+        "10. [锁定] 同步 assets/dinit/assets/rules/judgments.md、assets/dinit/assets/rules/mindset.md"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dprd.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dprd/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        67
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 70,
+      "title": "dref 适配 + 注册：去平台耦合、删自定义状态机、新建 commands/dref.md",
+      "description": "dref 来自 PR #1，当前有平台耦合（AskUserQuestion）、自定义状态字段（与 dtask 冲突）、自动写文件（与 dprd/dtask 边界不清）三个问题。需适配为：纯流程语言、对话层清单即最终产物、确认后引导 /dtask。新建 commands/dref.md 薄壳。",
+      "acceptance": [
+        "Given skills/dref/SKILL.md 更新后 When 读取 Then 不含 AskUserQuestion 等平台特定工具名，改用纯流程语言",
+        "Given skills/dref/SKILL.md 更新后 When 读取 Then 不包含自定义状态字段（待评估/已确认/开发中/已完成/已关闭），Phase 4 清单确认后引导 /dtask",
+        "Given skills/dref/SKILL.md 更新后 When 读取 Then Phase 5（智能拆分与保存到文件）已删除，输出止于对话层",
+        "Given skills/dref/SKILL.md 更新后 When 读取 depends Then 值为 dprd",
+        "Given skills/dref/SKILL.md 更新后 When 读取 triggers Then 不超过 6 个触发词",
+        "Given commands/dref.md 新建后 When 读取 Then ~15行薄壳，指向 skills/dref/SKILL.md"
+      ],
+      "steps": [
+        "1. [锁定] skills/dref/SKILL.md：删除 Phase 5 全部（智能拆分与保存，lines 140-165）",
+        "2. [锁定] skills/dref/SKILL.md：删除自定义状态字段及取值表（lines 127-132），Phase 4 清单确认后追加引导「确认后用 /dtask 将清单项转化为任务」",
+        "3. [锁定] skills/dref/SKILL.md：产出路径改为推荐落点说明（.doc/refine/），不自动建目录写文件",
+        "4. [锁定] skills/dref/SKILL.md：正文 diwu-refine → dref；depends: [] → depends: dprd；triggers 13个缩减到6个: refine, /dref, 细化, 梳理, 需求不清晰, 拆解一下",
+        "5. [锁定] skills/dref/SKILL.md：使用 AskUserQuestion → 通过结构化提问（去平台耦合）",
+        "6. [锁定] 新建 commands/dref.md 薄壳：frontmatter + 4步执行流程 + 指向技能"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dref/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dref.md"
+      ],
+      "category": "functional",
+      "blocked_by": [],
+      "status": "InSpec"
+    },
+    {
+      "id": 71,
+      "title": "全局收尾：元数据同步 + plugin.json + 验证",
+      "description": "汇总 Phase 6-9：.claude/CLAUDE.md 版本/索引/结构列表全量更新；README.md 10项显式检查点（架构图/标题计数/索引表/生命周期图/命令段落/项目结构）；plugin.json skills 12→10 commands 11→12；marketplace.json/CHANGELOG 同步。最终 pytest+bash -n+py_compile 全量验证。",
+      "acceptance": [
+        "Given .claude/CLAUDE.md 更新后 When 读取 Then 版本 0.0.10、Skill 索引移除 djug/darc/ddemo 添加 dref、项目结构列表全量更新",
+        "Given README.md 更新后 When 读取 Then 顶部版本 0.0.10、架构图无 djug/darc/ddemo 有 drec+dref、标题计数 Skills 10 Commands 12、索引表更新、生命周期图无 /darc、项目结构 10 Skill 12 Command",
+        "Given plugin.json 更新后 When 读取 Then version 0.0.10、skills 数组 10 项、commands 数组 12 项、description 不含计数",
+        "Given marketplace.json 更新后 When 读取 version Then 0.0.10",
+        "Given CHANGELOG.md 更新后 When 读取 Then 含 v0.0.10 条目",
+        "Given install.sh 更新后 When 检查 Then 版本 0.0.10、计数 10(10) Skill 12 Command、OpenCode stub 无 ddemo 有 drec/dref/dloop/dend",
+        "Given 全部修改完成 When 运行 pytest tests/ -q Then 全部通过",
+        "Given 全部修改完成 When 运行 bash -n install.sh + python3 -m py_compile hooks/scripts/*.py scripts/*.py Then 无语法错误"
+      ],
+      "steps": [
+        "1. [锁定] .claude/CLAUDE.md：版本 0.0.9→0.0.10；Skill 索引表更新（移除 djug/darc，ddemo 从 product/tool 行移除，dref 加入 product/tool 行）；项目结构 skills/ 列表更新（移除 djug/darc/ddemo，加入 dref）、commands/ 列表更新（ddemo→drec+dref）",
+        "2. [锁定] README.md 10项检查点全部更新：顶部版本+计数、Mermaid架构图(S4/S8/S10剔除+drec+dref)、Skills标题计数12→10、Commands标题计数11→12、Skill索引表、Command索引表、工作流示例、生命周期图/darc节点、/ddemo命令段落、项目结构计数文案",
+        "3. [锁定] plugin.json：version 0.0.9→0.0.10；skills[] 移除 djug/darc/ddemo 添加 dref→10项；commands[] 移除 ddemo 添加 drec+dref→12项；description 去掉 Skill 计数",
+        "4. [锁定] marketplace.json：version+description 同步",
+        "5. [锁定] CHANGELOG.md：追加 v0.0.10 条目",
+        "6. [锁定] install.sh：版本 0.0.9→0.0.10；计数 10 Skill / 12 Command；OpenCode stub 删除 ddemo、补充 drec/dref/dloop/dend 映射",
+        "7. 运行 pytest tests/ -q 全量回归",
+        "8. 运行 bash -n install.sh + python3 -m py_compile hooks/scripts/*.py scripts/*.py 语法验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/CHANGELOG.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        66,
+        67,
+        68,
+        69,
+        70
+      ],
+      "status": "InDraft"
     }
   ]
 }

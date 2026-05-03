@@ -90,6 +90,8 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 1. 整理 session 内容摘要（处理了哪些任务、实施内容、验收验证结果、下一步计划）
 2. **调用 `/drec` 完成 recording 写入与原子 commit**（详见 drec §原子 Commit 职责 §调用契约），由 drec 统一负责：写入文件 → git add -A 全量变更 → git commit
 
+> **pending_recording 兜底**：`release` 命令会自动在 `dtask-state.json` 写入 `pending_recording` 标记。若忘记调 `/drec`，Stop Hook 会检测到此标记并强制拦截，要求先执行 `/drec` 清除标记后才允许继续。详见 stop_decision §pending_recording 门控。
+
 > **（R1）**：写入 session 文件前必须 Read 当前 session 文件尾部，确认追加位置正确。
 
 3. 如有重大设计决策，追加到 decisions.md

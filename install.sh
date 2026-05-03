@@ -84,7 +84,7 @@ install_opencode() {
  */
 export const config = {
   name: "diwu-flow",
-  version: "0.0.9",
+  version: "0.1.0",
 };
 
 export default config;

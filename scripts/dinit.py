@@ -259,20 +259,26 @@ def cmd_sync_skills(cwd: Path) -> dict:
                     # 路径正确但目标不可达（broken）→ 重建
                     broken += 1
                     link_path.unlink()
+                    repair_kind = "FIXED_BROKEN"
                 else:
                     # 错误路径 → 删除重建
-                    link_path.unlink()
                     fixed += 1
+                    link_path.unlink()
+                    repair_kind = "FIXED_WRONG"
             else:
                 # 不是 symlink → 跳过用户自定义
                 skipped += 1
                 symlinks_report.append({"name": name, "target": expected_target, "status": "USER_CUSTOM"})
                 continue
+        else:
+            repair_kind = None
 
-        # 创建新 symlink（含 BROKEN 重建和全新创建）
+        # 创建新 symlink（含修复重建和全新创建）
         try:
             os.symlink(expected_target, str(link_path))
-            if broken > 0 and any(r.get("name") == name and r.get("status") == "BROKEN_PENDING" for r in symlinks_report):
+            if repair_kind == "FIXED_BROKEN":
+                symlinks_report.append({"name": name, "target": expected_target, "status": "FIXED"})
+            elif repair_kind == "FIXED_WRONG":
                 symlinks_report.append({"name": name, "target": expected_target, "status": "FIXED"})
             else:
                 created += 1

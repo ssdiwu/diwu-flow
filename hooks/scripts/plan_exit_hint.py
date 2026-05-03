@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse(ExitPlanMode): inject Plan->Dtask reminder without changing approval semantics."""
 
+import io
 import json
 import os
 import sys
@@ -14,6 +15,9 @@ MESSAGE = (
     "完整规则见 rules/mindset.md §Plan→Dtask 门控"
 )
 
+_PLAN_LINE_THRESHOLD = 20
+_MARKER_PATH = os.path.join(".claude", ".plan-active")
+
 
 def _load_event():
     """Parse stdin JSON safely. Missing or invalid input degrades to empty dict."""
@@ -24,6 +28,30 @@ def _load_event():
         return json.loads(raw)
     except (json.JSONDecodeError, ValueError):
         return {}
+
+
+def _count_lines(text):
+    if not isinstance(text, str) or not text:
+        return 0
+    return sum(1 for _ in io.StringIO(text))
+
+
+def _build_marker_payload(event):
+    tool_input = event.get("tool_input") or {}
+    plan_text = tool_input.get("plan")
+    if not isinstance(plan_text, str) or not plan_text.strip():
+        return None
+
+    line_count = _count_lines(plan_text)
+    if line_count < _PLAN_LINE_THRESHOLD:
+        return None
+
+    return {
+        "version": 2,
+        "source": "tool_input.plan",
+        "session_id": event.get("session_id", ""),
+        "line_count": line_count,
+    }
 
 
 def main():
@@ -39,35 +67,15 @@ def main():
     }
     print(json.dumps(output, ensure_ascii=False))
 
-    # 仅当本次 plan >=20 行时才创建 marker
-    _PLAN_LINE_THRESHOLD = 20
-    _PLAN_DIR = os.path.normpath(os.path.expanduser("~/.claude/plans"))
-
-    plan_path = None
-    tool_input = event.get("tool_input") or {}
-    candidate = tool_input.get("file_path", "")
-    if candidate and candidate.endswith(".md") and _PLAN_DIR in os.path.normpath(os.path.abspath(candidate)):
-        plan_path = candidate
-
-    # 无 plan_path 信息 → 安全侧，不创建 marker（避免误用 stale plan）
-    should_create_marker = False
-    if plan_path:
-        try:
-            with open(plan_path, encoding="utf-8") as f:
-                line_count = sum(1 for _ in f)
-            if line_count >= _PLAN_LINE_THRESHOLD:
-                should_create_marker = True
-        except (OSError, UnicodeDecodeError):
-            pass
-
-    if should_create_marker:
+    marker_payload = _build_marker_payload(event)
+    if marker_payload:
         cwd = event.get("cwd") or os.getcwd()
-        marker_path = os.path.join(cwd, ".claude", ".plan-active")
+        marker_path = os.path.join(cwd, _MARKER_PATH)
         try:
             os.makedirs(os.path.dirname(marker_path), exist_ok=True)
-            # 写入 plan 文件绝对路径（非空文件）
-            with open(marker_path, "w") as mf:
-                mf.write(plan_path + "\n")
+            with open(marker_path, "w", encoding="utf-8") as mf:
+                json.dump(marker_payload, mf, ensure_ascii=False, indent=2)
+                mf.write("\n")
         except OSError:
             pass
 

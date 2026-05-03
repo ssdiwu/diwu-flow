@@ -12,10 +12,13 @@ from pathlib import Path
 
 from common import load_json_or_empty, save_json
 from dtask_state import (
+    clear_pending_recording,
     clear_task_owner,
     get_task_owner,
+    load_runtime_state,
     save_runtime_state,
     session_owned_task_ids,
+    set_pending_recording,
     set_task_owner,
     sync_runtime_state,
 )
@@ -217,6 +220,7 @@ def cmd_release(cwd: Path, task_id: int, session_id: str, target: str) -> dict:
         )
 
     task["status"] = VALID_RELEASE_TARGETS[target]
+    set_pending_recording(runtime_state, task_id, VALID_RELEASE_TARGETS[target], _now(), session_id)
     clear_task_owner(runtime_state, task_id)
     _save_release(cwd, task_payload, runtime_state)
     return _result(True, "released", task_id=task_id, to=VALID_RELEASE_TARGETS[target])
@@ -247,6 +251,27 @@ def cmd_adopt(cwd: Path, task_id: int, session_id: str) -> dict:
 
     save_runtime_state(cwd, runtime_state, remove_legacy=True)
     return _result(True, "adopted", task_id=task_id, session_id=session_id)
+
+
+def cmd_show_pending(cwd: Path) -> dict:
+    task_payload, _ = _load_tasks(cwd)
+    sync_result = sync_runtime_state(cwd, task_payload, persist=True, ensure_exists=True)
+    if sync_result.is_invalid:
+        return _result(False, "invalid_runtime_state", message=sync_result.reason)
+    pr = sync_result.state.get("pending_recording")
+    if not pr:
+        return _result(True, "no_pending_recording")
+    return _result(True, "has_pending_recording", pending_recording=pr)
+
+
+def cmd_clear_pending(cwd: Path) -> dict:
+    result = load_runtime_state(cwd)
+    if result.is_invalid:
+        return _result(False, "invalid_runtime_state", message=result.reason)
+    cleared = clear_pending_recording(result.state)
+    if cleared:
+        save_runtime_state(cwd, result.state)
+    return _result(True, "cleared" if cleared else "was_already_clear")
 
 
 def cmd_sync_runtime(cwd: Path) -> dict:
@@ -293,6 +318,12 @@ def main() -> None:
     p_sync = sub.add_parser("sync-runtime", help="清理 stale owner 并迁移 legacy dloop")
     add_cwd_arg(p_sync)
 
+    p_show_pr = sub.add_parser("show-pending", help="显示 pending_recording 标记（供 drec SKILL 调用）")
+    add_cwd_arg(p_show_pr)
+
+    p_clear_pr = sub.add_parser("clear-pending", help="清除 pending_recording 标记（drec closeout 成功后调用）")
+    add_cwd_arg(p_clear_pr)
+
     args = parser.parse_args()
     cwd = Path(args.cwd).resolve()
 
@@ -304,8 +335,12 @@ def main() -> None:
         payload = cmd_release(cwd, args.task_id, args.session_id, args.to)
     elif args.command == "adopt":
         payload = cmd_adopt(cwd, args.task_id, args.session_id)
-    else:
+    elif args.command == "sync-runtime":
         payload = cmd_sync_runtime(cwd)
+    elif args.command == "show-pending":
+        payload = cmd_show_pending(cwd)
+    elif args.command == "clear-pending":
+        payload = cmd_clear_pending(cwd)
 
     _print_and_exit(payload, 0 if payload.get("ok") else 1)
 
