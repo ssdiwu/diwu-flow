@@ -19,6 +19,48 @@
   - `dtask_transition.py` 作为唯一允许同时修改 `dtask.json.status` 与 `dtask-state.json` 的入口，避免半完成状态
   - legacy `dloop-state.json` 迁移路径保留向后兼容
 
+### 2026-05-02 21:33:04 project-pitfalls 注入策略：按类别分段摘要替代全文截断
+
+- **备选方案**:
+  - A) 全文截断：简单粗暴一刀切，超过上限直接截断尾部
+  - B) 按类别分段摘要：解析 `## 类别` 分段，每类提取现象列一行一条+计数，末尾追加提示行
+- **选定方案**: B
+- **影响范围**: hooks/scripts/session_start.py（注入逻辑重写）+ rules/pitfalls.md（文档更新）+ rules/session.md（Preflight 第4步描述更新）+ assets 模板 + .claude/rules/ 副本 = **5+ 模块**
+- **理由**:
+  - 全文截断会丢失类别结构信息，用户看不到踩坑分类全貌
+  - 分段摘要在长度可控（8000 字符上限）的同时保留了项目高频踩坑的分类可读性
+  - 末尾「详细条目见 .diwu/project-pitfalls.md」提示引导用户查阅完整数据
+  - 纯模板文件（无真实数据）不注入，避免噪音
+
+### 2026-05-02 21:54:43 截断策略重构（Task#59）+ 去重合并策略（Task#60）
+
+- **备选方案** (截断策略):
+  - A) 维持全文截断，仅调大上限（4000→8000）
+  - B) 替换为按 `## 类别` 分段摘要模式（已在上个 session 选定并实施）
+- **选定方案**: B（延续上个 session 决策，本 session 落地到 session_start.py 代码实现）
+
+- **备选方案** (去重合并策略):
+  - A) 全局去重：跨 session 合并同类别的所有条目
+  - B) 仅同 session + 同类别去重，保留跨 session 的复发信号
+- **选定方案**: B
+- **影响范围**: session_start.py（注入逻辑）+ 3 个测试用例适配新行为 + darc SKILL.md（归档第4步增加去重子步骤）
+- **理由**:
+  - 截断策略已在 21:33 session 决定为分段摘要模式，本 session 是代码落地
+  - 跨 session 去重会丢失时间线信息（同一问题反复出现是重要的复发信号）
+  - 同 session 内合并既减少冗余又保留归档粒度，不过度聚合
+
+### 2026-05-03 02:12:04 _find_skills_dir() 多候选路径探测替代单路径硬编码
+
+- **备选方案**:
+  - A) 保持单路径 `PLUGIN_ROOT / "skills"` + 要求用户手动配置或创建 symlink
+  - B) 多候选路径自动探测：marketplace → marketplaces → PLUGIN_ROOT/skills → 依次尝试
+- **选定方案**: B
+- **影响范围**: scripts/dinit.py 核心加载逻辑——影响所有使用 dinit 初始化的项目
+- **理由**:
+  - CC 插件安装后的实际目录结构存在 marketplace/marketplaces 拼写差异（不同 CC 版本行为不一致）
+  - 单路径假设在真实用户项目中必然失败（skills/ 目录不存在于用户项目根目录）
+  - 多候选探测是零配置兼容的唯一可行方案，fallback 链覆盖所有已知布局
+
 ### 2026-05-03 00:14:28 drec 升级为项目状态存档唯一入口
 
 - **备选方案**:
@@ -31,11 +73,23 @@
   - 统一入口后一个 commit = 一次完整快照（代码 + .diwu/ 状态 + recording），符合原子性原则
   - Amend 模式覆盖「连续任务快速完成」场景，避免每任务一个 noise commit
 
+### 2026-05-03 16:29:25 Plan→Dtask 门控机制：JSON marker 替代 file_path 判定
+
+- **备选方案**:
+  - A) 维持 file_path 判定方式（旧 contract，CC 实际不再传此字段）
+  - B) JSON marker 方案：plan_exit_hint.py 用 tool_input.plan 创建含 session_id + 行数的 JSON marker，task_entry_guard 解析 JSON 判定
+- **选定方案**: B
+- **影响范围**: hooks/scripts/plan_exit_hint.py + hooks/scripts/task_entry_guard.py（双守卫核心逻辑）
+- **理由**:
+  - ExitPlanMode hook contract 变更：CC 实际传 tool_input.plan 而非 tool_input.file_path
+  - 旧 contract 导致 marker 永远创建不了 → task_entry_guard hard block 静默失效（最危险的安全模式：看起来在工作实际不工作）
+  - JSON marker 含 session_id 支持 cross-session stale 清理，比纯 file_path 判定更健壮
+
 ### 2026-05-03 17:04:32 v0.0.10 精简方案：删除 djug / darc / ddemo 三个废弃能力
 
 - **备选方案**:
   - A) 全部保留但标记 deprecated
-  - B) 删除三个能力，合并 darc→dref 功能到 drec，清理全仓库引用
+  - B) 删除三个能力，合并 darc 归档功能到 drec，清理全仓库引用
 - **选定方案**: B
 - **影响范围**: 删除 3 个 Skill 目录 + 1 个 Command + 5 个参考文件；修改 commands/skills/rules 三副本/plugin.json/marketplace.json/install.sh/README.md/.claude/CLAUDE.md 共 ~30 文件；Skills 12→10，Commands 11→12（新增 drec/dref）
 - **理由**:
@@ -43,6 +97,18 @@
   - darc 是纯手动步骤清单，归档规范并入 drec SKILL.md 更符合「Skill 为底」原则
   - ddemo 被 rules/mindset.md 不确定性门控和 dprd 完全覆盖
   - 一次性清理避免技术债务累积，删除后全量测试通过确认无破坏
+
+### 2026-05-03 17:25:15 版本号回退 0.1.0→0.0.10：acceptance 契约优先原则
+
+- **备选方案**:
+  - A) 保持 0.1.0（语义上算 minor 升级合理，且已写入多文件）
+  - B) 回退到 0.0.10（acceptance 明确写了 0.0.10，违反 acceptance 即违反验收契约）
+- **选定方案**: B
+- **影响范围**: plugin.json + marketplace.json + install.sh + CHANGELOG.md + README.md 共 5 文件版本号回退
+- **理由**:
+  - acceptance 是验收契约不是建议，实施前未与 acceptance 对齐是实施错误
+  - 0.1.0 暗示有 breaking change 或重要新功能，但本次实际是精简（删除功能），语义不符
+  - 即使多文件已写入 0.1.0，回退成本低于 acceptance 契约失效导致的信任损失
 
 ### 2026-05-04 01:20:47 dadr 并入 ddoc 作为第三种文档模式
 
