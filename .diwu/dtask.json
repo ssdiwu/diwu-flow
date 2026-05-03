@@ -614,7 +614,7 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
       ],
       "category": "refactor",
-      "status": "InReview"
+      "status": "Done"
     },
     {
       "id": 78,
@@ -636,7 +636,7 @@
       "blocked_by": [
         77
       ],
-      "status": "InReview"
+      "status": "Done"
     },
     {
       "id": 79,
@@ -674,7 +674,7 @@
       "blocked_by": [
         78
       ],
-      "status": "InReview"
+      "status": "Done"
     },
     {
       "id": 80,
@@ -718,7 +718,7 @@
       "blocked_by": [
         79
       ],
-      "status": "InReview"
+      "status": "Done"
     },
     {
       "id": 81,
