@@ -2,6 +2,12 @@
 
 All notable changes to diwu-flow will be documented in this file.
 
+## [0.0.6] - 2026-05-03
+
+### 新增
+
+- **dref Skill**：需求细化清单方法论。通过 5 阶段工作流（吸收分析→洞察提问→收尾→输出清单→智能拆分保存），帮助用户将模糊想法转化为可执行的检查清单，保存到 `docs/Optimization requirements/`。支持领域感知（前端/后端/性能/UX/DevOps）和自适应行为。
+
 ## [0.0.4] - 2026-04-29
 
 ### Agent Taxonomy v2：核心收缩
