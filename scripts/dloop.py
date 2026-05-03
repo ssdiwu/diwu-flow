@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from common import load_json_or_empty, save_json  # noqa: E402
-from dloop_state import classify, cleanup_state, get_active_tasks, get_executable_tasks  # noqa: E402
+from dloop_state import classify, cleanup_state, get_active_tasks, get_done_ids, get_executable_tasks  # noqa: E402
 from dtask_state import loop_state, runtime_state_path, save_runtime_state, set_loop_state, sync_runtime_state  # noqa: E402
 
 
@@ -90,6 +90,7 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
         "session_id": session_id if session_id else f"dloop-{datetime.now(timezone.utc).strftime('%Y-%m-%d-%H%M%S')}",
         "started_at": datetime.now(timezone.utc).isoformat(),
         "completed_task_ids": [],
+        "initial_done_ids": list(get_done_ids(tasks)),  # 启动快照：排除历史 Done 对 max_tasks 的干扰
         "current_iteration": 0,
         "max_tasks": effective_max,
         "stopped_at": None,

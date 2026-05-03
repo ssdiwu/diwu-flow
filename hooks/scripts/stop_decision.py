@@ -258,13 +258,24 @@ def _check_recording_reminder(cwd):
     # 取代码变更文件中最近修改时间与 recording 时间对比
     import time
     latest_recording_mtime = os.path.getmtime(sessions[0])
-    # 用 git diff --name-only 获取变更文件，取最新 mtime
+    # 覆盖 staged + unstaged + untracked 三类变更（排除 .diwu/ 内部状态）
     try:
+        # staged + unstaged
         diff_result = _sp.run(
-            ["git", "diff", "--name-only"],
+            ["git", "diff", "--name-only", "HEAD"],
             cwd=cwd, capture_output=True, text=True, timeout=10
         )
         changed_files = diff_result.stdout.strip().split("\n") if diff_result.stdout.strip() else []
+        # 追加 untracked 新文件（排除 .diwu/ 和 .gitignore 匹配项）
+        untracked_result = _sp.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            cwd=cwd, capture_output=True, text=True, timeout=10
+        )
+        if untracked_result.stdout.strip():
+            for uf in untracked_result.stdout.strip().split("\n"):
+                uf = uf.strip()
+                if uf and not uf.startswith(".diwu/"):
+                    changed_files.append(uf)
         latest_code_mtime = 0
         for f in changed_files:
             f = f.strip()
@@ -447,14 +458,16 @@ if __name__ == "__main__":
     # 由 CC 框架在不同事件上触发，执行顺序不确定。如果 stop_decision 先于
     # task_completed 执行，completed_task_ids 可能尚未包含最新 Done 任务。
     # 仅在 dloop 模式下生效（loop_state 非 None）。
-    # 已知限制：首轮迭代可能包含历史 Done 任务（无法区分「本轮完成」vs「早已完成」），
-    # 这可能导致 max_tasks 在首轮偏激进地触发停止；后续迭代不受影响。
+    # important: 用 initial_done_ids 快照排除历史 Done，只计入本轮新增完成。
+    _effective_completed_for_check = []
     if loop_state is not None:
         current_completed = loop_state.get("completed_task_ids", [])
+        initial_done = set(loop_state.get("initial_done_ids", []))
         done_ids_from_json = {t["id"] for t in tasks if t.get("status") == "Done"}
-        missing_ids = [tid for tid in done_ids_from_json if tid not in current_completed]
-        if missing_ids:
-            loop_state["completed_task_ids"] = current_completed + missing_ids
+        # 只补充本轮新增的 Done（排除 dloop start 时已存在的）
+        new_done_ids = [tid for tid in done_ids_from_json
+                        if tid not in current_completed and tid not in initial_done]
+        _effective_completed_for_check = current_completed + new_done_ids
     session_id = hook_session_id(stdin_data)
 
     if loop_state is not None:
@@ -483,6 +496,15 @@ if __name__ == "__main__":
     except Exception:
         pass
 
+    # 将 effective completed_task_ids 传入 decide/decide_loop_mode，
+    # 使 get_terminal_stop_reason() 的 max_tasks 判断基于完整数据。
+    # 使用副本避免污染运行态 loop_state（不写回 dtask-state.json）。
+    decide_loop_state = loop_state
+    if loop_state is not None and _effective_completed_for_check:
+        original_completed = loop_state.get("completed_task_ids", [])
+        if len(_effective_completed_for_check) > len(original_completed):
+            decide_loop_state = {**loop_state, "completed_task_ids": _effective_completed_for_check}
+
     should_continue, output = decide(
         tasks,
         settings,
@@ -490,7 +512,7 @@ if __name__ == "__main__":
         task_json_path,
         cwd,
         additional_prompts,
-        loop_state,
+        decide_loop_state,
         runtime_state=runtime_state,
         session_id=session_id,
     )

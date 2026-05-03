@@ -243,17 +243,9 @@ def cmd_sync_skills(cwd: Path) -> dict:
         name = skill_dir.name
         link_path = target_dir / name
         real_target = skills_src / name
-        try:
-            expected_target = str(real_target.relative_to(target_dir))
-        except ValueError:
-            # 目标不在 target_dir 子树中（跨目录场景如 tmp_project_dir）
-            # 使用 os.path.relpath() 计算同文件系统上的最短相对路径
-            rel = os.path.relpath(str(real_target.resolve()), str(target_dir.resolve()))
-            if rel.startswith("..") or ("/" in rel and not rel.startswith(".")):
-                expected_target = rel
-            else:
-                # 同目录或异常情况，退回绝对路径（仅当跨文件系统时触发）
-                expected_target = str(real_target.resolve())
+        # 使用绝对路径作为 symlink target——相对路径的深度取决于 cwd 到
+        # target 的目录层级差，浅路径 clone 会断链；绝对路径对同机始终有效。
+        expected_target = str(real_target.resolve())
 
         if link_path.exists() or link_path.is_symlink():
             if link_path.is_symlink():
@@ -538,20 +530,15 @@ def cmd_validate(cwd: Path) -> dict:
                     target = os.readlink(str(link))
                     resolved = Path(link.parent / target).resolve()
                     real_target = skills_src / sd.name
-                    try:
-                        expected = str(real_target.relative_to(skills_dir))
-                    except ValueError:
-                        expected = str(real_target.resolve())
-                    is_correct_path = (target == expected)
-                    is_reachable = resolved.exists()
-                    if is_correct_path and is_reachable:
+                    real_resolved = real_target.resolve()
+                    if resolved == real_resolved and real_resolved.exists():
                         check(f"Skill symlink 正确: {sd.name}", True)
-                    elif not is_reachable:
+                    elif not real_resolved.exists():
                         check(f"Skill symlink 正确: {sd.name}", False,
-                              f"broken symlink: target={target} -> {resolved} 不存在")
+                              f"broken symlink: target={target} -> {resolved} 不存在（期望 {real_resolved}）")
                     else:
                         check(f"Skill symlink 正确: {sd.name}", False,
-                              f"wrong target: expected={expected} actual={target}")
+                              f"wrong target: expected={real_resolved} actual={resolved}")
 
     # 运行时目录
     for d in ["recording", "archive"]:

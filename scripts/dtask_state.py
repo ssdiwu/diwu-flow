@@ -152,11 +152,16 @@ def _normalize_loop(loop: dict | None) -> tuple[dict | None, str | None]:
     if stop_reason is not None and not isinstance(stop_reason, str):
         return None, "dloop.stop_reason 必须是字符串或 null"
 
+    initial_done = loop.get("initial_done_ids", [])
+    if not isinstance(initial_done, list) or not all(_is_non_negative_int(tid) for tid in initial_done):
+        initial_done = []
+
     return {
         "active": active,
         "session_id": session_id,
         "started_at": started_at,
         "completed_task_ids": completed,
+        "initial_done_ids": initial_done,
         "current_iteration": current_iteration,
         "max_tasks": max_tasks,
         "stopped_at": stopped_at,

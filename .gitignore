@@ -20,3 +20,6 @@ __pycache__/
 # diwu-flow 运行时缓存（不跟踪，运行时数据本身在 .diwu/ 中追踪）
 .diwu/.context_monitor_cache.json
 .diwu/__pycache__/
+
+# sync-skills 本地产物（含机器特定绝对路径 symlink，不可迁移）
+.agents/skills/
