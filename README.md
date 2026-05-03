@@ -4,37 +4,58 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/ssdiwu/diwu-flow)
 
-多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合等 **10 个核心 Skill**。（v0.0.10）
+多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合等 **10 个核心 Skill**。（v0.0.11）
 
 ---
 
 ## 架构总览
 
-```mermaid
-flowchart LR
-    subgraph UI["Commands 薄壳层（12）"]
-        C1["/drun"] & C2["/dtask"] & C3["/dinit"]
-        C4["/dprd"] & C5["/dadr"] & C6["/ddoc"]
-        C7["/drec"] & C8["/dref"] & C9["/dcorr"]
-        C10["/dstat"] & C11["/dloop"] & C12["/dend"]
-    end
+三层架构：**Commands（交互入口）→ Skills（方法论核心）→ Agents（执行引擎）**
 
-    subgraph CORE["Skills 方法论层（10）"]
-        S1["drun"] & S2["dtask"] & S3["dvfy"]
-        S4["dcorr"] & S5["dprd"]
-        S6["drec"] & S7["ddoc"] & S8["dref"]
-        S9["dstat"] & S10["dloop"]
-    end
+### Layer 1 — Commands 薄壳层（11）
 
-    subgraph AGENTS["Agents 执行层（3）"]
-        A1["explorer"] & A2["implementer"] & A3["verifier"]
-    end
+用户直接调用的命令入口，每个 Command 是对应 Skill 的薄封装。
 
-    UI -->|"薄封装"| CORE
-    CORE -->|"派发"| AGENTS
+| 分组 | Commands | 定位 |
+|------|----------|------|
+| **执行** | `/drun` `/dloop` `/dend*` | 单任务 / 连续循环 / 停止循环 |
+| **规划** | `/dtask` `/dref` `/dinit*` | 任务管理 / 需求细化 / 项目初始化 |
+| **文档** | `/dprd` `/ddoc` `/drec` | PRD+ADR / 产品文档 / Session 记录 |
+| **辅助** | `/dcorr` `/dstat` | 纠偏恢复 / 状态快照 |
+
+> `*` 标记为无对应 Skill 的独立 Command。Commands 不含任何方法论逻辑，仅负责参数透传和交互增强。无 Command 机制的平台可直调 Skills。
+
+### Layer 2 — Skills 方法论层（10）
+
+所有方法论的唯一真相源，零平台耦合，可在任何工具链中独立加载。
+
+| 分组 | Skills | 核心产出 |
+|------|--------|---------|
+| **任务闭环** | `drun` `dtask` `dvfy*` | 执行 → 验收 → 证据判定 |
+| **纠偏恢复** | `dcorr` | 退化检测 + 四行重写 + 止损序列 |
+| **需求产品** | `dprd` `dref` `ddoc` | PRD 需求分析 → 细化清单 → 产品文档 |
+| **状态记录** | `drec` `dstat` `dloop` | Session 归档 + 项目聚合 + 连续循环 |
+
+> `*` 标记为无对应 Command 的独立 Skill。Skill frontmatter 无平台专属字段（无 context/agent/model/hooks），是跨平台复用的基础。
+
+### Layer 3 — Agents 执行层（3）
+
+Skills 派发的执行单元，默认路径自动发现，故障时退化回三件套闭环。
+
+| Agent | 定位 | 核心约束 |
+|-------|------|---------|
+| **explorer** | 只读探索 | 不修改文件；保护主对话上下文不被污染 |
+| **implementer** | 代码实施 | 先读后写；JSON indent=2；唯一写权限角色 |
+| **verifier** | 独立验收 | 不允许 Edit/Write；不信任 implementer 自述 |
+
+> 故障隔离：任何非核心 agent 失败时退化回 explorer→implementer→verifier 闭环。
+
+### 层间关系与原则
+
 ```
-
-### 核心原则
+用户 → Commands(薄封装) → Skills(方法论) → Agents(执行)
+         ↑ 仅 CC 平台       ↑ 所有平台通用     ↑ 默认路径自动发现
+```
 
 | 原则 | 含义 |
 |------|------|
@@ -67,7 +88,7 @@ claude plugin add /path/to/diwu-flow
 /dstat                   # 项目全局状态快照
 ```
 
-> 示例：做「消息通知」功能 → `/dprd` 讨论推送方式 → 确定用 WebSocket 时 `/dadr` 记录决策 → `/ddoc` 写产品文档 → `/dref` 细化关键需求 → `/dtask` 拆集成任务 → `/dloop` 开始循环。
+> 示例：做「消息通知」功能 → `/dprd` 讨论推送方式 → 确定用 WebSocket 时 `/ddoc --mode adr` 记录决策 → `/dref` 细化关键需求 → `/dtask` 拆集成任务 → `/dloop` 开始循环。
 
 ### 接手老项目
 
@@ -89,7 +110,7 @@ claude plugin add /path/to/diwu-flow
 
 | 平台 | 命令 | 产物 |
 |------|------|------|
-| Claude Code | `claude plugin add <path>` | 10 Skill + 3 Agent + 12 Command + 7 Hook |
+| Claude Code | `claude plugin add <path>` | 10 Skill + 3 Agent + 11 Command + 7 Hook |
 | Codex CLI | `./install.sh --platform codex` | Skills + Agents symlink 到 `~/.codex/` |
 | OpenCode | `./install.sh --platform opencode` | Plugin + symlink 到 `.opencode/` |
 | 全部 | `./install.sh --platform all` | 以上全部 |
@@ -121,7 +142,6 @@ claude plugin add /path/to/diwu-flow
 | `/dtask` | dtask | 规划 / 分解任务列表 |
 | `/dinit` | — | 初始化或刷新项目骨架 |
 | `/dprd` | dprd | 生成产品需求文档（PRD） |
-| `/dadr` | — | 记录架构决策（ADR） |
 | `/ddoc` | ddoc | 正向 / 逆向生成文档 |
 | `/drec` | drec | Session 记录写入与归档 |
 | `/dref` | dref | 需求细化清单 |
@@ -142,7 +162,7 @@ claude plugin add /path/to/diwu-flow
 
 > 使用默认路径自动发现，不在 plugin.json 中声明。故障隔离：任何非核心 agent 失败时退化回 explorer→implementer→verifier 闭环。
 
-### Hooks（7 事件 / 11 脚本）
+### Hooks（7 事件 / 9 脚本）
 
 | 事件 | 脚本 | 功能 |
 |------|------|------|
@@ -283,16 +303,7 @@ stateDiagram-v2
 | **跨命令关系** | PRD README 的 Demo 需求列需手动验证或用 `/dprd` 重新评估生成落地方案；`.doc/README.md` 和 `.doc/adr/README.md` 是 Q5 的前置读取 |
 | **感知信号** | 交付前自检：智能引号 0 命中、绝对路径 0 命中、乱码 0 命中 |
 
-### /dadr — 架构决策记录
-
-| 维度 | 约束 |
-|------|------|
-| **业务边界** | 同一决策只有一个 ADR（更新不新建）；Context 必须有具体数字；Consequences 的 ⚠️ 必须有触发条件和解决路径 |
-| **时序约束** | 先读 README 判断新建/更新 → 写文件 → 更新 README；不可先写文件再判断 |
-| **跨命令关系** | ADR README 是 `/dprd` Q5 的输入；ADR 编号格式 `ADR-NNN` 是 `/dtask` steps 引用的依据 |
-| **感知信号** | 备选方案的缺点必须是具体技术风险和触发条件，不允许「复杂度高」等模糊描述 |
-
-### /ddoc — 产品文档
+### /ddoc — 产品文档（含 ADR 子模式）
 
 | 维度 | 约束 |
 |------|------|
@@ -300,6 +311,15 @@ stateDiagram-v2
 | **时序约束** | 写文档 → 自审 → gap 分析（两层）→ 补充缺口 → 再次 gap 分析；gap 分析必须在自审之后 |
 | **跨命令关系** | `.doc/README.md` 是所有命令的入口；每次写入文档后必须同步更新 README（通用货币维护义务） |
 | **感知信号** | 有状态实体必须有 stateDiagram；核心业务流程必须有 flowchart；数据实体关系必须有 erDiagram |
+
+#### ADR 子模式约束
+
+| 维度 | 约束 |
+|------|------|
+| **业务边界** | 同一决策只有一个 ADR（更新不新建）；Context 必须有具体数字；Consequences 的 ⚠️ 必须有触发条件和解决路径 |
+| **时序约束** | 先读 README 判断新建/更新 → 写文件 → 更新 README；不可先写文件再判断 |
+| **跨命令关系** | ADR README 是 `/dprd` Q5 的输入；ADR 编号格式 `ADR-NNN` 是 `/dtask` steps 引用的依据 |
+| **感知信号** | 备选方案的缺点必须是具体技术风险和触发条件，不允许「复杂度高」等模糊描述 |
 
 ### /dref — 需求细化
 
@@ -526,11 +546,11 @@ InDraft → InSpec → InProgress → InReview → Done
 ```
 diwu-flow/
 ├── .claude-plugin/
-│   ├── plugin.json              # 插件声明（10 Skill + 12 Command）
+│   ├── plugin.json              # 插件声明（10 Skill + 11 Command）
 │   └── marketplace.json         # 发布市场元数据
 ├── skills/                      # 10 个方法论 Skill（唯一真相源）
 │   └── {drun,dtask,dvfy,...}/SKILL.md
-├── commands/                    # 12 个薄壳 Command（CC Slash Command）
+├── commands/                    # 11 个薄壳 Command（CC Slash Command）
 │   └── {drun,dtask,dinit,...}.md
 ├── agents/                      # 3 个核心执行 Agent（默认路径自动发现）
 │   ├── explorer.md              #   只读探索
@@ -565,9 +585,16 @@ git remote -v # 哪个 remote？
 
 ## Version
 
-v0.0.7 — Agent 核心收缩至 3 个 + 新增 dstat/dloop/dend 三个 Command + 多平台架构重构。
+v0.0.10 — 精简完成（删除 djug/darc/ddemo 4 个废弃能力）+ diwu-workflow 残留清理 + dref 需求细化清单 + dvfy 验证证据体系独立化。
 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License
 
-[MIT](LICENSE) © [ssdiwu](https://github.com/ssdiwu)
+[MIT](LICENSE)
+
+## 贡献者
+
+| 贡献 | 贡献者 |
+|------|--------|
+| 核心架构 / 全部 Skills & Commands & Agents | [ssdiwu](https://github.com/ssdiwu) |
+| dref Skill（需求细化清单方法论） | [RexYoung00](https://github.com/RexYoung00) |

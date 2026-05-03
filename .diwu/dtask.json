@@ -396,6 +396,184 @@
         70
       ],
       "status": "Done"
+    },
+    {
+      "id": 72,
+      "title": "dadr 并入 ddoc — Phase 1: 核心资产迁移",
+      "description": "将独立 Command /dadr 的功能并入 /ddoc 作为第三种 adr 模式。Phase 1 负责核心资产迁移：dadr.py 重命名为 ddoc_adr.py、测试文件重命名、ddoc SKILL.md 扩展 ADR 模式章节、commands/ddoc.md 重写为三模式入口、删除 commands/dadr.md。",
+      "acceptance": [
+        "Given scripts/ddoc_adr.py 存在 When 执行 python3 scripts/ddoc_adr.py next-number --cwd /tmp/t Then 返回 {\"ok\": true, \"data\": {\"next_number\": 1}}",
+        "Given skills/ddoc/SKILL.md 更新后 When 读取 Then 含 ADR 模式章节（工作流/步骤/AI保留步骤/骨架模板），frontmatter keywords 含 \"ADR模式\"",
+        "Given commands/ddoc.md 重写后 When 读取 Then 支持 forward/reverse/adr 三种模式参数检测，含 ddoc_adr.py 脚本调用行",
+        "Given commands/dadr.md 删除后 When 检查 commands/ 目录 Then 不存在 dadr.md",
+        "Given test_ddoc_adr.py 存在 When 运行 pytest tests/level2_scripts/test_ddoc_adr.py -v Then 9 个用例全部通过（类名 TestDdocAdr*）"
+      ],
+      "steps": [
+        "1. [锁定] mv /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dadr.py /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ddoc_adr.py；更新 docstring 为 'diwu-flow ddoc: ADR 子模式脚本'",
+        "2. [锁定] mv /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dadr.py /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_ddoc_adr.py；类名 TestDadr* → TestDdocAdr*；run_script 参数 '\"dadr.py\"' → '\"ddoc_adr.py\"'",
+        "3. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md，在两种模式概述之后、四层示范之前插入 ADR 模式完整章节：工作流(决策描述→编号分配→AI澄清→骨架创建→AI撰写→索引维护)、5 步骤、AI 保留步骤(Step 2/4 由 AI 执行)、骨架模板、边界情况",
+        "4. [锁定] 更新 skills/ddoc/SKILL.md frontmatter：keywords 补充 \"ADR模式\"/\"架构决策\"；triggers 补充 \"记录架构决策、ADR、技术选型\"；argument-hint 增加 adr 模式选项",
+        "5. [锁定] 重写 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md：description 改为「产品文档工具（正向/逆向/ADR 三种模式）」；Step 0 增加 adr 关键词检测(adr/架构决策/决策记录/ADR)；新增 ADR 模式子命令表(next-number/create/update-status)和脚本调用行 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/ddoc_adr.py`；新增 ADR 子模式约束表(业务边界/时序约束/跨命令关系/感知信号)",
+        "6. [锁定] rm /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dadr.md",
+        "7. 运行 pytest tests/ -q 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dadr.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ddoc_adr.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dadr.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_ddoc_adr.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dadr.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "InDraft"
+    },
+    {
+      "id": 73,
+      "title": "dadr 并入 ddoc — Phase 2-3: 注册清理与文档更新",
+      "description": "Phase 2 清理注册声明（plugin.json 删 dadr 条目、marketplace.json 计数更新、install.sh 6处更新）。Phase 3 全面更新 README（6处 dadr 引用）和 .claude/CLAUDE.md（commands 列表删 dadr）。",
+      "acceptance": [
+        "Given plugin.json 更新后 When 读取 Then commands 数组长度为 11，不含 './commands/dadr.md'",
+        "Given marketplace.json 更新后 When 读取 Then description 含 '11 个 Command'",
+        "Given install.sh 更新后 When 检查 Then 无 dadr 映射行(L68已删)、计数均为 11(L20/L78/L95/L96)、版本号 0.0.11(L86)",
+        "Given README.md 更新后 When 读取 Then Layer 1 Commands 表无 /dadr* 标记、标题为 11、工作流示例含 '/ddoc --mode adr'、Commands 速查表无 /dadr 行且 /ddoc 行含三种模式、仓库结构注释 commands 为 11",
+        "Given .claude/CLAUDE.md 更新后 When 读取 L79 Then commands 列表不含 dadr"
+      ],
+      "steps": [
+        "1. [锁定] .claude-plugin/plugin.json：commands 数组删除 './commands/dadr.md' 条目（12→11）",
+        "2. [锁定] .claude-plugin/marketplace.json：'12 个 Command' → '11 个 Command'",
+        "3. [锁定] install.sh 6 处更新：L20 '12 个薄壳命令'→'11'；L68 dadr 整行删除；L78 注释 12→11；L95 '12 个 command'→'11'；L96 '12 个 command 映射'→'11'；L86 version '0.0.10'→'0.0.11'",
+        "4. [锁定] README.md Layer 1 Commands 表：文档组 `/dadr*` 移除，ADR 归入 /ddoc 行描述（PRD+ADR / 产品文档）；标题 (12) → (11)",
+        "5. [锁定] README.md 工作流示例：`→ /dadr 记录决策` → `→ /ddoc --mode adr 记录决策`",
+        "6. [锁定] README.md Commands 速查表：删除 /dadr 行；/ddoc 行改为 'ddoc | ddoc | 正向/逆向/ADR 三种文档模式'",
+        "7. [锁定] README.md：删除整个 `### /dadr — 架构决策记录` 命令参考段落（~8行），其约束内容合并到 /ddoc 段落末尾新增 ADR 子模式约束表",
+        "8. [锁定] README.md 仓库结构注释：'# 12 个薄壳 Command' → '# 11'；plugin.json 注释 '(10 Skill + 12 Command)' → '(10 Skill + 11 Command)'",
+        "9. [锁定] .claude/CLAUDE.md L79：commands 列表中删除 dadr（drun, dtask, dinit, dprd, ddoc, drec, ...）",
+        "10. 运行 pytest tests/ -q 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [72],
+      "status": "InDraft"
+    },
+    {
+      "id": 74,
+      "title": "dadr 并入 ddoc — Phase 4-5: Rules 同步与收尾验证",
+      "description": "Phase 4 同步 rules/ 三文件微调到 assets/ 副本（file-layout/constraints/judgments 中 dadr 提及更新）。Phase 5 追加 CHANGELOG v0.0.11 条目、全局版本号 bump 0.0.10→0.0.11(minor)、V1-V4 验证全套。",
+      "acceptance": [
+        "Given rules 同步完成 When diff rules/file-layout.md assets/dinit/assets/rules/file-layout.md Then 两文件一致，均含 '见 /ddoc --mode adr'",
+        "Given rules 同步完成 When diff rules/constraints.md assets/dinit/assets/rules/constraints.md Then 两文件一致，示例为 'ddoc 新增 adr 子模式'",
+        "Given CHANGELOG.md 更新后 When 读取 Then 含 v0.0.11 条目（dadr 并入 ddoc / Commands 12→11 / dadr.py→ddoc_adr.py）",
+        "Given 版本号 bump 完成 When 读取 plugin.json+marketplace.json+install.sh Then version 均为 0.0.11",
+        "Given V1 验证 When 运行 pytest tests/ -q Then 全量通过",
+        "Given V2 验证 When 运行 python3 scripts/ddoc_adr.py next-number --cwd /tmp/t Then 返回 next_number=1",
+        "Given V3 验证 When rg '/dadr' 排除 .diwu/CHANGELOG/test_ddoc_adr.py 后 Then 零命中",
+        "Given V4 验证 When diff rules/constraints.md assets/dinit/assets/rules/constraints.md Then 一致"
+      ],
+      "steps": [
+        "1. [锁定] rules/file-layout.md L47 + assets/dinit/assets/rules/file-layout.md L47：'.doc/adr/' 注释 '见 /diwu-adr' → '见 /ddoc --mode adr'",
+        "2. [锁定] rules/constraints.md L23 + assets 副本：示例 '\"新增 drun Skill、新增 dadr 命令\"' → '\"新增 drun Skill、ddoc 新增 adr 子模式\"'",
+        "3. [建议] rules/judgments.md L168 + assets 副本：可选微调 'ADR 输出' → 'ADR 输出（通过 /ddoc --mode adr）'",
+        "4. [锁定] 同步 assets/dinit/assets/rules/ 三文件确保与 rules/ 一致",
+        "5. [锁定] CHANGELOG.md 顶部追加 v0.0.11 条目：变更(dadr 并入 ddoc)、Removed(commands/dadr.md)、Changed(scripts/dadr.py→ddoc_adr.py / ddoc SKILL.md ADR 章节 / Commands 12→11)",
+        "6. [锁定] 全局版本号 bump：plugin.json version + marketplace.json version + install.sh L86 OpenCode stub version：0.0.10 → 0.0.11",
+        "7. V1: python3 -m pytest tests/ -q 全量回归",
+        "8. V1: python3 -c \"import json; p=json.load(open('.claude-plugin/plugin.json')); assert len(p['commands'])==11\"",
+        "9. V1: python3 -c \"import yaml; yaml.safe_load(open('skills/ddoc/SKILL.md'))\" frontmatter 合法性",
+        "10. V2: python3 scripts/ddoc_adr.py next-number --cwd /tmp/t && python3 scripts/ddoc_adr.py create --title '测试决策' --cwd /tmp/t && python3 scripts/ddoc_adr.py update-status --number 1 --status Accepted --cwd /tmp/t",
+        "11. V3: rg '/dadr' --include='*.md' --include='*.py' --include='*.json' --exclude-dir='.diwu' --exclude=CHANGELOG.md --exclude='test_ddoc_adr.py' . 确认零残留",
+        "12. V4: diff rules/constraints.md assets/dinit/assets/rules/constraints.md && diff rules/file-layout.md assets/dinit/assets/rules/file-layout.md"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/CHANGELOG.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+      ],
+      "category": "infra",
+      "blocked_by": [73],
+      "status": "InDraft"
+    },
+    {
+      "id": 75,
+      "title": "Agent 模型分级：explorer=haiku, implementer=sonnet",
+      "description": "三个 agent 当前均未声明 model 字段（继承父会话）。explorer 只读探索用 haiku（快速廉价）；implementer 代码实施用 sonnet（质量保证）；verifier 继承不改（复杂度波动大）。",
+      "acceptance": [
+        "Given agents/explorer.md 更新后 When 解析 frontmatter Then model 字段值为 haiku",
+        "Given agents/implementer.md 更新后 When 解析 frontmatter Then model 字段值为 sonnet",
+        "Given agents/verifier.md 不改动 When 解析 frontmatter Then 无 model 字段（继承父会话）",
+        "Given 全部修改完成 When 运行 pytest tests/level1/test_agents_config.py -v Then 全部通过"
+      ],
+      "steps": [
+        "1. [锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/agents/explorer.md frontmatter 中 tools 行之后加 model: haiku",
+        "2. [锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/agents/implementer.md frontmatter 中 tools 行之后加 model: sonnet",
+        "3. 运行 pytest tests/level1/test_agents_config.py -v 验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/agents/explorer.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/agents/implementer.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "InDraft"
+    },
+    {
+      "id": 76,
+      "title": "drun closeout 加入 verifier 终验 + rules 三副本同步",
+      "description": "verifier 当前仅在 S3/S4 子代理策略中触发，S1/S2 路径（小幅度任务）完全由主代理自审。在 drun closeout 阶段加入 verifier 终验作为 Done 前的默认独立验收门。关键约束：1) closeout 顺序 verifier→release→/drec（原子性铁律）；2) verifier 输出用 PASSED/GAPS_FOUND/HUMAN_NEEDED（与 agents/verifier.md 第 38 行一致）；3) verifier 输入用 implementer 交接报告的文件列表（非 git diff）；4) rules 三副本必须同步。",
+      "acceptance": [
+        "Given skills/drun/SKILL.md 更新后 When 读取 Session 结束章节 Then closeout 顺序为：整理摘要 → decisions → verifier 终验 → release → /drec",
+        "Given drun 更新后 When 读取 verifier 终验规则 Then 触发条件为 S1/S2 路径标 Done 前；跳过条件为 S3/S4 已调过 verifier；输出状态为 PASSED/GAPS_FOUND/HUMAN_NEEDED",
+        "Given drun 更新后 When 读取 verifier 输入定义 Then 文件来源为 implementer 交接报告（非 git diff --stat HEAD~1）",
+        "Given rules/task.md 更新后 When 读取状态转移判定锚点表 Then 小幅度自审 Done 行含 verifier 终验说明",
+        "Given rules/judgments.md 更新后 When 读取验收判断正例 Then 含 verifier 终验",
+        "Given rules/verification.md 更新后 When 读取 Done 判定规则表 Then L1-3 通过行含 verifier 终验",
+        "Given commands/drun.md 更新后 When 读取 closeout 说明 Then 含 verifier 终验提示",
+        "Given rules 三副本同步 When diff rules/task.md .claude/rules/task.md && diff rules/judgments.md .claude/rules/judgments.md && diff rules/verification.md .claude/rules/verification.md Then 各组一致",
+        "Given 全部修改完成 When 运行 pytest tests/ -q Then 全量通过"
+      ],
+      "steps": [
+        "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md 第 85-98 行（Session 结束章节），重排 closeout 顺序为：①整理摘要 → ②decisions → ③verifier 终验 → ④release → ⑤/drec",
+        "2. [锁定] 在 drun SKILL.md closeout 中新增 verifier 终验规则表：触发条件(S1/S2 路径标 Done 前)、跳过条件(S3/S4 已调过 verifier / infra/refactor 简单度量)、输入(acceptance + implementer 交接报告文件列表)、输出(PASSED/GAPS_FOUND/HUMAN_NEEDED 与 agents/verifier.md 第 38 行一致)、三分支(PASSED→release Done / GAPS_FOUND→保持 InProgress / HUMAN_NEEDED→release InReview)",
+        "3. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md 第 85 行：'小幅度，自审 Done | L3+ 至少一项 | 无需人工确认' → '小幅度，自审 Done + verifier 终验 | L3+ 至少一项 | verifier PASSED 后 Done'",
+        "4. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md 第 87 行：'可自审后直接 Done' → '可自审 + verifier 终验后 Done'",
+        "5. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/verification.md 第 23 行：'Agent 自审后 Done' → 'Agent 自审 + verifier 终验后 Done'",
+        "6. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md 第 29 行后追加：S1/S2 路径标 Done 前先经 verifier 终验",
+        "7. [锁定] 同步 rules/task.md → .claude/rules/task.md + assets/dinit/assets/rules/task.md",
+        "8. [锁定] 同步 rules/judgments.md → .claude/rules/judgments.md + assets/dinit/assets/rules/judgments.md",
+        "9. [锁定] 同步 rules/verification.md → .claude/rules/verification.md + assets/dinit/assets/rules/verification.md",
+        "10. 运行 pytest tests/ -q 全量回归验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/verification.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/verification.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/verification.md"
+      ],
+      "category": "functional",
+      "blocked_by": [75],
+      "status": "InDraft"
     }
   ]
 }

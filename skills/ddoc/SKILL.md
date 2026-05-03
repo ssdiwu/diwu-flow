@@ -2,25 +2,28 @@
 name: ddoc
 version: "1.0"
 type: rule
-description: "产品文档工具——正向（需求->文档）或逆向（代码->文档）两种模式"
+description: "产品文档工具——正向（需求->文档）、逆向（代码->文档）、ADR（架构决策记录）三种模式"
 triggers:
   - "为已有产品还原/补全文档"
   - "为新功能/模块编写产品文档"
   - "用户说 写文档、还原文档、doc、产品文档"
+  - "记录架构决策、ADR、技术选型"
 keywords:
   - "文档"
   - "正向模式"
   - "逆向模式"
+  - "ADR模式"
+  - "架构决策"
   - "还原文档"
   - "领域驱动"
   - "完整性检查"
 effort: high
-argument-hint: "[forward|reverse] [范围] [输入源]"
+argument-hint: "[forward|reverse|adr] [范围] [输入源]"
 ---
 
 # ddoc
 
-产品文档工具，支持两种模式：**正向（需求→文档）** 和 **逆向（代码→文档）**。
+产品文档工具，支持三种模式：**正向（需求→文档）**、**逆向（代码→文档）** 和 **ADR（架构决策记录）**。
 
 ---
 
@@ -101,6 +104,50 @@ argument-hint: "[forward|reverse] [范围] [输入源]"
 6. **AI2 终审**：确认无缺口
 
 > 详细步骤见 `references/reverse-mode.md`；AI1/AI2 prompt 模板见 `references/templates.md`
+
+### ADR 模式：架构决策记录
+
+工作流：
+```
+决策描述 → 编号分配 → AI 澄清 → 骨架创建 → AI 撰写 → 索引维护
+```
+
+核心步骤：
+1. **编号分配**：调用 `ddoc_adr.py next-number` 获取下一个 ADR 编号（如 ADR-001）
+2. **AI 澄清**：询问用户决策背景、备选方案、影响范围（每次 ≤4 个问题）
+3. **骨架创建**：调用 `ddoc_adr.py create --title "..."` 生成骨架文件 + README 索引更新
+4. **AI 撰写**：填充 Context / Options Considered / Decision / Consequences 四段内容
+5. **索引维护**：状态变更时调用 `ddoc_adr.py update-status --number N --status Accepted`
+
+**AI 保留步骤**：Step 2（澄清问题）和 Step 4（内容撰写）由 AI 执行，其余由脚本处理。
+
+**骨架模板**（脚本生成，AI 填充）：
+
+```markdown
+# ADR-{number}: {title}
+
+**Status**: {status}
+**Date**: {date}
+
+## Context
+<!-- AI 在 Step 2 澄清后填入具体背景、数据、约束 -->
+
+## Options Considered
+- **[方案A]**: 优点 / 缺点
+- **[方案B]**: 优点 / 缺点
+
+## Decision
+<!-- AI 填写决策理由和选择 -->
+
+## Consequences
+- ✅ 正面影响
+- ⚠️ 注意事项 / 风险
+```
+
+**边界情况**：
+- 同一决策只有一个 ADR（更新不新建），Context 必须有具体数字
+- Consequences 的 ⚠️ 必须有触发条件和解决路径
+- 备选方案的缺点必须是具体技术风险，不允许「复杂度高」等模糊描述
 
 ---
 

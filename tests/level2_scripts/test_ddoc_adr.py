@@ -1,4 +1,4 @@
-"""scripts/dadr.py 测试。
+"""scripts/ddoc_adr.py 测试。
 
 覆盖：next-number（空目录/有文件/跳号）/ create（首次/指定编号/README 缺失重建/
 重复编号）/ update-status（正常/不存在）/ README 索引格式。
@@ -12,9 +12,9 @@ import pytest
 from conftest import run_script  # noqa: E402
 
 
-class TestDadrNextNumber:
+class TestDdocAdrNextNumber:
     def test_empty_dir(self, tmp_project_dir):
-        rc, out, err = run_script("dadr.py", "next-number", "--cwd", str(tmp_project_dir))
+        rc, out, err = run_script("ddoc_adr.py", "next-number", "--cwd", str(tmp_project_dir))
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is True
@@ -27,16 +27,16 @@ class TestDadrNextNumber:
         (adr_dir / "ADR-001-test.md").write_text("# ADR-001")
         (adr_dir / "ADR-003-other.md").write_text("# ADR-003")
 
-        rc, out, err = run_script("dadr.py", "next-number", "--cwd", str(tmp_project_dir))
+        rc, out, err = run_script("ddoc_adr.py", "next-number", "--cwd", str(tmp_project_dir))
         assert rc == 0
         data = json.loads(out)
         assert data["data"]["next_number"] == 4  # max(1,3) + 1
 
 
-class TestDadrCreate:
+class TestDdocAdrCreate:
     def test_create_first_adr(self, tmp_project_dir):
         rc, out, err = run_script(
-            "dadr.py", "create",
+            "ddoc_adr.py", "create",
             "--title", "使用 PostgreSQL 替代 SQLite",
             "--cwd", str(tmp_project_dir),
         )
@@ -65,7 +65,7 @@ class TestDadrCreate:
 
     def test_create_with_number(self, tmp_project_dir):
         rc, out, err = run_script(
-            "dadr.py", "create",
+            "ddoc_adr.py", "create",
             "--title", "引入 Redis 缓存",
             "--number", "5",
             "--cwd", str(tmp_project_dir),
@@ -87,7 +87,7 @@ class TestDadrCreate:
 
         # 不创建 README — create 应自动重建
         rc, out, err = run_script(
-            "dadr.py", "create",
+            "ddoc_adr.py", "create",
             "--title", "新决策",
             "--cwd", str(tmp_project_dir),
         )
@@ -105,11 +105,11 @@ class TestDadrCreate:
     def test_create_duplicate_rejected(self, tmp_project_dir):
         """重复编号应返回错误。"""
         # 先创建一个
-        run_script("dadr.py", "create", "--title", "First", "--cwd", str(tmp_project_dir))
+        run_script("ddoc_adr.py", "create", "--title", "First", "--cwd", str(tmp_project_dir))
 
         # 再尝试用相同编号创建
         rc, out, err = run_script(
-            "dadr.py", "create",
+            "ddoc_adr.py", "create",
             "--title", "Duplicate",
             "--number", "1",
             "--cwd", str(tmp_project_dir),
@@ -120,13 +120,13 @@ class TestDadrCreate:
         assert data["status"] == "file_exists"
 
 
-class TestDadrUpdateStatus:
+class TestDdocAdrUpdateStatus:
     def test_update_status_success(self, tmp_project_dir):
         # 先创建
-        run_script("dadr.py", "create", "--title", "Test ADR", "--cwd", str(tmp_project_dir))
+        run_script("ddoc_adr.py", "create", "--title", "Test ADR", "--cwd", str(tmp_project_dir))
 
         rc, out, err = run_script(
-            "dadr.py", "update-status",
+            "ddoc_adr.py", "update-status",
             "--number", "1",
             "--status", "Accepted",
             "--cwd", str(tmp_project_dir),
@@ -150,7 +150,7 @@ class TestDadrUpdateStatus:
 
     def test_update_status_not_found(self, tmp_project_dir):
         rc, out, err = run_script(
-            "dadr.py", "update-status",
+            "ddoc_adr.py", "update-status",
             "--number", "99",
             "--status", "Accepted",
             "--cwd", str(tmp_project_dir),
@@ -161,12 +161,12 @@ class TestDadrUpdateStatus:
         assert data["status"] == "not_found"
 
 
-class TestDadrFormattedText:
+class TestDdocAdrFormattedText:
     """验证 formatted_text 字段存在性。"""
 
     def test_create_has_formatted_text(self, tmp_project_dir):
         rc, out, err = run_script(
-            "dadr.py", "create",
+            "ddoc_adr.py", "create",
             "--title", "Formatted test",
             "--cwd", str(tmp_project_dir),
         )

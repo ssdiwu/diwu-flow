@@ -8,8 +8,12 @@
 # 流程:
 #   1. 先推送到 origin/main（私有仓库，包含 .diwu/）
 #   2. 从当前 HEAD 创建临时 worktree，在 worktree 中清理敏感文件
-#   3. 将 clean commit 推送到 public/main
+#   3a. 打 tag 并推送 origin（私有 tag 指向原始 HEAD）
+#   3b. 推送 clean commit 到 public/main + clean tag
 #   4. 清理 worktree
+#
+# 关键: tag 在 Step 2 确定 clean SHA 之后才创建，
+#       避免 public tag 意外指向私有 commit。
 #
 # 前提:
 #   - 当前在 main 分支，工作区干净
@@ -55,17 +59,15 @@ if git tag -l "$VERSION" | grep -q "$VERSION"; then
     exit 1
 fi
 
-# --- Step 1: 先推送到 origin/main（私有仓库，包含 .diwu/）---
+# --- Step 1: 推送到 origin/main（私有仓库，包含 .diwu/）---
+# 注意：不在此时打 tag，等 Step 2 确定 clean SHA 后再统一打标签，
+# 避免 public tag 意外指向私有 commit（已出过 P0 事故）。
 
 echo ""
 echo "=== Step 1: 推送到私有仓库 ==="
 echo "→ 推送到 $PRIVATE_REPO/main"
 git push "$PRIVATE_REPO" "main"
-
-echo "→ 打标签: $VERSION"
-git tag -a "$VERSION" -m "diwu-flow ${VERSION}"
-git push "$PRIVATE_REPO" "refs/tags/${VERSION}"
-echo "✓ 私有仓库已推送（含 .diwu/）"
+echo "✓ 私有仓库 main 已推送（含 .diwu/）"
 
 # --- Step 2: 创建 worktree，在 worktree 中清理敏感文件 ---
 
@@ -99,7 +101,15 @@ else
     echo "  clean commit: ${CLEAN_SHA:0:8}"
 fi
 
-# --- Step 3: 推送到公开仓库 ---
+# --- Step 3: 统一打标签并推送到公开仓库 ---
+# 此时 CLEAN_SHA 已确定，可安全地为 origin 和 public 分别打正确的 tag。
+
+# 3a. 打私有 tag（指向原始 HEAD，含 .diwu/）
+echo ""
+echo "=== Step 3a: 打标签（私有仓库） ==="
+git tag -a "$VERSION" -m "diwu-flow ${VERSION}"
+git push "$PRIVATE_REPO" "refs/tags/${VERSION}"
+echo "✓ 私有仓库 tag $VERSION → ${HEAD_SHA:0:8}"
 
 if [ "$PUSH_PUBLIC" = "--push-public" ]; then
     if ! git -C "$ORIGINAL_DIR" remote get-url "$PUBLIC_REMOTE" >/dev/null 2>&1; then
@@ -107,8 +117,10 @@ if [ "$PUSH_PUBLIC" = "--push-public" ]; then
         echo "  请先执行: git remote add public <公开仓库-git-url>"
         exit 1
     fi
+
+    # 3b. 推送 clean main + clean tag 到公开仓库
     echo ""
-    echo "=== Step 3: 推送到公开仓库 ==="
+    echo "=== Step 3b: 推送到公开仓库 ==="
     echo "→ 推送 clean commit 到 $PUBLIC_REMOTE/main"
     git push --force "$PUBLIC_REMOTE" "${CLEAN_SHA}:refs/heads/main"
 
@@ -123,7 +135,7 @@ if [ "$PUSH_PUBLIC" = "--push-public" ]; then
         fi
     done
 
-    # public tag 必须指向 clean commit（非 origin commit）
+    # public tag 始终指向 clean commit
     if [ "$CLEAN_SHA" != "$HEAD_SHA" ]; then
         TEMP_TAG="${VERSION}-public"
         git tag -a "$TEMP_TAG" "$CLEAN_SHA" -m "diwu-flow ${VERSION} (public clean)"
