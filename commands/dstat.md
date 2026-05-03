@@ -24,6 +24,6 @@ effort: low
 
 - **阻塞提醒**：Done 任务占比低 + InProgress 长时间未变 → 提醒检查是否阻塞
 - **未 commit 提示**：git dirty 且有 Done 任务 → 提醒先提交再继续
-- **归档提醒**：recording 文件数接近阈值 → 建议执行 /darc 归档
+- **归档提醒**：recording 文件数接近阈值 → 建议执行 /drec 归档
 
 > **文件操作安全（R1）**：本命令为纯读取，不写入任何文件。

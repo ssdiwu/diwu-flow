@@ -215,7 +215,7 @@
       ],
       "category": "refactor",
       "blocked_by": [],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 67,
@@ -249,7 +249,7 @@
       ],
       "category": "refactor",
       "blocked_by": [],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 68,
@@ -282,7 +282,7 @@
       ],
       "category": "refactor",
       "blocked_by": [],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 69,
@@ -325,7 +325,7 @@
       "blocked_by": [
         67
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 70,
@@ -353,7 +353,7 @@
       ],
       "category": "functional",
       "blocked_by": [],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 71,
@@ -395,7 +395,7 @@
         69,
         70
       ],
-      "status": "InDraft"
+      "status": "Done"
     }
   ]
 }

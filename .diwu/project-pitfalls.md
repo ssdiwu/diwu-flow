@@ -117,7 +117,7 @@
 
 | 现象 | 根因 | 正确做法 | 来源 |
 |------|------|---------|------|
-| baa064d 误清 dtask.json 的 22 条 Done 任务 | 普通 session 直接覆盖 status 真相源，违反只有 /darc 能归档的规则 | 补 guard 检测（任务数大幅缩减时 exit(2)）+ /darc 归档前 marker 放行 | session-2026-05-01-234739.md, session-2026-05-01-235505.md |
+| baa064d 误清 dtask.json 的 22 条 Done 任务 | 普通 session 直接覆盖 status 真相源，违反只有 /drec 能归档的规则 | 补 guard 检测（任务数大幅缩减时 exit(2)）+ /drec 归档前 marker 放行 | session-2026-05-01-234739.md, session-2026-05-01-235505.md |
 | Guard 检查顺序即优先级：精确拦截被宽泛放行覆盖 | _has_active_task（宽泛放行）在 dloop guard（精确拦截）之前 | fail-fast guard 必须放在宽泛放行条件之前 | session-2026-05-01-201911.md |
 | 安全守卫判别维度只有"是否活跃"没有"谁在操作" | active=true 是状态标记不是权限标记 | Guard 判别维度不能只有状态必须有 caller 身份 | session-2026-05-01-202846.md |
 | Hook 阻止机制用错退出码：exit(1) 非 exit(2) | PreToolUse exit(1)=non-blocking, exit(2)=deny, exit(0)=allow | 改 hook 前必须先确认平台文档的退出码语义 | session-2026-05-01-205841.md, session-2026-05-01-215721.md, session-2026-05-01-220204.md |

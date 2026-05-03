@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/ssdiwu/diwu-flow)
 
-多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 **12 个核心 Skill**。（v0.0.8）
+多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合等 **10 个核心 Skill**。（v0.0.10）
 
 ---
 
@@ -12,18 +12,18 @@
 
 ```mermaid
 flowchart LR
-    subgraph UI["Commands 薄壳层（11）"]
+    subgraph UI["Commands 薄壳层（12）"]
         C1["/drun"] & C2["/dtask"] & C3["/dinit"]
         C4["/dprd"] & C5["/dadr"] & C6["/ddoc"]
-        C7["/ddemo"] & C8["/dcorr"] & C9["/dstat"]
-        C10["/dloop"] & C11["/dend"]
+        C7["/drec"] & C8["/dref"] & C9["/dcorr"]
+        C10["/dstat"] & C11["/dloop"] & C12["/dend"]
     end
 
-    subgraph CORE["Skills 方法论层（12）"]
+    subgraph CORE["Skills 方法论层（10）"]
         S1["drun"] & S2["dtask"] & S3["dvfy"]
-        S4["djug"] & S5["dcorr"] & S6["dprd"]
-        S7["drec"] & S8["darc"] & S9["ddoc"]
-        S10["ddemo"] & S11["dloop"] & S12["dstat"]
+        S4["dcorr"] & S5["dprd"]
+        S6["drec"] & S7["ddoc"] & S8["dref"]
+        S9["dstat"] & S10["dloop"]
     end
 
     subgraph AGENTS["Agents 执行层（3）"]
@@ -67,7 +67,7 @@ claude plugin add /path/to/diwu-flow
 /dstat                   # 项目全局状态快照
 ```
 
-> 示例：做「消息通知」功能 → `/dprd` 讨论推送方式 → 确定用 WebSocket 时 `/dadr` 记录决策 → `/ddoc` 写产品文档 → `/ddemo` 为不确定功能点生成验证方案 → `/dtask` 拆集成任务 → `/dloop` 开始循环。
+> 示例：做「消息通知」功能 → `/dprd` 讨论推送方式 → 确定用 WebSocket 时 `/dadr` 记录决策 → `/ddoc` 写产品文档 → `/dref` 细化关键需求 → `/dtask` 拆集成任务 → `/dloop` 开始循环。
 
 ### 接手老项目
 
@@ -89,7 +89,7 @@ claude plugin add /path/to/diwu-flow
 
 | 平台 | 命令 | 产物 |
 |------|------|------|
-| Claude Code | `claude plugin add <path>` | 12 Skill + 3 Agent + 11 Command + 7 Hook |
+| Claude Code | `claude plugin add <path>` | 10 Skill + 3 Agent + 12 Command + 7 Hook |
 | Codex CLI | `./install.sh --platform codex` | Skills + Agents symlink 到 `~/.codex/` |
 | OpenCode | `./install.sh --platform opencode` | Plugin + symlink 到 `.opencode/` |
 | 全部 | `./install.sh --platform all` | 以上全部 |
@@ -98,24 +98,22 @@ claude plugin add /path/to/diwu-flow
 
 ## 资产总览
 
-### Skills（12 个）
+### Skills（10 个）
 
 | Skill | 类型 | 一句话定位 | 核心产出 |
 |-------|------|-----------|---------|
 | **drun** | rule | 单任务执行器 | Preflight 5 步 → 实施 → 验证 → 记录 |
 | **dtask** | rule | 任务管理核心 | GWT 验收、task.json、规划分解 |
 | **dvfy** | rule | 验证证据优先级 | L1-L5 五级证据、Done 判定矩阵 |
-| **djug** | rule | 阶段边界决策锚点 | 四段式判断（启动/实施/验收/纠偏） |
 | **dcorr** | rule | 纠偏与误判排查 | 退化信号检测、四行重写模板 |
 | **dprd** | product | 产品需求分析 | PRD 文档（产品级/完整版两种模式） |
-| **drec** | rule | Session 记录写入 | 格式模板、踩坑经验四段式记录 |
-| **darc** | rule | 归档管理 | Task + Recording 双轨归档机制 |
+| **drec** | rule | Session 记录与归档 | 格式模板、踩坑经验四段式记录、归档聚合指引 |
 | **ddoc** | rule | 产品文档工具 | 正向(需求→文档) / 逆向(代码→文档) |
-| **ddemo** | rule | 积木式能力验证 | Demo 规格与目录结构 |
+| **dref** | tool | 需求细化清单 | 洞察性反问→可执行检查清单 |
 | **dstat** | tool | 项目状态只读聚合 | 任务进度 / Session / 决策 / Git 状态 |
 | **dloop** | rule | drun 薄壳循环包装 | `while(未停止){ /drun }` |
 
-### Commands（11 个）
+### Commands（12 个）
 
 | Command | 对应 Skill | 一句话 |
 |---------|-----------|--------|
@@ -125,7 +123,8 @@ claude plugin add /path/to/diwu-flow
 | `/dprd` | dprd | 生成产品需求文档（PRD） |
 | `/dadr` | — | 记录架构决策（ADR） |
 | `/ddoc` | ddoc | 正向 / 逆向生成文档 |
-| `/ddemo` | ddemo | 创建 Demo 能力规格 |
+| `/drec` | drec | Session 记录写入与归档 |
+| `/dref` | dref | 需求细化清单 |
 | `/dcorr` | dcorr | 纠偏恢复协议 |
 | `/dstat` | dstat | 项目状态快照 |
 | `/dloop` | dloop | 启动连续循环 |
@@ -180,7 +179,7 @@ flowchart LR
     L --> M{继续?}
     M -->|dloop 活跃| D
     M -->|单次模式| N["结束"]
-    M -->|归档阈值达| O["/darc<br/>归档清理"]
+    M -->|归档阈值达| O["/drec<br/>归档清理"]
 ```
 
 ### drun vs dloop
@@ -281,7 +280,7 @@ stateDiagram-v2
 |------|------|
 | **业务边界** | Layer 0 未通过时 Layer 1 不得开始；不写 task.json；不生成代码；Demo 需求名称必须 kebab-case |
 | **时序约束** | 确认定位 → Q1-Q8 逐问（每次只问一个）→ 检查已有 PRD → 脊梁提炼（用户确认）→ 论证链设计（用户确认）→ 积木选取 → 反模式门禁 → 写入 → 自检 |
-| **跨命令关系** | PRD README 的 Demo 需求列是 `/ddemo` 的输入；`.doc/README.md` 和 `.doc/adr/README.md` 是 Q5 的前置读取 |
+| **跨命令关系** | PRD README 的 Demo 需求列需手动验证或用 `/dprd` 重新评估生成落地方案；`.doc/README.md` 和 `.doc/adr/README.md` 是 Q5 的前置读取 |
 | **感知信号** | 交付前自检：智能引号 0 命中、绝对路径 0 命中、乱码 0 命中 |
 
 ### /dadr — 架构决策记录
@@ -302,14 +301,14 @@ stateDiagram-v2
 | **跨命令关系** | `.doc/README.md` 是所有命令的入口；每次写入文档后必须同步更新 README（通用货币维护义务） |
 | **感知信号** | 有状态实体必须有 stateDiagram；核心业务流程必须有 flowchart；数据实体关系必须有 erDiagram |
 
-### /ddemo — 不确定性功能点验证
+### /dref — 需求细化
 
 | 维度 | 约束 |
 |------|------|
-| **业务边界** | 每次只处理一个 Demo；两级门控（先判产品类型，再判能力 vs 功能）；核心验证资产篇幅 > 50%；不写生产架构 |
-| **时序约束** | 两级门控 → 读 README（不全量扫描）→ 建立上下文 → 生成 → 写入 → 更新 Demo README |
-| **跨命令关系** | Demo 文件路径格式 `DEMO-{kebab-case-name}-spec.md` 是 `/dtask` 的查找依据；通过标准必须可量化（供 `/dtask` acceptance 引用） |
-| **感知信号** | 核心验证资产必须可直接运行（Prompt 全文 / 测试矩阵 / 测试脚本），不允许伪代码占位 |
+| **业务边界** | 对话式澄清，不自动写文件；产出是检查清单，确认后引导用 /dtask 转化为任务 |
+| **时序约束** | 吸收分析 → 洞察性提问（每轮≤4问题）→ 迭代深挖或加速推进 → 输出最终清单 |
+| **跨命令关系** | 上游：/dprd（depends）；下游：/dtask（清单→任务转化） |
+| **感知信号** | 问题质量 > 数量；挑战假设优于泛泛之问；用户不耐烦时加速推进 |
 
 ### /dcorr — 纠偏恢复协议
 
@@ -418,9 +417,9 @@ BLOCKED 时：任务退回 `InSpec`，禁止 commit，禁止标记 Done，记录
 
 | 能力 | Claude Code | Codex CLI | OpenCode |
 |------|------------|-----------|----------|
-| 12 Skills | plugin.json 声明 | symlink SKILL.md | symlink SKILL.md |
+| 10 Skills | plugin.json 声明 | symlink SKILL.md | symlink SKILL.md |
 | 3 Agents | 默认路径自动发现 | symlink .md | symlink .md |
-| 11 Commands | Slash Commands | 不支持 | 声明式索引(.md) |
+| 12 Commands | Slash Commands | 不支持 | 声明式索引(.md) |
 | 7 Hook 事件 | hooks.json | 不支持 | v1 不移植 |
 | Python 脚本 | CLAUDE_PLUGIN_ROOT | 不支持 | 不支持 |
 
@@ -527,11 +526,11 @@ InDraft → InSpec → InProgress → InReview → Done
 ```
 diwu-flow/
 ├── .claude-plugin/
-│   ├── plugin.json              # 插件声明（12 Skill + 11 Command）
+│   ├── plugin.json              # 插件声明（10 Skill + 12 Command）
 │   └── marketplace.json         # 发布市场元数据
-├── skills/                      # 12 个方法论 Skill（唯一真相源）
+├── skills/                      # 10 个方法论 Skill（唯一真相源）
 │   └── {drun,dtask,dvfy,...}/SKILL.md
-├── commands/                    # 11 个薄壳 Command（CC Slash Command）
+├── commands/                    # 12 个薄壳 Command（CC Slash Command）
 │   └── {drun,dtask,dinit,...}.md
 ├── agents/                      # 3 个核心执行 Agent（默认路径自动发现）
 │   ├── explorer.md              #   只读探索
