@@ -580,6 +580,171 @@
         75
       ],
       "status": "Done"
+    },
+    {
+      "id": 77,
+      "title": "Phase 1: 删除 ddoc ADR 模式与 dvfy skill 注册",
+      "description": "终局 D 重组第一步——先删后改。删除 ddoc_adr.py 脚本与测试、ddoc SKILL.md ADR 章节、commands/ddoc.md ADR 段落、plugin.json dvfy 注册。同时版本号 0.0.11→0.0.12 的 plugin.json 更新在此 task 完成。",
+      "acceptance": [
+        "Given scripts/ddoc_adr.py 存在 When 执行删除 Then 文件不存在",
+        "Given tests/level2_scripts/test_ddoc_adr.py 存在 When 执行删除 Then 文件不存在",
+        "Given skills/ddoc/SKILL.md 含 ADR 模式章节(L108-151) When 删除该章节及 frontmatter 中 ADR 相关条目 Then 文件不含 '### ADR 模式'、不含 'adr' 关键词（除历史遗留 description 外）",
+        "Given commands/ddoc.md 含 ADR 子命令表(L45-51)和约束表(L53-60) When 删除所有 ADR 相关内容 Then 文件不含 'ddoc_adr.py' 且不含 'ADR 子命令表'",
+        "Given plugin.json skills 数组含 dvfy When 删除该行 Then len(skills)==9 且 version=='0.0.12'",
+        "Given marketplace.json version 0.0.11 When 更新 Then version=='0.0.12'",
+        "Given install.sh 含 0.0.11 When 更新 Then 版本号替换为 0.0.12 且 skills count 10→9 且 commands count 11→10",
+        "Given Phase 1 完成 When pytest tests/ -q Then 全量通过（test_ddoc_adr.py 已删除自动跳过）"
+      ],
+      "steps": [
+        "1. [锁定] rm /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ddoc_adr.py",
+        "2. [锁定] rm /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_ddoc_adr.py",
+        "3. [锁定] Edit skills/ddoc/SKILL.md: 删除 §ADR 模式章节(L108-151)、frontmatter L5 description 改'三种模式'→'两种模式'、L10 trigger 删除 ADR 行、L15 keyword 删除 'ADR模式'、L21 argument-hint 去 'adr'、L26 正文去 '和 **ADR（架构决策记录）**'",
+        "4. [锁定] Edit commands/ddoc.md: L2 description 改'三种'→'两种'、L3 argument-hint 去'adr'、L13-14 ADR 检测行删除、L28-41 ADR 模式段落删除（整块）、L45-51 ADR 子命令表删除、L53-60 ADR 子模式约束表删除",
+        "5. [锁定] Edit .claude-plugin/plugin.json: skills 数组删除 './skills/dvfy' 行、version '0.0.11'→'0.0.12'",
+        "6. [锁定] Edit .claude-plugin/marketplace.json: L9 version '0.0.11'→'0.0.12'、L10 description 10→9/11→10",
+        "7. [锁定] Edit install.sh: L18/20/68/85/92/94/95 的 10/11 计数调整、0.0.11→0.0.12 版本号替换"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ddoc_adr.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_ddoc_adr.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+      ],
+      "category": "refactor",
+      "status": "InReview"
+    },
+    {
+      "id": 78,
+      "title": "Phase 2: drec 补回踩坑聚合协议与设计决策记录",
+      "description": "修复 v0.0.10 精简时的历史遗漏：darc→drec 合并丢失了踩坑聚合 9 步协议和 Task#32 引入的 decisions.md 写入指引。在 drec SKILL.md 归档聚合指引后追加踩坑聚合章节，在 Session 格式模板后追加设计决策记录章节。",
+      "acceptance": [
+        "Given skills/drec/SKILL.md 归档聚合指引后 When 追加踩坑聚合章节 Then 含 9 步完整协议（同session合并/禁止跨session去重/禁止过期清理/来源列规范）",
+        "Given skills/drec/SKILL.md Session 模板后 When 追加设计决策记录章节 Then 含三档标准表（必须写/建议写/不写）和追加格式模板",
+        "Given drec 修改完成 When 检查 rules/judgments.md L134 Then 引用 'skills/drec/SKILL.md §设计决策记录' 有效（章节存在）"
+      ],
+      "steps": [
+        "1. [锁定] Edit skills/drec/SKILL.md: 在 L197 ('## 工具失败处理协议'之前) 插入 '### 踩坑聚合（9 步协议）' 章节，含 9 步详细描述（扫描/来源追踪/聚类/同session合并/禁止跨session去重/禁止过期清理/追加写入/来源列规范/无数据跳过）",
+        "2. [锁定] Edit skills/drec/SKILL.md: 在 L65 (现有 '---' 和 '## 本次踩坑/经验（必填）' 之间) 插入 '## 设计决策记录' 章节，含三档标准表+追加格式模板"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md"
+      ],
+      "category": "bugfix",
+      "blocked_by": [
+        77
+      ],
+      "status": "InReview"
+    },
+    {
+      "id": 79,
+      "title": "Phase 3: dvfy 溶解+ dprd 瘦身 + verifier 引用更新",
+      "description": "内容重组核心动作：dtask SKILL.md 吸收 Done 判定矩阵、drun SKILL.md 吸收完成前四问+运行态验证方法、dcorr SKILL.md 吸收无法验证处理模板、dvfy SKILL.md 改为历史索引页面、dprd SKILL.md 砍掉完整模式技术方案部分、agents/verifier.md dvfy引用更新。所有 depends 链同步清理。",
+      "acceptance": [
+        "Given dtask SKILL.md depends 含 dvfy When 删除该依赖 Then frontmatter depends 无 dvfy",
+        "Given dtask SKILL.md When 追加 Done 判定矩阵 Then 含 L1-3/L4/L5 四档判定表和 dtask §InReview→Done 锚点的交叉引用",
+        "Given drun SKILL.md depends 含 dvfy When 删除该依赖 Then frontmatter depends 无 dvfy",
+        "Given drun SKILL.md When 追加完成前四问 Then §Session 结束 前含四问表",
+        "Given drun SKILL.md When 追加运行态验证方法 Then §执行验证循环 后含四种方法表",
+        "Given dcorr SKILL.md When 追加无法验证处理 Then §与 BLOCKED 的边界 前含三段式模板+禁止行为+区分表",
+        "Given dvfy SKILL.md When 改为索引 Then frontmatter 含 deprecated:true + migrated_to 数组、正文仅含迁移对照表",
+        "Given dprd SKILL.md 含方案对比/五维约束/非功能需求/双端落地 When 删除这些章节 Then 仅保留产品论证核心(竞品/画像/迭代层次/业务指标/写作原则/反模式)且在删除位置引用 ddoc 正向模式",
+        "Given agents/verifier.md L61 When 更新 Then 'dvfy 体系'→'dtask Done 判定矩阵'",
+        "Given Phase 3 完成 When pytest tests/ -q Then 全量通过"
+      ],
+      "steps": [
+        "1. [锁定] Edit skills/dtask/SKILL.md: depends 删除 dvfy 行(L23)；在 §子代理策略 后追加'## Done 判定矩阵'章节（从 dvfy L45-62 迁移，含证据门槛表和验证映射表）",
+        "2. [锁定] Edit skills/drun/SKILL.md: depends 删除 dvfy 行(L21)；在 §Session 结束 内(L88前)插入'### 完成前四问'表；在 §执行验证循环 后(L146后)插入'## 运行态验证方法'表；L131 'dvfy 证据等级'→'证据等级(L1-L3主判，见 dtask §Done判定矩阵)'；L146 'dtask(实施)→dvfy(验证)→dcorr(纠偏)'→'dtask(实施/验证)→dcorr(纠偏)'",
+        "3. [锁定] Edit skills/dcorr/SKILL.md: 在 §与 BLOCKED 的边界 前(L189前)插入'## 无法验证时的处理'章节（三段式模板+禁止行为+与 BLOCKED 区分表）",
+        "4. [锁定] Write skills/dvfy/SKILL.md: 整文件重写为历史索引（frontmatter: deprecated:true + migrated_to 数组 + type:index；正文: 迁移对照表）",
+        "5. [锁定] Edit skills/dprd/SKILL.md: 删除 §方案对比方法论(L137-160)、§约束发现方法含五维约束(L163-205)、§非功能性需求分类(L208-240)、§双端落地 Checklist(L244-263)；在原位置插入'## 技术方案深度设计'引用段指向 ddoc 正向模式",
+        "6. [锁定] Edit agents/verifier.md: L61 'dvfy 体系或人工确认'→'dtask Done 判定矩阵（见 skills/dtask/SKILL.md §Done 判定矩阵）或人工确认'"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dcorr/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dvfy/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dprd/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/agents/verifier.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        78
+      ],
+      "status": "InReview"
+    },
+    {
+      "id": 80,
+      "title": "Phase 4: 全局引用修复与版本同步",
+      "description": "清理 10+ 文件中对 dvfy 的残留引用、ddd ADR 残留引用、版本号同步到所有文件。覆盖 rules/workflow.md 三副本、rules/mindset.md 三副本、rules/README.md、README.md、CHANGELOG.md、.claude/CLAUDE.md。",
+      "acceptance": [
+        "Given rules/workflow.md 三副本 L3 引用 dvfy When 更新 Then 均改为'dtask / drun'",
+        "Given rules/workflow.md 三副本 L98 引用 dvfy When 更新 Then 均改为'rules/verification.md'",
+        "Given rules/mindset.md 三副本 L87 示例含 dvfy When 更新 Then 均改为 dtask",
+        "Given rules/README.md 含 dvfy 行 When 更新 Then 删除或改为 'dtask + drun + dcorr'",
+        "Given README.md 多处 dvfy 引用 + '10 个' When 更新 Then 全部修正为 9 个 + dvfy 行删除 + ADR 残留清理",
+        "Given CHANGELOG.md When 追加 Then 含完整 v0.0.12 条目（Changed/Removed/Fixed 三栏）",
+        "Given .claude/CLAUDE.md L28/L82 含 dvfy When 更新 Then 删除",
+        "Given install.sh 含 ADR 残留 When 检查 Then 确认无 dadr/ddoc_adr 引用"
+      ],
+      "steps": [
+        "1. [锁定] Edit rules/workflow.md: L3 'dtask / dvfy'→'dtask / drun'、L98 'dvfy 定义了'→'rules/verification.md 定义了'",
+        "2. [锁定] Edit .claude/rules/workflow.md: 同步 Step 1",
+        "3. [锁定] Edit assets/dinit/assets/rules/workflow.md: 同步 Step 1",
+        "4. [锁定] Edit rules/mindset.md: L87 'dvfy'→'dtask'",
+        "5. [锁定] Edit .claude/rules/mindset.md: 同步 Step 4",
+        "6. [锁定] Edit assets/dinit/assets/rules/mindset.md: 同步 Step 4",
+        "7. [锁定] Edit rules/README.md: 删除 dvfy 行或改为'dtask + drun + dcorr'",
+        "8. [锁定] Edit README.md: L7 10→9 + version v0.0.11→v0.0.12、L34 dvfy 行删除、L122/128 dvfy 行删除、L508 重写、L552 dvfy 删除、ADR 残留行清理（L91/L303/L306/L315-322）、L588 version 更新",
+        "9. [锁定] Edit CHANGELOG.md: 在 v0.0.11 条目(L1)前追加完整 v0.0.12 条目",
+        "10. [锁定] Edit .claude/CLAUDE.md: L28 表格 dvfy 删除、L82 skills 列表 dvfy 删除、L3 版本号 0.0.11→0.0.12"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/CHANGELOG.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        79
+      ],
+      "status": "InReview"
+    },
+    {
+      "id": 81,
+      "title": "Phase 5: 全量验证与残留检查",
+      "description": "终局 D 最终验收：pytest 全量、JSON 合法性、grep 残留引用扫描、cross-reference 完整性。",
+      "acceptance": [
+        "Given 所有修改完成 When pytest tests/ -q Then 全量通过（排除已删除的 test_ddoc_adr.py）",
+        "Given plugin.json When JSON 检查 Then len(skills)==9 且 version=='0.0.12'",
+        "Given 所有常规文件 When grep dvfy 残留 Then 仅 skills/dvfy/SKILL.md 和 CHANGELOG.md/.diwu/ 含 dvfy（索引文件+历史记录合法）",
+        "Given 所有常规文件 When grep dadr|ddoc_adr Then 仅 .diwu/ 含引用（历史 recording 合法）",
+        "Given rules/judgments.md L134 When 检查 Then 引用'skills/drec/SKILL.md §设计决策记录'有效"
+      ],
+      "steps": [
+        "1. [锁定] bash: pytest tests/ -q",
+        "2. [锁定] bash: python3 -c 验证 plugin.json skills 计数=9 + version=0.0.12",
+        "3. [锁定] bash: python3 -c 验证 marketplace.json version=0.0.12",
+        "4. [锁定] bash: grep 扫描 dvfy 残留（排除 .diwu/ + CHANGELOG.md + skills/dvfy）",
+        "5. [锁定] bash: grep 扫描 dadr/ddoc_adr 残留（排除 .diwu/）",
+        "6. [锁定] bash: grep 确认 judgments.md L134 引用 drec 设计决策记录章节存在"
+      ],
+      "files_modified": [],
+      "category": "infra",
+      "blocked_by": [
+        80
+      ],
+      "status": "Done"
     }
   ]
 }

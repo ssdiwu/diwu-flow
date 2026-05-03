@@ -58,4 +58,4 @@ Stub 扫描：
 
 - 不允许修改任何文件（tools 白名单不含 `Edit` / `Write`）
 - 不允许判定任务 `Done`（只输出 `PASSED` / `GAPS_FOUND` / `HUMAN_NEEDED`）
-- 最终 `Done` 裁决权属于 `dvfy` 体系或人工确认
+- 最终 `Done` 裁决权属于 dtask Done 判定矩阵（见 `skills/dtask/SKILL.md` §Done 判定矩阵）或人工确认
