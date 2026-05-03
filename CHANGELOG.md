@@ -1,3 +1,27 @@
+## [v0.0.10] - 2026-05-03
+
+### Added
+- **pending_recording 三层兜底机制**：L0 release 写标记 → L1 Stop Hook 强制门控（.diwu/ dirty + session 匹配 + 30min 阈值）→ L2 drec Amend 模式（未分享 commit 保护 + success-only 清除语义）
+- **`show-pending` / `clear-pending` CLI 子命令**：drec SKILL.md 前置检查和收尾清除走 canonical 入口，每次调用自动触发 self-heal
+- **commands/drec.md**：新薄壳命令，/drec 成为真实 command 入口
+- **commands/dref.md**：新薄壳命令，需求细化清单的 command 入口
+
+### Changed
+- **Stop Hook `git status --short` 解析修复**：`split(None, 1)` 替代 `strip()+l[3:]`，正确处理带前导空格的 dirty 路径（如 ` M .diwu/file`）
+- **dinit.py sync-skills 双计数修复**：`repair_kind` 本地变量追踪操作类型，修复 symlink 修复被误报为 CREATED 的 bug
+- **drec SKILL.md 归档聚合指引扩展**：从单段描述扩展为完整归档规范（双轨总览、触发条件、5步手动流程、3种产物格式、5项验收、5条约束）
+- **dref SKILL.md 适配**：去平台耦合（移除 AskUserQuestion）、删自定义状态机（待评估/已确认等）、删 Phase 5 自动写文件、triggers 缩减至 6 个、depends 链接 dprd
+
+### Removed
+- **skills/djug/**：内容与 rules/judgments.md 完全重复，无独立方法论价值
+- **skills/darc/**：纯手动步骤清单，已并入 drec SKILL.md 归档聚合指引章节
+- **skills/ddemo/** + **commands/ddemo.md**：Demo 功能由 /dprd 内联验证流程替代
+- plugin.json 中 djug/darc/ddemo 注册条目已清理
+
+### Fixed
+- Stop Hook `_check_pending_recording_gate()` 在 `decide_loop_mode()` 中被 `save_runtime_state()` 覆盖的问题——gate 检查移至 save 之前
+
+
 # Changelog
 
 All notable changes to diwu-flow will be documented in this file.

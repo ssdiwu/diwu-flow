@@ -19,7 +19,6 @@ keywords:
 depends:
   - dtask
   - dvfy
-  - djug
   - dcorr
   - drec
 effort: high
@@ -129,7 +128,7 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 > - 验收标准 → dtask.json `acceptance[]`
 > - 验证脚本 → `.diwu/checks/smoke.sh`
 
-**调用顺序**：dtask(实施) → dvfy(验证) → djug(判定) → dcorr(纠偏)
+**调用顺序**：dtask(实施) → dvfy(验证) → dcorr(纠偏)
 
 执行完毕后停止，输出完成摘要。如需连续执行多个任务，使用 `/dloop`。
 

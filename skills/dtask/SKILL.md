@@ -21,7 +21,6 @@ keywords:
   - "commit"
 depends:
   - dvfy
-  - djug
 effort: high
 argument-hint: "[功能描述] [category] [blocked_by]"
 ---

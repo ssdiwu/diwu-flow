@@ -67,7 +67,7 @@ def check_task_archive(settings, tasks):
         msg = (
             f"[ARCHIVE_CHECK] Task archive: "
             f"已完成/已取消任务数 ({count}) 达到归档阈值 ({threshold})，"
-            f"建议执行 /darc 归档"
+            f"建议执行 /drec 归档"
         )
         return True, count, threshold, msg
 
@@ -111,7 +111,7 @@ def check_recording_archive(settings):
             parts.append(f"{old} 个文件超过 {dt} 天")
         msg = (
             f"[ARCHIVE_CHECK] Recording archive: "
-            + "; ".join(parts) + "，建议执行 /darc"
+            + "; ".join(parts) + "，建议执行 /drec"
         )
         return True, total, old, ct, dt, msg
 
@@ -166,7 +166,7 @@ if __name__ == "__main__":
                 "source": "stop_archive",
                 "level": "info",
                 "messages": messages,
-                "suggestion": "建议执行 /darc 归档",
+                "suggestion": "建议执行 /drec 归档",
             }
         }
         print(json.dumps(output, ensure_ascii=False))

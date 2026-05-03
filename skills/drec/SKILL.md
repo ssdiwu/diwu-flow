@@ -128,7 +128,72 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 
 ## 归档聚合指引
 
-归档时（recording/ 文件数超阈值），扫描所有即将归档的 session 文件中的 `### 本次踩坑/经验` 段落，按类别聚类后追加到 project-pitfalls.md。**每条必须标注具体 session 文件名作为来源**（如 `session-2026-04-18-213522.md`），禁止写归档文件名或占位符；归档文件内按 `## Source:` 分隔符追踪所属 session。
+> **触发入口**：Stop hook 自动检测（`hooks/scripts/stop_archive.py`）或手动 `/drec` 执行归档操作。
+
+### 双轨总览
+
+| 轨道 | 归档对象 | 触发条件 | 产物 |
+|------|---------|---------|------|
+| **Task 轨道** | Done / Cancelled 任务 | 数量 ≥ `task_archive_threshold`（默认 20） | `archive/task_archive_YYYY-MM.json` |
+| **Recording 轨道** | Session 记录文件 | 文件数 ≥ `recording_archive_threshold`（默认 50）**或** 存在超过 `recording_retention_days` 天（默认 30）的文件 | `archive/recording_YYYY-MM-DD.md` |
+
+### 触发条件与参数来源
+
+| 参数 | 默认值 | 配置来源 | 说明 |
+|------|--------|---------|------|
+| `task_archive_threshold` | 20 | `.diwu/dsettings.json` | Done/Cancelled 任务数达到此值触发 |
+| `recording_archive_threshold` | 50 | `.diwu/dsettings.json` | recording 文件数达到此值触发 |
+| `recording_retention_days` | 30 | `.diwu/dsettings.json` | 超过此天数的 recording 文件触发（即使总数未达阈值） |
+
+### 手动归档步骤
+
+1. **读取阈值配置**：从 `.diwu/dsettings.json` 加载上述三个参数（缺失时使用默认值）
+2. **扫描待归档任务**：遍历 `dtask.json` 中 `status` 为 Done 或 Cancelled 的任务，收集到列表
+3. **扫描待归档 recording**：遍历 `.diwu/recording/*.md`，按文件数和修改时间筛选超阈值/超龄文件
+4. **执行归档写入**：
+   - Task 轨道：将任务定义序列化为 JSON 追加到 `archive/task_archive_YYYY-MM.json`
+   - Recording 轨道：将 session 文件内容合并写入 `archive/recording_YYYY-MM-DD.md`（最新在前）
+5. **更新索引**：写入/更新 `.diwu/archive/.last_archive_summary.json`，记录本次归档的时间、数量、产物路径
+6. **清理源文件**（可选）：确认归档成功后，从 `dtask.json` 移除已归档任务（仅 task 轨道）；recording 文件保留原位不删除
+
+### 产物格式
+
+**Task 归档产物** (`task_archive_YYYY-MM.json`)：
+```json
+[
+  {"id": 1, "title": "...", "status": "Done", "description": "...", ...},
+  {"id": 2, "title": "...", "status": "Cancelled", ...}
+]
+```
+
+**Recording 归档产物** (`recording_YYYY-MM-DD.md`)：
+```markdown
+## Archived Sessions — 2026-05-03
+
+### ← 原始 session 文件内容完整保留 →
+### ← 多个 session 按时间倒序拼接，每个以 --- 分隔 →
+```
+
+**归档摘要** (`.last_archive_summary.json`)：
+```json
+{"archived_at": "2026-05-03T10:00:00Z", "tasks_count": 22, "recordings_count": 5, "files": ["archive/task_archive_2026-05.json", "archive/recording_2026-05-03.md"]}
+```
+
+### 验收清单
+
+- [ ] 归档后 `dtask.json` 中 Done/Cancelled 任务数 < 阈值（或已清零）
+- [ ] 归档 JSON 可被 `json.load()` 正确解析（无语法错误）
+- [ ] Recording 归档文件中每个 session 的 `### 本次踩坑/经验` 字段完整存在
+- [ ] `.last_archive_summary.json` 存在且 `archived_at` 为近期时间戳
+- [ ] 未归档的任务/Recording 不受影响（无误删）
+
+### 约束
+
+1. **不自动删除源文件**：归档是追加式写入，原始 recording 文件保留不动（避免误删活跃引用）
+2. **Task 归档后从 dtask.json 移除**：防止下次重复归档同一批任务；移除前必须确认 JSON 已写入磁盘
+3. **按月分片**：文件名含 `YYYY-MM` 或 `YYYY-MM-DD`，同月多次归档追加到同一文件
+4. **幂等安全**：重复执行归档不会产生重复条目（task 按 id 去重，recording 按文件名去重）
+5. **归档检测函数签名**：`check(cwd=None) -> list[(level, message)]`，内部调用 `check_task_archive()` + `check_recording_archive()`
 
 ---
 
