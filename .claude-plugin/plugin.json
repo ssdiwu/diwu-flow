@@ -1,7 +1,7 @@
 {
   "name": "diwu-flow",
-  "version": "0.0.9",
-  "description": "多平台方法论体系——Skills 为底，Commands 为壳。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 10 个方法论 Skill。",
+  "version": "0.1.0",
+  "description": "多平台方法论体系——Skills 为底，Commands 为壳。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析等 11 个方法论 Skill。",
   "author": {
     "name": "ssdiwu"
   },
@@ -19,7 +19,8 @@
     "./skills/ddoc",
     "./skills/ddemo",
     "./skills/dstat",
-    "./skills/dloop"
+    "./skills/dloop",
+    "./skills/dref"
   ],
   "commands": [
     "./commands/drun.md",

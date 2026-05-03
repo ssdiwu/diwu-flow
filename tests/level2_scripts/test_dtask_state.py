@@ -2,6 +2,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
@@ -106,3 +108,95 @@ def test_sync_migrates_legacy_dloop_state(tmp_project_dir):
     state = json.loads(runtime_state_path(tmp_project_dir).read_text(encoding="utf-8"))
     assert state["dloop"]["session_id"] == "loop-session"
     assert not legacy.exists()
+
+
+# ---------------------------------------------------------------------------
+# pending_recording 单元测试（直接 import dtask_state 模块函数）
+# ---------------------------------------------------------------------------
+
+from dtask_state import (  # noqa: E402
+    _normalize_pending_recording,
+    clear_pending_recording,
+    default_runtime_state,
+    set_pending_recording,
+    sync_runtime_state,
+)
+
+
+def test_default_includes_null_pending_recording():
+    """default_runtime_state() 含 pending_recording: None。"""
+    state = default_runtime_state()
+    assert state.get("pending_recording") is None
+
+
+def test_normalize_preserves_valid_pending_recording():
+    """合法的 pending_recording dict 通过 normalize。"""
+    valid = {
+        "task_id": 1,
+        "target_status": "Done",
+        "released_at": "2026-05-01T00:00:00Z",
+        "session_id": "sid-1",
+    }
+    result, err = _normalize_pending_recording(valid)
+    assert err is None
+    assert result == valid
+
+
+@pytest.mark.parametrize("invalid_value", [
+    "string",
+    42,
+    [],
+    {"task_id": -1},                          # 负数 task_id
+    {"task_id": "not-int"},                   # 非法 task_id 类型
+    {"task_id": 1},                           # 缺少必填字段
+    {"task_id": 1, "target_status": ""},      # 空 target_status
+    {"task_id": 1, "target_status": "Done", "released_at": 123},  # released_at 非字符串
+    {"task_id": 1, "target_status": "Done", "released_at": "", "session_id": ""},  # 空字符串
+])
+def test_normalize_rejects_invalid_pending_recording(invalid_value):
+    """非法的 pending_recording 值被 normalize 拒绝。"""
+    result, err = _normalize_pending_recording(invalid_value)
+    assert err is not None
+    assert result is None
+
+
+def test_sync_self_heal_clears_deleted_task_marker(tmp_project_dir):
+    """sync 时 pending_recording 指向不存在的 task_id → 自动清除标记。"""
+    dtask = {"tasks": [{"id": 1, "title": "a", "status": "Done"}]}
+    state_with_stale = {
+        "version": 1,
+        "task_sessions": {},
+        "dloop": None,
+        "pending_recording": {
+            "task_id": 999,
+            "target_status": "Done",
+            "released_at": "2026-05-01T00:00:00Z",
+            "session_id": "sid-stale",
+        },
+    }
+    _write_json(runtime_state_path(tmp_project_dir), state_with_stale)
+    result = sync_runtime_state(tmp_project_dir, dtask, persist=True)
+    assert result.ok is True
+    final = json.loads(runtime_state_path(tmp_project_dir).read_text(encoding="utf-8"))
+    assert final.get("pending_recording") is None
+
+
+def test_sync_self_heal_clears_status_mismatch_marker(tmp_project_dir):
+    """sync 时 pending_recording 的 target_status 与任务实际 status 不匹配 → 自动清除。"""
+    dtask = {"tasks": [{"id": 1, "title": "a", "status": "InProgress"}]}
+    state_with_mismatch = {
+        "version": 1,
+        "task_sessions": {},
+        "dloop": None,
+        "pending_recording": {
+            "task_id": 1,
+            "target_status": "Done",       # 实际状态是 InProgress
+            "released_at": "2026-05-01T00:00:00Z",
+            "session_id": "sid-x",
+        },
+    }
+    _write_json(runtime_state_path(tmp_project_dir), state_with_mismatch)
+    result = sync_runtime_state(tmp_project_dir, dtask, persist=True)
+    assert result.ok is True
+    final = json.loads(runtime_state_path(tmp_project_dir).read_text(encoding="utf-8"))
+    assert final.get("pending_recording") is None

@@ -56,6 +56,7 @@ def default_runtime_state() -> dict:
         "version": RUNTIME_STATE_VERSION,
         "task_sessions": {},
         "dloop": None,
+        "pending_recording": None,
     }
 
 
@@ -169,6 +170,31 @@ def _normalize_loop(loop: dict | None) -> tuple[dict | None, str | None]:
     }, None
 
 
+def _normalize_pending_recording(value) -> tuple[dict | None, str | None]:
+    if value is None:
+        return None, None
+    if not isinstance(value, dict):
+        return None, "pending_recording 必须是对象或 null"
+    task_id = value.get("task_id")
+    target_status = value.get("target_status")
+    released_at = value.get("released_at")
+    session_id = value.get("session_id")
+    if not _is_non_negative_int(task_id):
+        return None, "pending_recording.task_id 必须是非负整数"
+    if not isinstance(target_status, str) or not target_status:
+        return None, "pending_recording.target_status 必须是非空字符串"
+    if not isinstance(released_at, str) or not released_at:
+        return None, "pending_recording.released_at 必须是字符串"
+    if not isinstance(session_id, str) or not session_id:
+        return None, "pending_recording.session_id 必须是非空字符串"
+    return {
+        "task_id": task_id,
+        "target_status": target_status,
+        "released_at": released_at,
+        "session_id": session_id,
+    }, None
+
+
 def normalize_runtime_state(data: dict | None) -> tuple[dict | None, bool, str | None]:
     source = data or default_runtime_state()
     if not isinstance(source, dict):
@@ -211,10 +237,15 @@ def normalize_runtime_state(data: dict | None) -> tuple[dict | None, bool, str |
     if err:
         return None, False, err
 
+    pending_recording, pr_err = _normalize_pending_recording(source.get("pending_recording"))
+    if pr_err:
+        return None, False, pr_err
+
     normalized = {
         "version": version,
         "task_sessions": task_sessions,
         "dloop": dloop,
+        "pending_recording": pending_recording,
     }
     if normalized != source:
         changed = True
@@ -319,6 +350,20 @@ def sync_runtime_state(
                     ),
                 )
             session_to_task[session_id] = task_key
+
+    # self-heal: 清除指向不存在任务或状态不匹配的 stale pending_recording 标记
+    pr = state.get("pending_recording")
+    if pr and isinstance(pr, dict) and dtask_data is not None:
+        pr_task_id = pr.get("task_id")
+        pr_target = pr.get("target_status", "")
+        task_map = {t.get("id"): t for t in _task_list(dtask_data) if isinstance(t.get("id"), int)}
+        target_task = task_map.get(pr_task_id)
+        if target_task is None:
+            state["pending_recording"] = None
+            changed = True
+        elif target_task.get("status") != pr_target:
+            state["pending_recording"] = None
+            changed = True
 
     if persist and (changed or ensure_exists or migrated_legacy_loop):
         save_runtime_state(cwd_path, state, remove_legacy=True)
@@ -441,3 +486,20 @@ def resolve_session_inprogress_task(
         )
 
     return SessionTaskResolution("none")
+
+
+def set_pending_recording(runtime_state: dict, task_id: int, target_status: str,
+                          released_at: str, session_id: str) -> None:
+    runtime_state["pending_recording"] = {
+        "task_id": task_id,
+        "target_status": target_status,
+        "released_at": released_at,
+        "session_id": session_id,
+    }
+
+
+def clear_pending_recording(runtime_state: dict) -> bool:
+    if runtime_state.get("pending_recording") is None:
+        return False
+    runtime_state["pending_recording"] = None
+    return True

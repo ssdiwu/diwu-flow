@@ -2,6 +2,8 @@ import json
 import unittest
 from pathlib import Path
 
+import pytest
+
 from conftest import run_script  # noqa: E402
 
 
@@ -252,3 +254,216 @@ class TestAutoSessionIdResolution(unittest.TestCase):
         if extra_args:
             cmd.extend(extra_args)
         return run_script(*cmd, env=env)
+
+
+# ---------------------------------------------------------------------------
+# pending_recording 机制测试
+# ---------------------------------------------------------------------------
+
+
+def test_release_writes_pending_recording(tmp_project_dir):
+    """release done 后 dtask-state.json 含 pending_recording 标记。"""
+    _write_dtask(tmp_project_dir, [{"id": 1, "title": "a", "status": "InSpec"}])
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "claim", "--task-id", "1", "--session-id", "sid-1",
+        "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 0
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "release", "--task-id", "1", "--to", "done",
+        "--session-id", "sid-1",
+        "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 0
+    state = _read_runtime(tmp_project_dir)
+    pr = state.get("pending_recording")
+    assert pr is not None
+    assert pr["task_id"] == 1
+    assert pr["target_status"] == "Done"
+    assert pr["session_id"] == "sid-1"
+    assert "released_at" in pr
+
+
+def test_release_overwrites_existing_pending_recording(tmp_project_dir):
+    """多次 release 幂等覆盖，标记只指向最后一次 release 的任务。"""
+    _write_dtask(tmp_project_dir, [
+        {"id": 1, "title": "a", "status": "InSpec"},
+        {"id": 2, "title": "b", "status": "InSpec"},
+    ])
+    # release task1
+    for tid in (1, 2):
+        rc, _, _ = run_script(
+            "dtask_transition.py",
+            "claim", "--task-id", str(tid), "--session-id", f"sid-{tid}",
+            "--cwd", str(tmp_project_dir),
+        )
+        assert rc == 0
+        rc, _, _ = run_script(
+            "dtask_transition.py",
+            "release", "--task-id", str(tid), "--to", "done",
+            "--session-id", f"sid-{tid}",
+            "--cwd", str(tmp_project_dir),
+        )
+        assert rc == 0
+    state = _read_runtime(tmp_project_dir)
+    pr = state.get("pending_recording")
+    assert pr is not None
+    assert pr["task_id"] == 2  # 只指向 task2
+
+
+def test_release_failure_does_not_write_mark(tmp_project_dir):
+    """owner mismatch 时 release 失败，不写入 pending_recording 标记。"""
+    _write_dtask(tmp_project_dir, [{"id": 1, "title": "a", "status": "InProgress"}])
+    runtime = {
+        "version": 1,
+        "task_sessions": {
+            "1": {"session_id": "sid-old", "started_at": "2026-04-30T12:00:00Z"}
+        },
+        "dloop": None,
+    }
+    (tmp_project_dir / ".diwu" / "dtask-state.json").write_text(
+        json.dumps(runtime, ensure_ascii=False, indent=2)
+    )
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "release", "--task-id", "1", "--to", "done",
+        "--session-id", "sid-new",  # 不匹配 owner
+        "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 1
+    state = _read_runtime(tmp_project_dir)
+    assert state.get("pending_recording") is None
+
+
+@pytest.mark.parametrize("target_cli,target_status", [
+    ("inreview", "InReview"),
+    ("cancelled", "Cancelled"),
+    ("inspec", "InSpec"),
+])
+def test_non_done_release_also_writes_mark(tmp_project_dir, target_cli, target_status):
+    """InReview/Cancelled/InSpec 目标的 release 也写入 pending_recording 标记。"""
+    _write_dtask(tmp_project_dir, [{"id": 1, "title": "a", "status": "InSpec"}])
+    rc, _, _ = run_script(
+        "dtask_transition.py",
+        "claim", "--task-id", "1", "--session-id", "sid-1",
+        "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 0
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "release", "--task-id", "1", "--to", target_cli,
+        "--session-id", "sid-1",
+        "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 0
+    state = _read_runtime(tmp_project_dir)
+    pr = state.get("pending_recording")
+    assert pr is not None
+    assert pr["task_id"] == 1
+    assert pr["target_status"] == target_status
+
+
+def test_show_pending_cli_returns_marker(tmp_project_dir):
+    """show-pending 子命令：有标记时返回 has_pending_recording 且字段完整。"""
+    _write_dtask(tmp_project_dir, [{"id": 1, "title": "a", "status": "InSpec"}])
+    run_script(
+        "dtask_transition.py",
+        "claim", "--task-id", "1", "--session-id", "sid-x",
+        "--cwd", str(tmp_project_dir),
+    )
+    run_script(
+        "dtask_transition.py",
+        "release", "--task-id", "1", "--to", "done",
+        "--session-id", "sid-x",
+        "--cwd", str(tmp_project_dir),
+    )
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "show-pending", "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 0
+    payload = json.loads(out)
+    assert payload["ok"] is True
+    assert payload["status"] == "has_pending_recording"
+    pr = payload["pending_recording"]
+    assert pr["task_id"] == 1
+    assert pr["target_status"] == "Done"
+    assert pr["session_id"] == "sid-x"
+
+
+def test_show_pending_cli_no_marker(tmp_project_dir):
+    """无标记时 show-pending 返回 no_pending_recording。"""
+    _write_dtask(tmp_project_dir, [{"id": 1, "title": "a", "status": "InSpec"}])
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "show-pending", "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 0
+    payload = json.loads(out)
+    assert payload["ok"] is True
+    assert payload["status"] == "no_pending_recording"
+
+
+def test_clear_pending_cli(tmp_project_dir):
+    """clear-pending 子命令：清除标记后再 show-pending 确认已清空。"""
+    _write_dtask(tmp_project_dir, [{"id": 1, "title": "a", "status": "InSpec"}])
+    run_script(
+        "dtask_transition.py",
+        "claim", "--task-id", "1", "--session-id", "sid-c",
+        "--cwd", str(tmp_project_dir),
+    )
+    run_script(
+        "dtask_transition.py",
+        "release", "--task-id", "1", "--to", "done",
+        "--session-id", "sid-c",
+        "--cwd", str(tmp_project_dir),
+    )
+    # clear-pending
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "clear-pending", "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 0
+    payload = json.loads(out)
+    assert payload["status"] == "cleared"
+
+    # 再次 show-pending 确认已清空
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "show-pending", "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 0
+    payload = json.loads(out)
+    assert payload["status"] == "no_pending_recording"
+
+
+def test_show_pending_triggers_self_heal(tmp_project_dir):
+    """show-pending 走 sync 触发 self-heal：stale 标记（指向不存在 task）被自动清除。"""
+    _write_dtask(tmp_project_dir, [{"id": 1, "title": "a", "status": "InSpec"}])
+    # 手写含 stale pending_recording 的 state
+    stale_state = {
+        "version": 1,
+        "task_sessions": {},
+        "dloop": None,
+        "pending_recording": {
+            "task_id": 999,
+            "target_status": "Done",
+            "released_at": "2026-05-01T00:00:00Z",
+            "session_id": "sid-stale",
+        },
+    }
+    (tmp_project_dir / ".diwu" / "dtask-state.json").write_text(
+        json.dumps(stale_state, ensure_ascii=False, indent=2)
+    )
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "show-pending", "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 0
+    payload = json.loads(out)
+    assert payload["status"] == "no_pending_recording"
+    # 确认磁盘上的 state 也已被 self-heal 清除
+    state = _read_runtime(tmp_project_dir)
+    assert state.get("pending_recording") is None

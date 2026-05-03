@@ -16,7 +16,7 @@ effort: low
 - 输入 `/drun`：恢复当前 session 可继续的唯一任务。
 - 若存在 `InProgress` 任务：`/drun` 只恢复 **当前 session 在 `.diwu/dtask-state.json.task_sessions` 中持有的 owner**。
 - 若当前无 `InProgress`：`/drun` 选择第一个可执行的 `InSpec` 任务，并先通过 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py claim --task-id N --cwd <proj>` 把它显式切到 `InProgress`，再开始实施（`--session-id` 默认 `auto`，自动解析真实 session ID）。
-- 当本轮实施与验证结束：必须通过 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py release --task-id N --to done|inreview --cwd <proj>` 显式收尾，不能手改 `status`（`--session-id` 同样默认 `auto`）。
+- 当本轮实施与验证结束：必须通过 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py release --task-id N --to done|inreview --cwd <proj>` 显式收尾，不能手改 `status`（`--session-id` 同样默认 `auto`）。`release` 会自动在 `dtask-state.json` 写入 `pending_recording` 标记；若忘记后续调 `/drec`，Stop Hook 会检测到此标记并强制拦截，要求先执行 `/drec` 清除标记后才允许继续。
 
 ## 运行时真相源
 

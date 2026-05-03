@@ -77,6 +77,34 @@ def hook_session_id(event: dict) -> str:
     return event.get("session_id") or event.get("sessionId") or ""
 
 
+def _resolve_stop_session_id(event_session_id: str, cwd: str = "") -> str:
+    """Stop Hook 的 session_id 解析：event → env → session file → empty downgrade。
+
+    与 dtask_transition._resolve_session_id() 的差异 ——
+    本函数**不生成** drun-<timestamp> fallback SID。
+    原因：Stop Hook 生成的 fallback SID 不可能等于 release 时写入的 session_id，
+    生成出来只会制造假不匹配，导致 block 命中率下降。
+    返回空字符串时，调用方应将"本次 session"判定降级为 warn。
+    """
+    if event_session_id:
+        return event_session_id
+
+    env_sid = os.environ.get("CLAUDE_SESSION_ID", "")
+    if env_sid:
+        return env_sid
+
+    session_file = "/tmp/.claude_main_session"
+    try:
+        if os.path.exists(session_file):
+            content = open(session_file).read().strip()
+            if content and len(content) > 4:
+                return content
+    except OSError:
+        pass
+
+    return ""
+
+
 def format_task(prefix, task):
     return (
         prefix + "\n\n"
@@ -219,13 +247,16 @@ def _check_recording_reminder(cwd):
             ["git", "status", "--short"],
             cwd=cwd, capture_output=True, text=True, timeout=10
         )
-        lines = result.stdout.strip().split("\n") if result.stdout.strip() else []
-        # git status --short 格式: "XY path/to/file"（XY 为两字符状态码 + 空格）
-        # 提取路径部分（第3列起），过滤 .diwu/ 内部状态文件
+        raw = result.stdout
+        lines = raw.splitlines() if raw.strip() else []
+        # git status --short 格式: "XY path"（X=index Y=worktree，各 1 字符 + 空格 + 路径）
+        # 首字符可能为空格（如 " M path" 表示仅工作区修改），
+        # 用 split(None, 1) 提取路径更稳健，不受 strip/前导空格影响。
         code_changes = []
         for l in lines:
-            if len(l) > 3:
-                path = l[3:]  # 跳过 "XY " 前缀
+            parts = l.split(None, 1)
+            if len(parts) == 2:
+                path = parts[1]
                 if path and not path.startswith(".diwu/"):
                     code_changes.append(path)
         if not code_changes:
@@ -301,6 +332,134 @@ def _check_recording_reminder(cwd):
     return ""
 
 
+def _check_diu_dirty(cwd) -> tuple[bool, list[str]]:
+    """检测 .diwu/ 内部状态文件是否有未提交变更。
+
+    与 _check_recording_reminder() 互补：
+    - recording reminder 排除 .diwu/（关注代码变更）
+    - 本函数专注 .diwu/（关注状态文件变更）
+
+    返回 (has_dirty, dirty_files)。
+    """
+    DIU_DIRTY_PREFIXES = (
+        ".diwu/dtask.json",
+        ".diwu/dtask-state.json",
+        ".diwu/recording/",
+    )
+
+    try:
+        result = subprocess.run(
+            ["git", "status", "--short"],
+            cwd=cwd, capture_output=True, text=True, timeout=10,
+        )
+        raw = result.stdout
+        lines = raw.splitlines() if raw.strip() else []
+    except (OSError, subprocess.TimeoutExpired):
+        return False, []
+
+    dirty = []
+    for l in lines:
+        # git status --short 格式: "XY path"（X=index Y=worktree，各 1 字符 + 空格 + 路径）
+        # 首字符可能为空格（如 " M path" 表示仅工作区修改），
+        # 用 split(maxsplit=1) 提取路径更稳健，不受 strip/前导空格影响。
+        parts = l.split(None, 1)
+        if len(parts) == 2:
+            path = parts[1]
+            if any(path.startswith(p) or path == p for p in DIU_DIRTY_PREFIXES):
+                dirty.append(path)
+
+    # 补充：未跟踪文件（git status --short 不列出目录内文件）
+    if not dirty:
+        try:
+            untracked_result = subprocess.run(
+                ["git", "ls-files", "--others", "--exclude-standard"],
+                cwd=cwd, capture_output=True, text=True, timeout=10,
+            )
+            if untracked_result.stdout.strip():
+                for uf in untracked_result.stdout.strip().split("\n"):
+                    uf = uf.strip()
+                    if any(uf.startswith(p) or uf == p for p in DIU_DIRTY_PREFIXES):
+                        dirty.append(uf)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+    return len(dirty) > 0, dirty
+
+
+_STALE_THRESHOLD_SECS = 30 * 60  # 30 分钟
+
+
+def _check_pending_recording_gate(cwd, current_session_id=""):
+    """检测 pending_recording 标记 + .diwu/ dirty → 强制门控提示。
+
+    返回 (level, hint):
+      ("block", hint)  — 本次 session 的 release + 有 .diwu/ 未提交变更 + ≤30min
+      ("warn", hint)   — stale 标记 / 其他 session / 工作区干净但标记存在且 stale
+      ("", "")         — 无标记，无需处理
+    """
+    if not cwd:
+        return "", ""
+
+    state_path = os.path.join(cwd, ".diwu", "dtask-state.json")
+    try:
+        with open(state_path, "r", encoding="utf-8") as f:
+            state = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return "", ""
+
+    pr = state.get("pending_recording")
+    if not pr or not isinstance(pr, dict):
+        return "", ""
+
+    released_at = pr.get("released_at", "")
+    try:
+        from datetime import datetime, timezone as _tz
+        release_dt = datetime.fromisoformat(released_at)
+        age_secs = (datetime.now(_tz.utc) - release_dt).total_seconds()
+    except (ValueError, TypeError):
+        age_secs = float('inf')
+
+    is_stale = age_secs > _STALE_THRESHOLD_SECS
+
+    has_diu_dirty, _ = _check_diu_dirty(cwd)
+
+    task_id = pr.get("task_id", "?")
+    target_status = pr.get("target_status", "?")
+    pr_session_id = pr.get("session_id", "")
+
+    is_own_session = bool(current_session_id and current_session_id == pr_session_id)
+
+    if not has_diu_dirty:
+        if is_stale:
+            return ("warn", (
+                f"[PENDING_REC] Task#{task_id} ({target_status}) 的 pending_recording "
+                f"标记已超过 {int(age_secs // 60)} 分钟且工作区干净。\n"
+                f"如已完成 /drec，请确认标记已清除；否则可能需要手动清理。"
+            ))
+        return "", ""
+
+    if is_own_session and not is_stale:
+        return ("block", (
+            f"\n⛔ [PENDING_REC] Task#{task_id} 已 release 为 {target_status} "
+            f"但尚未执行 /drec 记录并 commit。\n"
+            f".diwu/ 存在未提交变更，原子性要求：每个 Done 任务对应一次可回溯 commit。\n"
+            f"**请立即执行 /drec** 完成记录与 commit 后再继续。"
+        ))
+
+    if is_stale:
+        return ("warn", (
+            f"\nℹ [PENDING_REC] 检测到过期 pending_recording 标记 "
+            f"(Task#{task_id}, {int(age_secs // 60)} 分钟前)。\n"
+            f"建议确认是否需要补执行 /drec。"
+        ))
+
+    return ("warn", (
+        f"\nℹ [PENDING_REC] 检测到其他 session 的待记录任务 "
+        f"(Task#{task_id}, session={pr_session_id[:8]}...)。\n"
+        f"如有需要请协调执行 /drec。"
+    ))
+
+
 def decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state, session_id, cwd=None):
     extra = _prompt_suffix(additional_prompts)
     resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, session_id or "")
@@ -345,6 +504,14 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
     if recording_hint:
         print(recording_hint, file=sys.stderr)
 
+    # Layer 1: pending_recording 强制门控
+    resolved_sid = _resolve_stop_session_id(session_id or "", cwd)
+    pr_level, pr_hint = _check_pending_recording_gate(cwd, resolved_sid)
+    if pr_level == "block":
+        return True, {"decision": "block", "reason": pr_hint + extra}
+    elif pr_level == "warn":
+        print(pr_hint, file=sys.stderr)
+
     return False, {}
 
 
@@ -387,6 +554,14 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
         _verify_dloop_cleared(cwd)
         print(report, file=sys.stderr)
         return False, {}
+
+    # Layer 1: pending_recording 提示注入（dloop 模式不独立 block，只注入提示）
+    # 必须在 save_runtime_state 之前检查：save 会覆写 dtask-state.json，
+    # 若 runtime_state dict 不含 pending_recording 字段则标记会被擦除。
+    resolved_sid = _resolve_stop_session_id(session_id or "", cwd)
+    pr_level, pr_hint = _check_pending_recording_gate(cwd, resolved_sid)
+    if pr_hint:
+        extra += f"\n\n{pr_hint}"
 
     # 未命中停止条件 → 迭代计数 + 委托 /drun 执行下一轮
     next_iteration = iteration + 1

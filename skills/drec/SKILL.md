@@ -221,12 +221,100 @@ CONTINUOUS MODE COMPLETE - 所有可执行任务已完成
 
 ### 执行步骤
 
+0. **[前置检查]** 读取 `pending_recording` 标记：
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py show-pending --cwd .
+   ```
+   - 输出 `no_pending_recording` → 正常模式（跳到 Step 1）
+   - 输出 `has_pending_recording` + task 详情 → 进入 Step 0b 判定
+
+   **Step 0b — Amend 模式判定**：
+   | 条件 | 动作 |
+   |------|------|
+   | 无标记 / null | 正常模式（原流程不变） |
+   | 有标记 + ≤10min + HEAD 是 `[recording]` commit + **未 push** | **Amend 模式**（见下方 Amend 章节） |
+   | 有标记 + ≤10min 但 HEAD 非 `[recording]` 或已 push | 正常模式新 commit |
+   | 有标记 + >10min | 正常模式（stale 标记，closeout 后清除） |
+
 1. 按 Session 文件格式模板写入 `.diwu/recording/session-{timestamp}.md`
 2. 运行 `date '+%Y-%m-%d %H:%M:%S'` 获取时间戳用于 commit message
 3. 检查 `git status --short` 是否有变更
-4. 有变更 → `git add -A && git commit -m "[recording] Session {timestamp} ..."`
+4. 有变更 → `git add -A && git commit -m "[recording] Session {timestamp} ..."`（或 amend 模式下用 `git commit --amend -m "..."`)
 5. 无变更 → 输出跳过提示，返回成功
 6. 将 commit hash 作为输出返回给调用方
+7. **[收尾]** closeout 成功后清除标记：`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py clear-pending --cwd .`
+
+---
+
+## Amend 模式
+
+当 Step 0b 判定进入 Amend 模式时，将新 recording 内容**追加到上一个 `[recording]` commit** 中（而非创建新 commit）。
+
+### 未分享 Commit 保护
+
+```bash
+# 检查 1: HEAD commit message 是否以 [recording] 开头
+HEAD_SUBJECT=$(git log -1 --pretty=%s)
+echo "$HEAD_SUBJECT" | grep -q '^\[recording\]' || { AMEND_ELIGIBLE=false; echo "HEAD 非 recording commit"; }
+
+# 检查 2: HEAD 是否已 push（即 HEAD 是否 reachable from upstream）
+if $AMEND_ELIGIBLE; then
+    if git rev-parse @{u} >/dev/null 2>&1; then
+        UNPUSHED_COUNT=$(git rev-list @{u}..HEAD --count 2>/dev/null || echo "0")
+        if [ "$UNPUSHED_COUNT" -eq 0 ]; then
+            AMEND_ELIGIBLE=false  # HEAD 已被上游包含，amend 会改写已分享历史
+        fi
+    fi
+    # 无 upstream → 视为未 push，允许 amend
+fi
+```
+
+### Amend 执行流程
+
+```
+1. 正常写入 recording 文件（Step 1，追加或新建）
+2. git add -A（全量变更）
+3. git commit --amend -m "[recording] Session {timestamp} — {updated_msg}"
+4. 返回 amend 后的 commit hash
+```
+
+### Amend 回退策略
+
+> 注意：Step 0b 前置判定已在执行 amend **之前**排除已 push / 非 recording commit 的场景，直接降级到正常模式。下表仅覆盖判定通过后仍发生的异常。
+
+| 失败场景 | 处理方式 |
+|----------|---------|
+| 前置判定未拦截但 `--amend` 仍失败（如权限/锁冲突） | 放弃 amend，回退到正常 `git commit` 新建 commit |
+| `git commit` 本身失败（merge conflict 等） | 输出错误信息，Agent 手动解决后重试 |
+
+---
+
+## 标记清除语义（R3）
+
+> **（R3）**：drec **closeout 成功后**才清除 `pending_recording` 标记。以下情况视为 closeout 成功，可清除：
+> - recording 文件已成功写入磁盘
+> - `git commit` 成功（exit 0 + 返回 hash）
+> - 工作区干净，判定"无变更需提交"（drec 原有 no-op 分支）
+>
+> **以下情况必须保留标记不清除**：
+> - recording 写入失败（IO 错误/权限不足）
+> - `git add` 或 `git commit` 返回非零退出码
+> - 前置判定降级到正常 commit 后 `git commit` 仍失败
+
+清除方式（仅 closeout 成功后调用）：
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py clear-pending --cwd .
+```
+
+### 完整失败处理表
+
+| 失败场景 | 处理方式 | 标记状态 |
+|----------|---------|---------|
+| 前置判定发现 HEAD 已 push 或非 recording commit | 降级到正常 `git commit` 新建 commit（不执行 amend） | commit 成功后清除 |
+| `git commit` 本身失败 | 输出错误，Agent 手动解决后重试 | **保留**（未 closeout 成功） |
+| recording 写入失败 | 输出错误，不执行 commit | **保留** |
+| 工作区干净（已被其他方式提交） | 跳过 commit，仅清除标记 | 清除（no-op 也是 success） |
+| 标记 task_id 与 dtask.json status 不匹配 | 正常模式执行，closeout 成功后清除 + 输出警告 | 清除 |
 
 ---
 
