@@ -37,7 +37,7 @@ effort: low
 
 - `继续当前任务`：当前 session 命中 owner 匹配的 `InProgress`。
 - `选择下一个 InSpec`：通过 `dtask_transition.py claim` 接管新任务后开始。
-- `完成并收尾`：通过 `dtask_transition.py release` 将当前 `InProgress` 显式切到 `Done` 或 `InReview`。
+- `完成并收尾`：通过 `dtask_transition.py release` 将当前 `InProgress` 显式切到 `Done` 或 `InReview`。S1/S2 路径标 Done 前先经 verifier 终验（详见 drun SKILL.md §Verifier 终验规则）。
 - `PENDING REVIEW`：超前实施达到上限，停止并等待人工验收。
 - `invalid runtime state`：`dtask-state.json` 缺失 owner、损坏或与 `dtask.json` 冲突；此时不会自动恢复 чужой 任务。
 

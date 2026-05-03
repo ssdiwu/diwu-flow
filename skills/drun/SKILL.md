@@ -87,14 +87,29 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 在 session 结束前（含 context window 接近上限时）：
 
 1. 整理 session 内容摘要（处理了哪些任务、实施内容、验收验证结果、下一步计划）
-2. **调用 `/drec` 完成 recording 写入与原子 commit**（详见 drec §原子 Commit 职责 §调用契约），由 drec 统一负责：写入文件 → git add -A 全量变更 → git commit
+2. 如有重大设计决策，追加到 decisions.md
+3. **verifier 终验**（S1/S2 路径标 Done 前必须执行；S3/S4 已调过 verifier 则跳过；infra/refactor 简单度量可跳过）
+
+#### Verifier 终验规则
+
+| 维度 | 规则 |
+|------|------|
+| **触发条件** | S1/S2 路径（主代理自审 / explorer→implementer）标 Done 前 |
+| **跳过条件** | S3/S4 路径已调用 verifier 终验；或 category 为 infra/refactor 且改动为纯度量调整 |
+| **输入** | acceptance 条目列表 + implementer 交接报告中的文件列表（非 git diff --stat） |
+| **输出** | `PASSED`（全部通过→release Done）/ `GAPS_FOUND`（有缺口→保持 InProgress 修复）/ `HUMAN_NEEDED`（需人工判断→release InReview） |
+| **三分支** | PASSED → Step 4 release Done；GAPS_FOUND → 返回实施修复缺口后重新验证；HUMAN_NEEDED → Step 4 release InReview |
+
+> 输出状态与 `agents/verifier.md` 第 38 行定义一致。
+
+4. **release**：用 `dtask_transition.py release` 将任务显式切到 `Done` 或 `InReview`
+5. **调用 `/drec` 完成 recording 写入与原子 commit**（详见 drec §原子 Commit 职责 §调用契约），由 drec 统一负责：写入文件 → git add -A 全量变更 → git commit
 
 > **pending_recording 兜底**：`release` 命令会自动在 `dtask-state.json` 写入 `pending_recording` 标记。若忘记调 `/drec`，Stop Hook 会检测到此标记并强制拦截，要求先执行 `/drec` 清除标记后才允许继续。详见 stop_decision §pending_recording 门控。
 
 > **（R1）**：写入 session 文件前必须 Read 当前 session 文件尾部，确认追加位置正确。
 
-3. 如有重大设计决策，追加到 decisions.md
-4. 确保 task.json 反映最新状态；若本轮已完成实施与验证，最后一步必须用 `dtask_transition.py release` 将任务显式切到 `Done` 或 `InReview`
+> **closeout 顺序铁律**：整理摘要 → decisions → verifier → release → /drec。不可跳序，不可省略 verifier（除非命中跳过条件）。
 
 > **详细 recording 格式和踩坑记录格式见 drec skill**
 
