@@ -1,7 +1,7 @@
 # 项目踩坑聚合表
 
 > 按 Layer 2 类别标签聚类。来源列写具体 session 文件名。
-> 最后更新：2026-05-02 00:32（Task 归档 #25 个任务）
+> 最后更新：2026-05-04 02:04（Session 归档 #13 个 session）
 
 ## 环境漂移
 
@@ -143,3 +143,60 @@
 | v0.0.3 tag 指向孤立 clean commit 从未推送到 public | 早期 drelease.sh worktree 产物生成了 clean commit 但未推送 public | 发版后必须 git ls-remote --tags public 独立验证，不信任 origin 状态 | session-2026-05-01-043916.md |
 | drelease.sh 原 Step 3 只推当前版本 tag 不处理历史遗留 | public tag 可能指向 origin commit（含敏感文件历史） | public tag 必须指向 clean commit 且每次发版顺带同步缺失历史 tags | session-2026-05-01-043916.md |
 | dtask SKILL.md 缺少 Step 3 命令模板导致非 CC 平台找不到 common.py | Skill 和 Command 中关键命令模板不同步 | 应在 Skill（跨平台底层）和 Command（CC 专属）中同步维护关键命令模板 | session-2026-05-01-234739.md |
+
+---
+
+## 归档批次：2026-05-04（Session #58-#76，19 个任务，13 个 session）
+
+### 环境漂移（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| macOS `sed -i ''` 对含点号数字（如 `0.1.0`）替换不生效 | BSD sed 转义行为与 GNU sed 差异 | 涉及版本号/含点字符串替换统一用 Python `str.replace()` | session-2026-05-03-172515.md, session-2026-05-03-180459.md |
+| CC `/plugin` 报 "not found" | 先查远程 marketplace 未查本地 installed_plugins.json | 插件加载问题先查本地注册表再查远程源 | session-2026-05-03-180459.md |
+
+### 读层现象（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| Task#64 symlink 只修检测不修根因（broken symlink） | 发现 broken artifact 后未追问「为什么第一次就建错了」→ expected_target 硬编码相对路径是根因 | 发现 broken artifact 必须追查首次创建逻辑，不能只补检测 | session-2026-05-03-002855.md, session-2026-05-03-004525.md |
+| PLUGIN_ROOT 是仓库路径但 CC 从 marketplace 加载 skill | dinit.py 写死唯一源路径，未考虑 CC 插件安装后的实际目录结构（marketplace vs marketplaces 拼写差异 + 多候选路径） | 涉及「CC 从哪加载」的问题必须验证实际加载路径，不能假设仓库路径即运行时路径 | session-2026-05-03-021204.md |
+| validate_skills_src typo 导致 NameError 崩溃但 pytest 未覆盖此路径 | 重构后变量名拼写错误，类型检查器不捕获，单元测试未覆盖真实 CLI 调用链 | 重命名/重构后必须跑一次真实 CLI 调用链验证（不只是单元测试） | session-2026-05-03-100308.md |
+
+### 分层未拆清（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| Stop hook 阻止 dloop 继续——release 与 Stop hook 时序竞争导致 iteration 未递增 | dloop 的 iteration 递增依赖 Stop hook 执行，与 task_completed.py 异步追踪存在时间窗口 | dloop 运行时状态写入/读取必须通过 dtask-state.json 统一入口，避免多 hook 竞态 | session-2026-05-03-001428.md, session-2026-05-03-002855.md |
+| dloop state 写入端(dloop.py)与读取端(stop_decision.py)分离，读取端可能读到过期数据 | stop_decision.py 读内存缓存而非磁盘最新值 | 读取 runtime state 前必须 sync_runtime_state() 强制 reload 或用 dtask.json Done 列表 fallback | session-2026-05-03-100308.md |
+| task_entry_guard 在 dloop 活跃时拦截非 owner session 的 Edit/Write | guard 仅判别「是否有活跃任务」未判别「谁在操作」 | Guard 判别维度必须有 caller 身份，不能只有状态标记 | session-2026-05-03-170432.md |
+| Task#71 acceptance 写 0.0.10 但实施时直接升到 0.1.0 | acceptance 是验收契约不是建议，实施前未对齐 | 版本号等契约字段在实施前必须先确认 acceptance 与目标一致 | session-2026-05-03-172515.md |
+
+### 路由护栏契约（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| ExitPlanMode hook contract 变更：tool_input.file_path 为空，实际传 tool_input.plan | plan_exit_hint.py 用旧 contract（file_path）判断 plan 路径 → marker 永远创建不了 → task_entry_guard hard block 静默失效 | Hook 开发必须验证 CC 实际传入的字段名，不能用假设的 contract | session-2026-05-03-162925.md, session-2026-05-03-173333.md |
+| task_entry_guard 拦截 Edit/Write 导致 dloop 非 owner session 无法写文件 | guard 仅拦截 Edit\|Write 主写入路径，Bash 路径不拦截 | 已知缺口：基础设施修复可通过 Bash 路径绕过 guard；长期应增加白名单或身份识别 | session-2026-05-03-170432.md |
+| Plan→Dtask 门控双守卫：ExitPlanMode 强提示 + Edit/Write 入口守卫 | 原 plan mode 输出视觉上等价于 dtask 但本质是架构方案不是执行契约 | 双守卫分层：退出 plan 时强提示进入 /dtask；进入 Edit/Write 写阶段时实施入口守卫 | session-2026-05-03-162925.md |
+
+### 验证误读（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| 引入 4 个 bug 的 PR 本身成为踩坑来源 | 功能验证只覆盖 happy path（插件仓库自身），未覆盖用户项目场景（tmp_dir 跨目录、默认模式无 dloop、有历史 Done 任务） | 修改涉及路径计算或全局状态读写时，必须在边界场景（跨盘/空值/预填充数据）下验证 | session-2026-05-03-004525.md |
+
+### 数据缺口（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| dtask.json 中 Task#72-74 已标记 Done 但状态仍为 InDraft | release 脚本只更新 pending_recording 标记未同步 dtask.json.status | release 后立即校验 dtask.json.status 与目标一致，dtask_transition.py 应原子更新两文件 | session-2026-05-04-020408.md |
+| dtask_transition API 参数命名不统一：claim 用 --task-id（单数），mark-inspec 用 --task-ids（复数），release 用 --task-id + --to | 三个子命令独立设计未统一命名规范 | API 设计时先定义统一命名约定（单数/复数/动词一致性），再实现各子命令 | session-2026-05-04-012526.md |
+| context 截断后 session ID 变化导致 owner mismatch | dtask-state.json.task_sessions 中旧 session ID 与新 session 不匹配 | context 截断恢复后需先 adopt（重新认领任务）再 release，不能直接操作旧 owner 任务 | session-2026-05-04-012526.md |
+
+### 其他（新增）
+
+| 现象 | 根因 | 正确做法 | 来源 |
+|------|------|---------|------|
+| dtask.json 在 context 截断后损坏（Task#71 后出现重复数据） | 截断恢复时 JSON 写入追加而非覆盖 | context 截断后恢复 dtask.json 前先用 head 截断到合法 JSON + json.load 验证完整性 | session-2026-05-04-012047.md |
+| 清理内置 TaskCreate 追踪器时误删了 dtask.json 中 Task#72-74 | 把「清理 TaskList 缓存」和「清理 dtask.json 任务」混为一谈 | TaskList 是 CC 内置追踪器（可安全清理），dtask.json 是项目真相源（不可随意删除条目） | session-2026-05-04-012047.md |
