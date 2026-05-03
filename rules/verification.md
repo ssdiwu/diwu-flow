@@ -20,7 +20,7 @@
 
 | 证据等级组合 | 判定动作 | 标注要求 |
 |-------------|---------|---------|
-| 全部 L1-3 通过 | Agent 自审后 Done | session 文件逐条标注 PASS + 验证方法 |
+| 全部 L1-3 通过 | Agent 自审 + verifier 终验后 Done | session 文件逐条标注 PASS + 验证方法 + verifier PASSED |
 | L1-3 部分 + L4 补充 | Agent 自审后 Done | L4 项标注「待人工确认」+ 后续验证方式 |
 | 仅 L4 或 L4-5 | **不允许 Done** | 标注 InReview + 「待验证」+ 原因 + 后续方式 |
 | 仅 L5 | **禁止宣称完成** | 保持 InProgress，补充真实验证 |

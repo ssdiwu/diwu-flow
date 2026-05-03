@@ -1,6 +1,36 @@
 {
   "version": 1,
   "task_sessions": {},
-  "dloop": null,
-  "pending_recording": null
+  "dloop": {
+    "active": true,
+    "session_id": "dloop-2026-05-03-172249",
+    "started_at": "2026-05-03T17:22:49.623309+00:00",
+    "completed_task_ids": [],
+    "initial_done_ids": [
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
+    ],
+    "current_iteration": 0,
+    "max_tasks": 2,
+    "stopped_at": null,
+    "stop_reason": null
+  },
+  "pending_recording": {
+    "task_id": 76,
+    "target_status": "Done",
+    "released_at": "2026-05-03T17:25:17.384491+00:00",
+    "session_id": "file-sid-should-ignore"
+  }
 }

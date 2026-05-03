@@ -461,7 +461,9 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md"
       ],
       "category": "refactor",
-      "blocked_by": [72],
+      "blocked_by": [
+        72
+      ],
       "status": "InDraft"
     },
     {
@@ -505,7 +507,9 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
       ],
       "category": "infra",
-      "blocked_by": [73],
+      "blocked_by": [
+        73
+      ],
       "status": "InDraft"
     },
     {
@@ -529,7 +533,7 @@
       ],
       "category": "refactor",
       "blocked_by": [],
-      "status": "InDraft"
+      "status": "Done"
     },
     {
       "id": 76,
@@ -572,8 +576,10 @@
         "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/verification.md"
       ],
       "category": "functional",
-      "blocked_by": [75],
-      "status": "InDraft"
+      "blocked_by": [
+        75
+      ],
+      "status": "Done"
     }
   ]
 }

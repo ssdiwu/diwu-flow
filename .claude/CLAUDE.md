@@ -2,6 +2,8 @@
 
 **插件版本：0.0.11**
 
+**当前项目是一个 Claude Code Plugin（插件）项目**
+
 ## 核心原则
 
 - Skills 为底，Commands 为壳：所有方法论在 Skills 中，Commands 是薄封装
