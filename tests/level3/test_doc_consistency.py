@@ -52,6 +52,21 @@ def _read_json(path):
     return {}
 
 
+def _read_frontmatter(path):
+    """Parse YAML frontmatter from a SKILL.md file. Returns dict or None."""
+    if not path.exists():
+        return None
+    import yaml
+    try:
+        text = path.read_text(encoding='utf-8')
+        if text.startswith('---'):
+            end = text.index('---', 3)
+            return yaml.safe_load(text[3:end])
+    except Exception:
+        pass
+    return None
+
+
 class TestDocConsistency:
 
     # --- C1: Key number matrix ---
@@ -109,12 +124,21 @@ class TestDocConsistency:
                     assert False, f"{loc}: claims {claimed} commands, actual {actual}"
 
     def test_skill_count_consistent(self):
-        actual = len([d for d in SKILLS_DIR.iterdir() if d.is_dir()])
+        # Count all skill dirs, excluding deprecated ones
+        all_dirs = [d for d in SKILLS_DIR.iterdir() if d.is_dir()]
+        deprecated_count = 0
+        for d in all_dirs:
+            sk_md = d / "SKILL.md"
+            if sk_md.exists():
+                fm = _read_frontmatter(sk_md)
+                if fm is not None and fm.get("deprecated"):
+                    deprecated_count += 1
+        actual = len(all_dirs) - deprecated_count
         pj = _read_json(PLUGIN_JSON)
         # For plugin.json, count skills[] array length directly
         claimed_pj = len(pj.get('skills', [])) if pj else None
         if claimed_pj is not None and claimed_pj != actual:
-            assert False, f"plugin.json: claims {claimed_pj} skills, actual {actual}"
+            assert False, f"plugin.json: claims {claimed_pj} skills, actual={actual} (excl. {deprecated_count} deprecated)"
         # For api.md, use regex on markdown text only
         api = API_MD.read_text(encoding='utf-8') if API_MD.exists() else ''
         if 'Skill 数量' in api:
@@ -144,7 +168,16 @@ class TestDocConsistency:
             claimed_dirs.add(parts[-1] if parts else entry)
         actual_dirs = {d.name for d in SKILLS_DIR.iterdir() if d.is_dir()}
         missing = claimed_dirs - actual_dirs
-        extra = actual_dirs - claimed_dirs
+        # Allow deprecated skill dirs (frontmatter: deprecated: true) not in plugin.json
+        deprecated_dirs = set()
+        for d in SKILLS_DIR.iterdir():
+            if d.is_dir():
+                sk_md = d / "SKILL.md"
+                if sk_md.exists():
+                    fm = _read_frontmatter(sk_md)
+                    if fm is not None and fm.get("deprecated"):
+                        deprecated_dirs.add(d.name)
+        extra = actual_dirs - claimed_dirs - deprecated_dirs
         assert not missing and not extra, (
             f"Skills dir mismatch: plugin.json={claimed_dirs}, "
             f"actual={actual_dirs}. Missing: {missing}, Extra: {extra}"

@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/ssdiwu/diwu-flow)
 
-多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、验证证据、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合等 **10 个核心 Skill**。（v0.0.11）
+多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合等 **9 个核心 Skill**。（v0.0.11）
 
 ---
 
@@ -20,23 +20,23 @@
 |------|----------|------|
 | **执行** | `/drun` `/dloop` `/dend*` | 单任务 / 连续循环 / 停止循环 |
 | **规划** | `/dtask` `/dref` `/dinit*` | 任务管理 / 需求细化 / 项目初始化 |
-| **文档** | `/dprd` `/ddoc` `/drec` | PRD+ADR / 产品文档 / Session 记录 |
+| **文档** | `/dprd` `/ddoc` `/drec` | PRD / 产品文档 / Session 记录 |
 | **辅助** | `/dcorr` `/dstat` | 纠偏恢复 / 状态快照 |
 
 > `*` 标记为无对应 Skill 的独立 Command。Commands 不含任何方法论逻辑，仅负责参数透传和交互增强。无 Command 机制的平台可直调 Skills。
 
-### Layer 2 — Skills 方法论层（10）
+### Layer 2 — Skills 方法论层（9）
 
 所有方法论的唯一真相源，零平台耦合，可在任何工具链中独立加载。
 
 | 分组 | Skills | 核心产出 |
 |------|--------|---------|
-| **任务闭环** | `drun` `dtask` `dvfy*` | 执行 → 验收 → 证据判定 |
+| **任务闭环** | `drun` `dtask` | 执行 → 验收 → 证据判定 |
 | **纠偏恢复** | `dcorr` | 退化检测 + 四行重写 + 止损序列 |
 | **需求产品** | `dprd` `dref` `ddoc` | PRD 需求分析 → 细化清单 → 产品文档 |
 | **状态记录** | `drec` `dstat` `dloop` | Session 归档 + 项目聚合 + 连续循环 |
 
-> `*` 标记为无对应 Command 的独立 Skill。Skill frontmatter 无平台专属字段（无 context/agent/model/hooks），是跨平台复用的基础。
+> 注：Skill frontmatter 无平台专属字段（无 context/agent/model/hooks），是跨平台复用的基础。
 
 ### Layer 3 — Agents 执行层（3）
 
@@ -119,13 +119,12 @@ claude plugin add /path/to/diwu-flow
 
 ## 资产总览
 
-### Skills（10 个）
+### Skills（9 个）
 
 | Skill | 类型 | 一句话定位 | 核心产出 |
 |-------|------|-----------|---------|
 | **drun** | rule | 单任务执行器 | Preflight 5 步 → 实施 → 验证 → 记录 |
 | **dtask** | rule | 任务管理核心 | GWT 验收、task.json、规划分解 |
-| **dvfy** | rule | 验证证据优先级 | L1-L5 五级证据、Done 判定矩阵 |
 | **dcorr** | rule | 纠偏与误判排查 | 退化信号检测、四行重写模板 |
 | **dprd** | product | 产品需求分析 | PRD 文档（产品级/完整版两种模式） |
 | **drec** | rule | Session 记录与归档 | 格式模板、踩坑经验四段式记录、归档聚合指引 |
@@ -300,26 +299,17 @@ stateDiagram-v2
 |------|------|
 | **业务边界** | Layer 0 未通过时 Layer 1 不得开始；不写 task.json；不生成代码；Demo 需求名称必须 kebab-case |
 | **时序约束** | 确认定位 → Q1-Q8 逐问（每次只问一个）→ 检查已有 PRD → 脊梁提炼（用户确认）→ 论证链设计（用户确认）→ 积木选取 → 反模式门禁 → 写入 → 自检 |
-| **跨命令关系** | PRD README 的 Demo 需求列需手动验证或用 `/dprd` 重新评估生成落地方案；`.doc/README.md` 和 `.doc/adr/README.md` 是 Q5 的前置读取 |
+| **跨命令关系** | PRD README 的 Demo 需求列需手动验证或用 `/dprd` 重新评估生成落地方案；`.doc/README.md` 是 Q5 的前置读取 |
 | **感知信号** | 交付前自检：智能引号 0 命中、绝对路径 0 命中、乱码 0 命中 |
 
-### /ddoc — 产品文档（含 ADR 子模式）
+### /ddoc — 产品文档
 
 | 维度 | 约束 |
 |------|------|
 | **业务边界** | 代码是锚点，无法确认的内容标注 `[待确认]`，不编造；逆向模式不写 task.json（大范围除外） |
 | **时序约束** | 写文档 → 自审 → gap 分析（两层）→ 补充缺口 → 再次 gap 分析；gap 分析必须在自审之后 |
-| **跨命令关系** | `.doc/README.md` 是所有命令的入口；每次写入文档后必须同步更新 README（通用货币维护义务） |
+| **跨命令关系** | `.doc/README.md` 是所有命令的入口；每次写入文档后必须同步更新 README |
 | **感知信号** | 有状态实体必须有 stateDiagram；核心业务流程必须有 flowchart；数据实体关系必须有 erDiagram |
-
-#### ADR 子模式约束
-
-| 维度 | 约束 |
-|------|------|
-| **业务边界** | 同一决策只有一个 ADR（更新不新建）；Context 必须有具体数字；Consequences 的 ⚠️ 必须有触发条件和解决路径 |
-| **时序约束** | 先读 README 判断新建/更新 → 写文件 → 更新 README；不可先写文件再判断 |
-| **跨命令关系** | ADR README 是 `/dprd` Q5 的输入；ADR 编号格式 `ADR-NNN` 是 `/dtask` steps 引用的依据 |
-| **感知信号** | 备选方案的缺点必须是具体技术风险和触发条件，不允许「复杂度高」等模糊描述 |
 
 ### /dref — 需求细化
 
@@ -505,7 +495,7 @@ AI 擅长执行，不擅长决策。**人负责决策，AI 负责操作**。
 | 缩写 | 全称 | diwu-flow 对应 |
 |------|------|---------------|
 | **BDD** | Behavior-Driven Development | GWT 验收格式（Given/When/Then） |
-| **TDD** | Test-Driven Development | dvfy L1-L5 证据优先级体系 |
+| **TDD** | Test-Driven Development | L1-L5 证据优先级体系（见 rules/verification.md） |
 | **SDD** | Specification-Driven Development | dtask.json 结构化任务定义 |
 | **DDD** | Domain-Driven Design | dprd 领域驱动文档 + ddoc 分域文档 |
 
@@ -546,11 +536,11 @@ InDraft → InSpec → InProgress → InReview → Done
 ```
 diwu-flow/
 ├── .claude-plugin/
-│   ├── plugin.json              # 插件声明（10 Skill + 11 Command）
+│   ├── plugin.json              # 插件声明（9 Skill + 10 Command）
 │   └── marketplace.json         # 发布市场元数据
-├── skills/                      # 10 个方法论 Skill（唯一真相源）
-│   └── {drun,dtask,dvfy,...}/SKILL.md
-├── commands/                    # 11 个薄壳 Command（CC Slash Command）
+├── skills/                      # 9 个方法论 Skill（唯一真相源）
+│   └── {drun,dtask,dcorr,...}/SKILL.md
+├── commands/                    # 10 个薄壳 Command（CC Slash Command）
 │   └── {drun,dtask,dinit,...}.md
 ├── agents/                      # 3 个核心执行 Agent（默认路径自动发现）
 │   ├── explorer.md              #   只读探索

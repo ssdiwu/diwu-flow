@@ -1,7 +1,7 @@
 # 项目踩坑聚合表
 
 > 按 Layer 2 类别标签聚类。来源列写具体 session 文件名。
-> 最后更新：2026-05-04 02:11（Session 归档 2026-05-02 ~ 2026-05-04，17 个 session）
+> 最后更新：2026-05-04 02:14（Session 归档 2026-05-02 ~ 2026-05-04，19 个 session，含 021452 归档总结后 bugfix session）
 
 ## 环境漂移
 
@@ -72,6 +72,8 @@
 | task_entry_guard 在 dloop 活跃时拦截非 owner session 的 Edit/Write | guard 仅判别「是否有活跃任务」未判别「谁在操作」 | Guard 判别维度不能只有状态必须有 caller 身份；已知缺口：基础设施修复可通过 Bash 路径绕过 guard（guard 仅拦截 Edit\|Write 主写入路径） | session-2026-05-03-170432.md |
 | rules 三副本同步方向错误：从 stale 的 .claude/rules/ 复制到 assets/ 覆盖已修复内容 | 以 stale 副本为源向 assets/ 同步，覆盖了已修复的 rules/ | 始终以 rules/ 为真相源向 .claude/rules/ 和 assets/ 两处同步 | session-2026-05-03-170432.md, session-2026-05-03-173333.md |
 | Task#71 acceptance 写的是 0.0.10 但实施时直接升到 0.1.0 | acceptance 是验收契约不是建议，实施前未再确认 | 版本号等契约字段在实施前必须先确认 acceptance 与目标一致 | session-2026-05-03-172515.md |
+| commit message 已写 Done 但实际未执行 release 迁移 | 认为改 dtask.json 的 status 字段就算完成，忽略了完整迁移链 InDraft→InSpec→InProgress→Done | status 变更必须与代码变更同一 commit 执行完整迁移链；仅修改 dtask.json 不算完成 closeout | session-2026-05-04-021452.md |
+| commit message 已写 Done 但实际未执行 release 迁移 | 认为改 dtask.json 的 status 字段就算完成，忽略了完整迁移链 InDraft→InSpec→InProgress→Done | status 变更必须与代码变更同一 commit 执行完整迁移链；仅修改 dtask.json 不算完成 closeout | session-2026-05-04-021452.md |
 
 ## 路由护栏契约
 
@@ -119,6 +121,8 @@
 | set 不能 JSON 序列化导致 TypeError | get_done_ids 返回 set 类型直接写入 state dict | 涉及持久化的数据结构必须确认可序列化，set/list/dict 的边界容易混用 | session-2026-05-03-100308.md |
 | sync-skills summary.total 被 BROKEN_PENDING（不存在常量）double-count | 状态常量不存在导致逻辑分支走偏 | 新增状态常量前先确认已在状态机定义中注册；用 repair_kind 统一表达 | session-2026-05-03-162925.md |
 | macOS `sed -i ''` 对某些正则模式静默失败（BSD sed 差异） | 同环境漂移类别第 8 条 | 改用 Python str.replace() 可靠替换 | session-2026-05-03-180459.md |
+| `re.match` 从字符串开头匹配，`ADR-001` 中数字不在开头 → 匹配失败 | `re.match` 默认只匹配行首，不扫描字符串内部 | 需要扫描字符串内部时用 `re.search`；编写正则前确认 match/search/findall 语义差异 | session-2026-05-04-021452.md |
+| Agent model 测试用允许范围检查（allowed_models）而非精确值断言 | 允许范围防回退但不防误标（如 implementer 被误标为 haiku 仍在范围内） | 关键约束用 `required_model` 精确值断言，非关键约束用范围检查 | session-2026-05-04-021452.md |
 
 ## 数据缺口
 
@@ -176,14 +180,17 @@
 
 ---
 
-## 归档批次：2026-05-04（Task#72-76 收尾 + 归档总结，3 个 session）
+## 归档批次：2026-05-04（Task#72-76 收尾 + 归档总结 + bugfix，5 个 session）
 
-> 本批次为 2026-05-04 当天全部 session，涵盖 dadr 并入 ddoc、Agent 分级、verifier 门控、归档整理。
+> 本批次为 2026-05-04 当天全部 session，涵盖 dadr 并入 ddoc、Agent 分级、verifier 门控、归档整理、归档后 bugfix。
 
 ### 关键新增踩坑
 
 | 类别 | 代表性新踩坑 | 来源 |
 |------|-------------|------|
 | 环境漂移 | dtask.json context 截断损坏 + Edit 缓存失效 + owner mismatch | session-2026-05-04-012047.md, session-2026-05-04-012526.md |
-| 数据缺口 | 误删 dtask.json 任务 + release 未同步 status | session-2026-05-04-012047.md, session-2026-05-04-020408.md |
+| 数据缺口 | 误删 dtask.json 任务 + release 未同步 status + commit 已写 Done 但未走完整迁移链 | session-2026-05-04-012047.md, session-2026-05-04-020408.md, session-2026-05-04-021452.md |
 | 路由护栏契约 | dtask_transition API 参数命名不统一 | session-2026-05-04-012526.md |
+| 验证误读 | re.match 行首匹配 vs re.search 全文扫描（正则陷阱）| session-2026-05-04-021452.md |
+| 验证误读 | 测试用允许范围检查不防误标，关键约束应精确值断言 | session-2026-05-04-021452.md |
+| 读层现象 | Read 工具读取 session 文件时异常截断（仅显示标题行）| session-2026-05-04-021105.md |

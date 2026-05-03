@@ -63,6 +63,29 @@ date '+%Y-%m-%d %H:%M:%S'
 - 正例：文件第一行就是 `## Session 2026-04-14 18:44:09`
 - 反例：开头写 `---` 再跟 `## Session ...`
 
+## 设计决策记录
+
+> 触发：Session 结束前（drun §Session 结束 Step 2）。写入 `.diwu/decisions.md`。
+
+### 三档标准
+
+| 档位 | 条件 | 示例 |
+|------|------|------|
+| **必须写** | 多方案选一 **或** 影响范围 >= 2 模块 | 统一 dtask-state.json vs 分散状态文件；脚本化 Command 转 Python |
+| **建议写** | 对后续有约束作用的技术选型（单模块内） | 选 scripts/ 作共享库位置；max_tasks 取快照而非固定值 |
+| **不写** | 记录本次 session 做了什么、下一步计划 | 常规实施日志、bug 修复过程 → 写入 session 文件即可 |
+
+### 追加格式
+
+```markdown
+### YYYY-MM-DD HH:MM:SS 决策标题
+
+- **备选方案**: A) ... B) ...
+- **选定方案**: B
+- **影响范围**: [模块列表]
+- **理由**: [正向论证]
+```
+
 ---
 
 ## 本次踩坑/经验（必填）
@@ -194,6 +217,20 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 3. **按月分片**：文件名含 `YYYY-MM` 或 `YYYY-MM-DD`，同月多次归档追加到同一文件
 4. **幂等安全**：重复执行归档不会产生重复条目（task 按 id 去重，recording 按文件名去重）
 5. **归档检测函数签名**：`check(cwd=None) -> list[(level, message)]`，内部调用 `check_task_archive()` + `check_recording_archive()`
+
+### 踩坑聚合（9 步协议）
+
+> 在手动归档步骤 Step 4 执行。将本批归档涉及的全部 recording 文件中的踩坑经验聚合到 `.diwu/project-pitfalls.md`。
+
+1. **扫描**（Step 4a）：遍历本次归档相关的 `.diwu/recording/session-*.md` 中所有 `### 本次踩坑/经验` 段落
+2. **来源追踪**（Step 4b）：在归档文件内按 `## Source: session-xxx.md` 分隔符追踪每条踩坑所属的具体 session
+3. **按类别聚类**（Step 4c）：按六类标签分组（环境漂移/数据缺口/读层现象/路由护栏契约/验证误读/分层未拆清/其他）
+4. **同 session 同类别合并**（Step 4d）：同一 session + 同一类别标签的多条踩坑合并为一条，现象描述要点保留并用 `; ` 连接
+5. **禁止跨 session 去重**（Step 4e）：不同 session 遇到同一问题是复发信号，各自保留独立条目
+6. **禁止过期清理**（Step 4f）：保留所有历史条目，不按时间或代码状态清理
+7. **追加写入**（Step 4g）：追加到 `.diwu/project-pitfalls.md`，不覆盖已有条目
+8. **来源列规范**（Step 4h）：来源列必须写具体 session 文件名（如 `session-2026-04-18-213522.md`），禁止写占位符或归档文件名
+9. **无数据跳过**（Step 4i）：如无踩坑数据则跳过，在 summary 中标注 "0 new pitfalls"
 
 ---
 

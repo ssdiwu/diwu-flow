@@ -10,7 +10,6 @@
   "skills": [
     "./skills/drun",
     "./skills/dtask",
-    "./skills/dvfy",
     "./skills/dcorr",
     "./skills/dprd",
     "./skills/drec",

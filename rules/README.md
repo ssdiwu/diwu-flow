@@ -12,7 +12,7 @@
 | **task.md** | 任务状态机、acceptance 格式、dtask 结构、blocked_by 规范 | dtask | 写任务、改状态、处理依赖时 |
 | **workflow.md** | 任务规划、任务实施、验证要求（Session 见 session.md） | dtask | 规划任务、实施任务、验证时 |
 | **session.md** | Session 生命周期管理（启动/结束/continuous_mode/checkpoint） | dsess + drecord | Session 开始、结束时 |
-| **verification.md** | 证据优先级体系（L1-L5）、Done 判定门槛、无法验证处理 | dverify | 选择证据等级、判定完成标准时 |
+| **verification.md** | 证据优先级体系（L1-L5）、Done 判定门槛、无法验证处理 | dtask + drun + dcorr | 选择证据等级、判定完成标准时 |
 | **correction.md** | 纠偏体系：退化信号检测、四行重写、止损序列 | dcorr | 检测到退化信号、需要纠偏时 |
 | **pitfalls.md** | 误判防护：Layer 1 泛化模式 / Layer 2 项目高频 / Layer 3 接口预留 | dcorr | SessionStart 自动注入（已实现）、归档聚合时 |
 | **exceptions.md** | 异常处理与 BLOCKED 判定、阻塞恢复流程 | *参考文件* | 遇到阻塞、需要人工介入时 |

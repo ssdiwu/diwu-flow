@@ -1,14 +1,19 @@
 ## [v0.0.11] - 2026-05-04
 
 ### Changed
-- **dadr 并入 ddoc**：独立 `/dadr` Command 删除，功能作为第三种 `adr` 模式并入 `/ddoc`
-- **scripts/dadr.py → scripts/ddoc_adr.py**：重命名为 ddoc 的 ADR 子模式后端
-- **skills/ddoc/SKILL.md**：新增 ADR 模式完整章节（工作流/5步骤/AI保留步骤/骨架模板/边界情况）
-- **commands/ddoc.md**：重写为 forward/reverse/adr 三模式入口，含 ADR 子命令表和约束表
-- **Commands 12 → 11**：plugin.json/marketplace.json/install.sh/README.md 全量同步
+- **dvfy 溶解**：L1-L5 证据保留在 `rules/verification.md`；Done 判定矩阵迁至 dtask；完成前四问+运行态验证方法迁至 drun；无法验证处理迁至 dcorr
+- **dprd 瘦身**：删除完整模式技术方案（方案对比/五维约束/非功能需求分类/双端落地），改为引用 ddoc 正向模式
+- **skills 10→9**：dvfy 改为历史索引，plugin.json 取消注册
+- **dadr 并入 ddoc + 再次删除**：先并入 ddoc 作为 ADR 模式 → 随后彻底删除 ADR 模式（ddoc_adr.py 脚本+测试+章节全删）
+- **Commands 12→10**：ddadr 先删→ddoc 含 ADR→再删 ADR 子模式，最终 10 个 command
+
+### Fixed
+- **drec 踩坑聚合补回**：原 darc 的 9 步踩坑聚合协议恢复至 drec SKILL.md（去重规则/禁止跨session/禁止过期清理/来源列规范）
+- **drec 设计决策记录补回**：decisions.md 三档标准（必须写/建议写/不写）恢复至 drec SKILL.md
 
 ### Removed
-- **commands/dadr.md**：独立 ADR 命令（功能无损移位至 /ddoc --mode adr）
+- **commands/dadr.md**：独立 ADR 命令（先并入 ddoc，随后 ADR 模式也删除）
+- **scripts/ddoc_adr.py + tests/level2_scripts/test_ddoc_adr.py**：ADR 后端脚本彻底删除
 
 ---
 
