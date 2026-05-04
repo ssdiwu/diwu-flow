@@ -1,1 +1,8 @@
-{"last_archive_time": "2026-05-02T00:32:46+08:00", "task_archived_count": 25, "recording_archived_count": 0, "archive_files": ["task_archive_2026-05.json"]}
+{
+  "archived_at": "2026-05-04T08:25:43.013685+00:00",
+  "tasks_archived": 0,
+  "recordings_moved": 1,
+  "files": [
+    "/Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/archive/recording/2026-04/session-2026-04-30-190038.md"
+  ]
+}

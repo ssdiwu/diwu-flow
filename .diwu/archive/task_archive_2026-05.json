@@ -1,1 +1,952 @@
-{"archived_at": "2026-05-02T00:32:46+08:00", "source": ".diwu/dtask.json", "tasks": [{"id": 33, "title": "dloop.py 新增 --session-id 可选参数", "status": "Done"}, {"id": 34, "title": "stop_decision.py 核心逻辑变更（session_id 三段式 + 删除任务选择注入）", "status": "Done"}, {"id": 35, "title": "task_completed.py 新增精确 loop 追踪（独立于 reminder gating）", "status": "Done"}, {"id": 36, "title": "dloop SKILL.md 重写为薄壳包装定义", "status": "Done"}, {"id": 37, "title": "commands/dloop.md 更新", "status": "Done"}, {"id": 38, "title": "清理 dloop 新增回归测试中的重复定义并恢复真实覆盖", "status": "Done"}, {"id": 39, "title": "plan-guard PreToolUse hard block 实现（>=3 步方案未落 dtask 时拦截写入工具）", "status": "Done"}, {"id": 40, "title": "修复 task_completed 提前记录 loop 完成计数的问题", "status": "Done"}, {"id": 41, "title": "补齐 .plan-active marker 生命周期使 hard block 可达", "status": "Done"}, {"id": 42, "title": "修复 dtask_transition mark-inspec 的非原子写入", "status": "Done"}, {"id": 43, "title": "修复 plan-guard 无条件 marker + 全局 plan 扫描导致误拦", "status": "Done"}, {"id": 44, "title": "修复 loop 完成计数仍在 owner 确认之前执行的问题", "status": "Done"}, {"id": 45, "title": "修复 install.sh --uninstall 删除无关 symlink 的破坏性行为", "status": "Done"}, {"id": 46, "title": "修复 dinit.py scan-repo 大目录 file_count 字符串化导致 TypeError 崩溃", "status": "Done"}, {"id": 47, "title": "修复 task_created_validate.py DFS 栈操作位置错误导致合法 DAG 崩溃", "status": "Done"}, {"id": 48, "title": "修复插件内硬编码路径问题并创建防回归测试", "status": "Done"}, {"id": 49, "title": "drun claim 步骤使用真实 CC session ID 替代手造 $(date)", "status": "Done"}, {"id": 50, "title": "修复 drelease.sh 历史标签补推竞态：回填循环跳过当前 VERSION", "status": "Done"}, {"id": 51, "title": "修复 auto session ID 跨会话污染：优先级调整为 env > 文件", "status": "Done"}, {"id": 52, "title": "修复 stop_decision owner_mismatch 提示命令错误并抽 helper", "status": "Done"}, {"id": 53, "title": "修复 stop_decision 三处 cwd 联动缺失", "status": "Done"}, {"id": 54, "title": "修复 install.sh uninstall 路径边界检查防 sibling 目录误删", "status": "Done"}, {"id": 55, "title": "/drun 细粒度子代理委托机制（按步骤动态派发 explorer/implementer/verifier）", "status": "Done"}, {"id": 57, "title": "归档 marker 机制：/darc 合法缩减 dtask.json 时 guard 放行", "status": "Cancelled", "reason": "死代码：_is_workflow_file() 在 marker 检查前已 exit(0)，marker 分支不可达"}, {"id": 56, "title": "/dtask Step 3 common.py 路径兼容性修复（非插件项目 cwd 支持）", "status": "Done"}], "count": 25}
+[
+  {
+    "id": 33,
+    "title": "dloop.py 新增 --session-id 可选参数",
+    "status": "Done"
+  },
+  {
+    "id": 34,
+    "title": "stop_decision.py 核心逻辑变更（session_id 三段式 + 删除任务选择注入）",
+    "status": "Done"
+  },
+  {
+    "id": 35,
+    "title": "task_completed.py 新增精确 loop 追踪（独立于 reminder gating）",
+    "status": "Done"
+  },
+  {
+    "id": 36,
+    "title": "dloop SKILL.md 重写为薄壳包装定义",
+    "status": "Done"
+  },
+  {
+    "id": 37,
+    "title": "commands/dloop.md 更新",
+    "status": "Done"
+  },
+  {
+    "id": 38,
+    "title": "清理 dloop 新增回归测试中的重复定义并恢复真实覆盖",
+    "status": "Done"
+  },
+  {
+    "id": 39,
+    "title": "plan-guard PreToolUse hard block 实现（>=3 步方案未落 dtask 时拦截写入工具）",
+    "status": "Done"
+  },
+  {
+    "id": 40,
+    "title": "修复 task_completed 提前记录 loop 完成计数的问题",
+    "status": "Done"
+  },
+  {
+    "id": 41,
+    "title": "补齐 .plan-active marker 生命周期使 hard block 可达",
+    "status": "Done"
+  },
+  {
+    "id": 42,
+    "title": "修复 dtask_transition mark-inspec 的非原子写入",
+    "status": "Done"
+  },
+  {
+    "id": 43,
+    "title": "修复 plan-guard 无条件 marker + 全局 plan 扫描导致误拦",
+    "status": "Done"
+  },
+  {
+    "id": 44,
+    "title": "修复 loop 完成计数仍在 owner 确认之前执行的问题",
+    "status": "Done"
+  },
+  {
+    "id": 45,
+    "title": "修复 install.sh --uninstall 删除无关 symlink 的破坏性行为",
+    "status": "Done"
+  },
+  {
+    "id": 46,
+    "title": "修复 dinit.py scan-repo 大目录 file_count 字符串化导致 TypeError 崩溃",
+    "status": "Done"
+  },
+  {
+    "id": 47,
+    "title": "修复 task_created_validate.py DFS 栈操作位置错误导致合法 DAG 崩溃",
+    "status": "Done"
+  },
+  {
+    "id": 48,
+    "title": "修复插件内硬编码路径问题并创建防回归测试",
+    "status": "Done"
+  },
+  {
+    "id": 49,
+    "title": "drun claim 步骤使用真实 CC session ID 替代手造 $(date)",
+    "status": "Done"
+  },
+  {
+    "id": 50,
+    "title": "修复 drelease.sh 历史标签补推竞态：回填循环跳过当前 VERSION",
+    "status": "Done"
+  },
+  {
+    "id": 51,
+    "title": "修复 auto session ID 跨会话污染：优先级调整为 env > 文件",
+    "status": "Done"
+  },
+  {
+    "id": 52,
+    "title": "修复 stop_decision owner_mismatch 提示命令错误并抽 helper",
+    "status": "Done"
+  },
+  {
+    "id": 53,
+    "title": "修复 stop_decision 三处 cwd 联动缺失",
+    "status": "Done"
+  },
+  {
+    "id": 54,
+    "title": "修复 install.sh uninstall 路径边界检查防 sibling 目录误删",
+    "status": "Done"
+  },
+  {
+    "id": 55,
+    "title": "/drun 细粒度子代理委托机制（按步骤动态派发 explorer/implementer/verifier）",
+    "status": "Done"
+  },
+  {
+    "id": 57,
+    "title": "归档 marker 机制：/darc 合法缩减 dtask.json 时 guard 放行",
+    "status": "Cancelled",
+    "reason": "死代码：_is_workflow_file() 在 marker 检查前已 exit(0)，marker 分支不可达"
+  },
+  {
+    "id": 56,
+    "title": "/dtask Step 3 common.py 路径兼容性修复（非插件项目 cwd 支持）",
+    "status": "Done"
+  },
+  {
+    "id": 58,
+    "title": "dloop start 返回文案增加 /drun 调用指令",
+    "description": "dloop 设计意图是 while(未停止){ /drun }，但 dloop.py start 返回的 formatted_text 写了「首轮开始: Task#N」，误导 Agent 直接上手实施而非调用 /drun。需在 start 返回文案中明确要求 Agent 发起 /drun。",
+    "acceptance": [
+      "Given dloop.py start 成功返回 When Agent 收到 formatted_text Then 文案中包含「请立即发起 /drun」或等效明确指令",
+      "Given dloop.py start 成功返回 When 非 dloop Agent 读到 message 字段 Then 不产生误解（message 字段也需同步更新）"
+    ],
+    "steps": [
+      "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py，找到 cmd_start 函数中 formatted_text 和 message 的构造位置（约第 107-125 行）",
+      "2. [锁定] 修改 formatted_text：将「首轮开始: Task#{id} {title}」替换为「请立即发起 /drun 完成首轮任务（Task#{id} {title}）」",
+      "3. [建议] 同步修改 message 字段，使其也包含 /drun 调用提示",
+      "4. 运行 pytest tests/ 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py"
+    ],
+    "category": "bugfix",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 59,
+    "title": "project-pitfalls.md 摘要注入 + 截断上限调大",
+    "description": "session_start.py 当前以全文截断方式注入 project-pitfalls.md（MAX_PITFALLS_LEN=4000），大文件（15K+）丢失前 70% 条目。改为：上限调到 8000 + 按二级标题类别生成摘要（每类列出全部现象列，一行一条+计数）+ 末尾提示「详细条目见 .diwu/project-pitfalls.md」。",
+    "acceptance": [
+      "Given project-pitfalls.md 含 12 个类别 100+ 条记录 When SessionStart hook 注入 Then additionalSystemPrompt 包含每个类别的名称、条目计数、所有现象描述摘要",
+      "Given 摘要总长度超过 8000 字符 When 生成摘要 Then 从旧类别开始截断，保留最近类别完整",
+      "Given 摘要注入完成 When Agent 读到注入内容 Then 末尾包含「详细条目见 .diwu/project-pitfalls.md」提示",
+      "Given project-pitfalls.md 为纯模板（无真实数据）When SessionStart 执行 Then 不注入（保持现有行为不变）"
+    ],
+    "steps": [
+      "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/session_start.py，确认当前 pitfalls 注入逻辑（第 59-136 行）",
+      "2. [锁定] MAX_PITFALLS_LEN 从 4000 改为 8000",
+      "3. [锁定] 替换全文截断注入逻辑为摘要模式：解析 markdown 按 ## 类别分段 → 每类提取表头后的所有现象列 → 组装为「类别名（N条）:\n- 现象1\n- 现象2...」格式",
+      "4. [锁定] 摘要末尾追加「详细条目见 .diwu/project-pitfalls.md」提示行",
+      "5. [锁定] 超 8000 字符时从前往后截断类别（旧类别先被截），保留最近类别完整",
+      "6. 运行 pytest tests/ 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/session_start.py"
+    ],
+    "category": "functional",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 60,
+    "title": "darc 踩坑聚合增加去重合并步骤",
+    "description": "darc SKILL.md 第 4 步（踩坑聚合）当前只追加不整理。同一 session 内同类别下多个条目实为同一根因的不同描述时，会产生冗余。增加去重合并步骤：同 session 来源 + 同类别的条目合并为一条。不清理过期条目，不跨 session 去重（保留复发信号）。",
+    "acceptance": [
+      "Given 同一 session 的 recording 含 3 条「验证误读」类踩坑 When 执行归档第 4 步 Then 3 条合并为 1 条，保留所有现象描述要点",
+      "Given 不同 session 含相同现象的踩坑 When 执行归档第 4 步 Then 各自保留独立条目（不跨 session 去重）",
+      "Given 某 session 无踩坑数据 When 执行归档第 4 步 Then 跳过，summary 标注「0 new pitfalls」"
+    ],
+    "steps": [
+      "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/darc/SKILL.md，确认第 4 步踩坑聚合的当前描述（约第 63-66 行）",
+      "2. [锁定] 在第 4 步中增加去重合并子步骤：扫描每个 session 的踩坑段落 → 按类别标签分组 → 同类别的条目以「现象列要点列表」形式合并为一条",
+      "3. [锁定] 明确标注不去重的范围：不跨 session 去重（不同 session 遇到同一问题是复发信号，保留）；不过期清理（保留所有历史条目）",
+      "4. 运行 pytest tests/ 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/darc/SKILL.md"
+    ],
+    "category": "functional",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 61,
+    "title": "drec SKILL.md 升级为 commit 唯一入口",
+    "description": "当前 drec 是纯参考型 Skill（仅定义格式模板），无自动化能力。需升级为：写完 recording 后自动执行原子 commit（git add 全量变更 + git commit），成为项目状态存档的唯一入口。commit message 使用固定格式 [recording] Session YYYY-MM-DD HH:MM:SS。",
+    "acceptance": [
+      "Given Agent 调用 /drec 写入 session 记录 When recording 文件写入完成 Then drec 自动执行 git add（代码+.diwu/ 状态文件）+ git commit，commit message 格式为 [recording] Session YYYY-MM-DD HH:MM:SS",
+      "Given 工作区无任何变更 When 调用 /drec Then 跳过 commit（无内容可提交），不报错",
+      "Given /drec 被 drun 或其他命令调用时 When 执行完 recording 写入和 commit Then 返回 commit hash 给调用方"
+    ],
+    "steps": [
+      "1. [锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md 新增「原子 Commit 职责」章节：定义 drec 写入 recording 后的 commit 行为规范（git add 范围、commit message 格式、空变更处理）",
+      "2. [锁定] 定义 commit message 格式模板：[recording] Session {timestamp} — Task#N {title} ({status})，多任务时枚举",
+      "3. [锁定] 定义 git add 范围：全量 add 工作区变更（含代码文件 + .diwu/ 下所有状态文件），一个 commit 包含完整快照",
+      "4. [建议] 新增「调用契约」章节：说明 /drec 的输入（session 内容摘要）和输出（recording 文件路径 + commit hash）"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md"
+    ],
+    "category": "functional",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 62,
+    "title": "drun 流程改为调用 /drec 存档 + Stop hook 轻量提醒增强",
+    "description": "drun SKILL.md 第90-91行当前要求 Agent 自行写入 recording 并一并 commit。需改为：drun 结尾调用 /drec 完成记录和 commit。同时增强 Stop hook：当检测到有代码改动但 .diwu/recording/ 无对应 session 记录时，输出轻量提醒（非阻塞），引导 Agent 先做 /drec。",
+    "acceptance": [
+      "Given drun 执行完毕准备结束 session When 到达 Session 结束步骤 Then 步骤描述为「调用 /drec 完成记录与 commit」而非「自行写入 recording 并一并 commit」",
+      "Given Stop hook 触发且工作区有代码变更 When .diwu/recording/ 最新 session 时间戳早于最近代码变更 Then 输出 info 级别提醒「检测到代码变更，建议先 /drec 记录本次 session」（非阻塞，不阻止退出）",
+      "Given Stop hook 触发但工作区无代码变更或 recording 已是最新 Then 不输出额外提醒（保持现有行为不变）"
+    ],
+    "steps": [
+      "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md 第86-98行（Session 结束章节），确认当前流程描述",
+      "2. [锁定] 将第91行「将 recording 与本轮代码变更一并 commit（不单独成 commit）」替换为「调用 /drec 完成 recording 写入与原子 commit（详见 drec §原子 Commit 职责）」",
+      "3. [锁定] 将第90行合并调整为：先整理 session 内容摘要 → 调用 /drec（传入摘要）→ /drec 负责写入文件 + commit",
+      "4. [锁定] 增强 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py 的 decide_default_mode 函数：在返回 False（允许退出）前，检查 git status 是否有代码变更 + recording/ 最新文件时间戳是否滞后，条件满足时追加 info 级 additional_prompts",
+      "5. 运行 pytest tests/ 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py"
+    ],
+    "category": "functional",
+    "blocked_by": [
+      61
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 63,
+    "title": "规则同步与测试更新",
+    "description": "Task#61/62 改动了 drec/drun Skill 和 stop_decision.py hook，需同步更新 rules/ 下相关规则文件（session.md 提交原子性铁律、templates.md 相关模板），并同步到 .claude/rules/ 和 assets/dinit/assets/rules/ 两处模板。最后补充测试并全量回归。",
+    "acceptance": [
+      "Given rules/session.md 提交原子性铁律 When 读取 Then 描述已更新为「通过 /drec 统一完成 recording 写入与 commit」，不再出现「自行写入 recording 并一并 commit」的旧表述",
+      "Given .claude/rules/session.md When 对比 rules/session.md Then 内容完全一致（规则同步完成）",
+      "Given assets/dinit/assets/rules/session.md 当对比 rules/session.md Then 内容完全一致（dinit 模板同步完成）",
+      "Given pytest tests/ 全量执行 When 完成 Then 全部通过，无新增失败"
+    ],
+    "steps": [
+      "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md，定位「提交原子性铁律」段落（约第 40-50 行）",
+      "2. [锁定] 更新 rules/session.md：将 recording 相关 commit 描述统一为「通过 /drec 完成」语义",
+      "3. [锁定] 同步到 /Users/diwu/.claude/plugins/cache/ssdiwu/diwu-flow/0.0.9/.claude/rules/session.md（CC 插件路径下的副本）",
+      "4. [锁定] 同步到 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/session.md（dinit 模板）",
+      "5. [建议] 检查 rules/templates.md 和 rules/workflow.md 中是否有引用旧流程的表述，如有则同步更新",
+      "6. 运行 pytest tests/ 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/session.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/session.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [
+      62
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 64,
+    "title": "dinit.py sync-skills 修复 symlink 目标路径错误 + 检测增强",
+    "description": "根因：cmd_sync_skills() 第 202 行写死 expected_target = '../../skills/{name}'（相对路径），仅在插件仓库自身结构下正确。用户项目中 .agents/skills/{name} → ../../skills/{name} 解析到用户项目的 skills/ 目录（不存在），产生 broken symlink。次因：sync-skills 和 validate 均不检查 symlink 目标可达性，broken symlink 被误报 SKIPPED/PASS。",
+    "acceptance": [
+      "Given 用户项目执行 dinit sync-skills When 创建 symlink Then target 指向 PLUGIN_ROOT/skills/{name}（正确跨项目路径），非 ../../skills/{name}",
+      "Given .agents/skills/drec 为 broken symlink（旧错误路径） When 执行 cmd_sync_skills() Then 检测到 BROKEN 并自动删除重建为正确路径",
+      "Given .agents/skills/drec 为 healthy symlink（新正确路径） When 执行 cmd_sync_skills() Then 报告 SKIPPED（回归兼容）",
+      "Given 存在 broken symlink When 执行 cmd_validate() Then 对应 skill 检查项 FAIL，message 含 'broken symlink' 或 'target not reachable'",
+      "Given diwu-flow 插件仓库自身执行 dinit sync-skills When symlink 创建成功 Then 目标指向仓库内 skills/ 目录（自兼容）"
+    ],
+    "steps": [
+      "1. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py 第 202 行 expected_target：从硬编码 '../../skills/{name}' 改为基于 PLUGIN_ROOT 计算的正确路径——使用 (PLUGIN_ROOT / 'skills' / name).relative_to(target_dir) 或 str(PLUGIN_ROOT / 'skills' / name)，确保用户项目和插件仓库均可用",
+      "2. [锁定] cmd_sync_skills() SKIPPED 分支（第 206-209 行）：增加 os.path.exists(link_path.parent / current_target) 可达性检查；不可达时标记 BROKEN 并触发重建（unlink + os.symlink 正确目标）",
+      "3. [锁定] cmd_validate() 第 475-478 行 is_symlink() 分支：增加 target 存在性检查，不存在则 check() 标记 FAIL 并附 message 说明 broken 原因",
+      "4. [建议] symlinks_report 新增 BROKEN 状态计数，formatted_text 体现 broken 数量",
+      "5. 运行 pytest tests/ 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py"
+    ],
+    "category": "bugfix",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 65,
+    "title": "Stop hook 触发顺序保障：task_completed 与 stop_decision 时序确定性",
+    "description": "task_completed.py（TaskCompleted 事件，负责往 dloop completed_task_ids 追加）和 stop_decision.py（Stop 事件，负责 iteration 递增+继续/停止判定）由 CC 框架在不同事件上触发，执行顺序不确定。当 stop_decision.py 先于 task_completed.py 执行时，iteration 递增但 completed_task_ids 尚未更新，可能导致停止条件误判或 iteration 计数与实际完成数不一致。需确保 stop_decision 读取到的 completed_task_ids 是最新的。",
+    "acceptance": [
+      "Given Task#N 被 release 为 Done When task_completed.py 和 stop_decision.py 都触发后 Then stop_decision 读到的 completed_task_ids 必然包含 N（无论触发顺序）",
+      "Given dloop active 且刚完成一个任务 When Stop hook 触发 Then iteration 递增与 completed_task_ids 追加的最终状态一致（无丢失）",
+      "Given 无 dloop 活跃时（默认模式） When Stop hook 触发 Then 行为不变（不影响默认模式性能）"
+    ],
+    "steps": [
+      "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py 和 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py，梳理两者的数据流：task_completed 写 dtask-state.json.dloop.completed_task_ids，stop_decision 读同一字段",
+      "2. [锁定] 方案选择：在 stop_decision.py 的 decide_loop_mode() 读取 runtime_state 前，先调用 sync_runtime_state() 强制从磁盘 reload 最新 dtask-state.json（而非使用内存缓存），确保读到 task_completed 可能已写入的最新 completed_task_ids",
+      "3. [锁定] 或备选方案：在 stop_decision.py 中读取 completed_task_ids 后，额外扫描 dtask.json 中 Done 任务作为 fallback 兜底（与 task_completed.py 的 fallback heuristic 对齐）",
+      "4. [建议] 在 hooks 配置或代码注释中记录两个 hook 的预期执行顺序依赖关系，方便后续维护者理解",
+      "5. 运行 pytest tests/ 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_decision.py",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py"
+    ],
+    "category": "bugfix",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 66,
+    "title": "ddoc 重构：skill 自包含化 + command 薄壳化",
+    "description": "当前 commands/ddoc.md 225行包含全部执行步骤，skills/ddoc 只是索引。需重构为：skills/ddoc/SKILL.md 成为自包含规范源（合并 CONTEXT.md/quick.md/四层示范/output-structure.md/constraints.md），commands/ddoc.md 精简为~30行薄壳。删除 5 个文件，保留 4 个 references/。",
+    "acceptance": [
+      "Given skills/ddoc/SKILL.md 完成后 When 读取 Then 包含完整的两种模式概述、快速决策树、四层示范、输出结构决策树、五约束维度定义、R1 写入约束",
+      "Given commands/ddoc.md 完成后 When 读取 Then 不超过 40 行，只含 frontmatter + Step 0 参数检测 + Step 1 四问 + 指向 skill",
+      "Given 重构完成 When 检查 skills/ddoc/ 目录 Then CONTEXT.md/quick.md/references/output-structure.md/references/constraints.md/references/INDEX.md 已删除，forward-mode.md/reverse-mode.md/completeness.md/templates.md 保留"
+    ],
+    "steps": [
+      "1. 读取 skills/ddoc/SKILL.md、CONTEXT.md、quick.md、commands/ddoc.md、references/output-structure.md、references/constraints.md 确认当前完整内容",
+      "2. [锁定] 重写 skills/ddoc/SKILL.md：合并上述全部内容为自包含规范源，保留 frontmatter 定义，按 核心原则 → 两种模式概述 → 快速决策树 → 正逆向核心步骤 → 四层示范 → 输出结构选择 → 五约束维度 → 两层完整性检查 → FAQ → References 章节组织",
+      "3. [锁定] 重写 commands/ddoc.md：保留 frontmatter + Step 0 参数检测规则 + Step 1 四问 + 指向 skills/ddoc/SKILL.md 的引用，删除所有详细执行步骤",
+      "4. [锁定] 删除 CONTEXT.md、quick.md、references/output-structure.md、references/constraints.md、references/INDEX.md"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 67,
+    "title": "删除 djug Skill + rules 三副本同步（mindset/workflow）",
+    "description": "djug 内容与 rules/judgments.md 完全重复，无独立方法论价值。删除 skills/djug/ 目录，清理 drun/dtask 的 depends 引用和 inline 引用，同步更新 rules/ + .claude/rules/ + assets/dinit/assets/rules/ 三副本中的 mindset.md 和 workflow.md。",
+    "acceptance": [
+      "Given djug 删除后 When 检查 skills/ 目录 Then djug/ 不存在",
+      "Given djug 删除后 When 读取 skills/drun/SKILL.md depends 列表 Then 不包含 djug，inline 调用顺序为 dtask → dvfy → dcorr",
+      "Given djug 删除后 When 读取 skills/dtask/SKILL.md depends 列表 Then 不包含 djug",
+      "Given rules 同步完成 When diff rules/mindset.md .claude/rules/mindset.md assets/dinit/assets/rules/mindset.md Then 三文件一致，均不含 djug 引用",
+      "Given rules 同步完成 When diff rules/workflow.md .claude/rules/workflow.md assets/dinit/assets/rules/workflow.md Then 三文件一致，均不含 djug 引用"
+    ],
+    "steps": [
+      "1. 删除 skills/djug/ 目录（rm -rf）",
+      "2. [锁定] skills/drun/SKILL.md：depends 列表移除 djug，inline 调用顺序 dtask → dvfy → djug(判定) → dcorr 改为 dtask → dvfy → dcorr",
+      "3. [锁定] skills/dtask/SKILL.md：depends 列表移除 djug",
+      "4. [锁定] rules/mindset.md：移除 djug 命名示例（如 drun、dvfy、djug 等 → 如 drun、dvfy 等）",
+      "5. [锁定] rules/workflow.md：移除两处 djug 引用（lines 3, 28）",
+      "6. [锁定] 同步 .claude/rules/mindset.md、.claude/rules/workflow.md",
+      "7. [锁定] 同步 assets/dinit/assets/rules/mindset.md、assets/dinit/assets/rules/workflow.md"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/workflow.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/workflow.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 68,
+    "title": "删除 darc Skill + 并入 drec + 新建 commands/drec.md",
+    "description": "darc 是纯手动步骤清单。删除 skills/darc/，将归档规范完整迁移到 skills/drec/SKILL.md 的归档聚合指引章节。新建 commands/drec.md 薄壳，使 /drec 成为真实 command 入口。所有 /darc 引用统一改为 /drec。",
+    "acceptance": [
+      "Given darc 删除后 When 检查 skills/ 目录 Then darc/ 不存在",
+      "Given drec SKILL.md 更新后 When 读取归档聚合指引章节 Then 包含双轨总览、触发条件、手动步骤5步、产物格式3种、验证清单5项、约束5条",
+      "Given commands/drec.md 新建后 When 读取 Then ~15行薄壳，指向 skills/drec/SKILL.md",
+      "Given /darc 引用迁移完成 When grep 全仓库 Then 无残留 /darc 提示（commands/dstat.md、hooks/scripts/stop_archive.py、rules/pitfalls.md 均已改为 /drec 或等效表述）",
+      "Given rules 同步完成 When diff rules/pitfalls.md .claude/rules/pitfalls.md assets/dinit/assets/rules/pitfalls.md Then 三文件一致，darc 引用已移除"
+    ],
+    "steps": [
+      "1. 删除 skills/darc/ 目录（rm -rf）",
+      "2. [锁定] 读取 skills/drec/SKILL.md 当前归档聚合指引章节，扩展迁移：双轨总览表、触发条件(threshold+retention_days)、手动步骤5步、产物格式(task_archive/recording_archive/last_summary)、验证清单5项、约束5条、归档检测函数签名",
+      "3. [锁定] 新建 commands/drec.md：frontmatter(description/argument-hint/allowed-tools:Read/effort:low) + 定位说明 + 3-4步执行提示 + 完整规范指向 skills/drec/SKILL.md",
+      "4. [锁定] commands/dstat.md line 27：/darc → /drec",
+      "5. [锁定] hooks/scripts/stop_archive.py 3处：/darc → 归档（/drec）",
+      "6. [锁定] rules/pitfalls.md：drec + darc → drec",
+      "7. [锁定] 同步 .claude/rules/pitfalls.md 和 assets/dinit/assets/rules/pitfalls.md"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drec.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dstat.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_archive.py",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/pitfalls.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/pitfalls.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/pitfalls.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 69,
+    "title": "删除 ddemo Skill + Command + 清理所有引用",
+    "description": "ddemo 核心概念已被 rules/mindset.md（不确定性门控）和 dprd（可预期/不可预期判断）覆盖。删除 skills/ddemo/ + commands/ddemo.md，清理 commands/dprd/commands/ddoc/commands/dtask/rules/judgments/rules/mindset/skills/dprd/install.sh 中的 ddemo 引用。同步 rules 三副本（judgments.md + mindset.md）。注意：rules/mindset.md 在 Task#67 已改过，本任务在此基础上继续改。",
+    "acceptance": [
+      "Given ddemo 删除后 When 检查 skills/ 和 commands/ Then ddemo/ 和 commands/ddemo.md 不存在",
+      "Given ddemo 引用清理后 When grep 全仓库 Then 无残留 /ddemo 或 ddemo 引用（除 CHANGELOG 历史记录外）",
+      "Given commands/dprd.md 更新后 When 读取 Demo 提示 Then 写「手动验证或用 /dprd 重新评估」，不引用 /ddemo",
+      "Given rules/judgments.md 更新后 When 读取 Then 「先 /ddemo」已改为「先验证」",
+      "Given rules/mindset.md 更新后 When 读取 Then 不含 /ddemo 或 djug 引用",
+      "Given rules 三副本同步 When diff judgments.md + mindset.md Then 三位置内容一致"
+    ],
+    "steps": [
+      "1. 删除 skills/ddemo/ 目录和 commands/ddemo.md",
+      "2. [锁定] commands/dprd.md line 227：使用 /ddemo {demo-名称} → 手动验证或用 /dprd 重新评估",
+      "3. [锁定] commands/ddoc.md：移除 ddemo 引用（line 216）",
+      "4. [锁定] commands/dtask.md lines 33,37：示例 ddemo.md → ddoc.md",
+      "5. [锁定] rules/judgments.md：先 /ddemo → 先验证（lines 25,26 两处）",
+      "6. [锁定] rules/mindset.md：移除 /ddemo 引用（line 86），注意此文件在 Task#67 已改过 djug 部分",
+      "7. [锁定] skills/dprd/SKILL.md line 109：移除 /ddemo 输入参数引用",
+      "8. [锁定] install.sh：移除 OpenCode stub 中 ddemo 行",
+      "9. [锁定] 同步 .claude/rules/judgments.md、.claude/rules/mindset.md",
+      "10. [锁定] 同步 assets/dinit/assets/rules/judgments.md、assets/dinit/assets/rules/mindset.md"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dprd.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dtask.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dprd/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [
+      67
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 70,
+    "title": "dref 适配 + 注册：去平台耦合、删自定义状态机、新建 commands/dref.md",
+    "description": "dref 来自 PR #1，当前有平台耦合（AskUserQuestion）、自定义状态字段（与 dtask 冲突）、自动写文件（与 dprd/dtask 边界不清）三个问题。需适配为：纯流程语言、对话层清单即最终产物、确认后引导 /dtask。新建 commands/dref.md 薄壳。",
+    "acceptance": [
+      "Given skills/dref/SKILL.md 更新后 When 读取 Then 不含 AskUserQuestion 等平台特定工具名，改用纯流程语言",
+      "Given skills/dref/SKILL.md 更新后 When 读取 Then 不包含自定义状态字段（待评估/已确认/开发中/已完成/已关闭），Phase 4 清单确认后引导 /dtask",
+      "Given skills/dref/SKILL.md 更新后 When 读取 Then Phase 5（智能拆分与保存到文件）已删除，输出止于对话层",
+      "Given skills/dref/SKILL.md 更新后 When 读取 depends Then 值为 dprd",
+      "Given skills/dref/SKILL.md 更新后 When 读取 triggers Then 不超过 6 个触发词",
+      "Given commands/dref.md 新建后 When 读取 Then ~15行薄壳，指向 skills/dref/SKILL.md"
+    ],
+    "steps": [
+      "1. [锁定] skills/dref/SKILL.md：删除 Phase 5 全部（智能拆分与保存，lines 140-165）",
+      "2. [锁定] skills/dref/SKILL.md：删除自定义状态字段及取值表（lines 127-132），Phase 4 清单确认后追加引导「确认后用 /dtask 将清单项转化为任务」",
+      "3. [锁定] skills/dref/SKILL.md：产出路径改为推荐落点说明（.doc/refine/），不自动建目录写文件",
+      "4. [锁定] skills/dref/SKILL.md：正文 diwu-refine → dref；depends: [] → depends: dprd；triggers 13个缩减到6个: refine, /dref, 细化, 梳理, 需求不清晰, 拆解一下",
+      "5. [锁定] skills/dref/SKILL.md：使用 AskUserQuestion → 通过结构化提问（去平台耦合）",
+      "6. [锁定] 新建 commands/dref.md 薄壳：frontmatter + 4步执行流程 + 指向技能"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dref/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dref.md"
+    ],
+    "category": "functional",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 71,
+    "title": "全局收尾：元数据同步 + plugin.json + 验证",
+    "description": "汇总 Phase 6-9：.claude/CLAUDE.md 版本/索引/结构列表全量更新；README.md 10项显式检查点（架构图/标题计数/索引表/生命周期图/命令段落/项目结构）；plugin.json skills 12→10 commands 11→12；marketplace.json/CHANGELOG 同步。最终 pytest+bash -n+py_compile 全量验证。",
+    "acceptance": [
+      "Given .claude/CLAUDE.md 更新后 When 读取 Then 版本 0.0.10、Skill 索引移除 djug/darc/ddemo 添加 dref、项目结构列表全量更新",
+      "Given README.md 更新后 When 读取 Then 顶部版本 0.0.10、架构图无 djug/darc/ddemo 有 drec+dref、标题计数 Skills 10 Commands 12、索引表更新、生命周期图无 /darc、项目结构 10 Skill 12 Command",
+      "Given plugin.json 更新后 When 读取 Then version 0.0.10、skills 数组 10 项、commands 数组 12 项、description 不含计数",
+      "Given marketplace.json 更新后 When 读取 version Then 0.0.10",
+      "Given CHANGELOG.md 更新后 When 读取 Then 含 v0.0.10 条目",
+      "Given install.sh 更新后 When 检查 Then 版本 0.0.10、计数 10(10) Skill 12 Command、OpenCode stub 无 ddemo 有 drec/dref/dloop/dend",
+      "Given 全部修改完成 When 运行 pytest tests/ -q Then 全部通过",
+      "Given 全部修改完成 When 运行 bash -n install.sh + python3 -m py_compile hooks/scripts/*.py scripts/*.py Then 无语法错误"
+    ],
+    "steps": [
+      "1. [锁定] .claude/CLAUDE.md：版本 0.0.9→0.0.10；Skill 索引表更新（移除 djug/darc，ddemo 从 product/tool 行移除，dref 加入 product/tool 行）；项目结构 skills/ 列表更新（移除 djug/darc/ddemo，加入 dref）、commands/ 列表更新（ddemo→drec+dref）",
+      "2. [锁定] README.md 10项检查点全部更新：顶部版本+计数、Mermaid架构图(S4/S8/S10剔除+drec+dref)、Skills标题计数12→10、Commands标题计数11→12、Skill索引表、Command索引表、工作流示例、生命周期图/darc节点、/ddemo命令段落、项目结构计数文案",
+      "3. [锁定] plugin.json：version 0.0.9→0.0.10；skills[] 移除 djug/darc/ddemo 添加 dref→10项；commands[] 移除 ddemo 添加 drec+dref→12项；description 去掉 Skill 计数",
+      "4. [锁定] marketplace.json：version+description 同步",
+      "5. [锁定] CHANGELOG.md：追加 v0.0.10 条目",
+      "6. [锁定] install.sh：版本 0.0.9→0.0.10；计数 10 Skill / 12 Command；OpenCode stub 删除 ddemo、补充 drec/dref/dloop/dend 映射",
+      "7. 运行 pytest tests/ -q 全量回归",
+      "8. 运行 bash -n install.sh + python3 -m py_compile hooks/scripts/*.py scripts/*.py 语法验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/CHANGELOG.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+    ],
+    "category": "infra",
+    "blocked_by": [
+      66,
+      67,
+      68,
+      69,
+      70
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 72,
+    "title": "dadr 并入 ddoc — Phase 1: 核心资产迁移",
+    "description": "将独立 Command /dadr 的功能并入 /ddoc 作为第三种 adr 模式。Phase 1 负责核心资产迁移：dadr.py 重命名为 ddoc_adr.py、测试文件重命名、ddoc SKILL.md 扩展 ADR 模式章节、commands/ddoc.md 重写为三模式入口、删除 commands/dadr.md。",
+    "acceptance": [
+      "Given scripts/ddoc_adr.py 存在 When 执行 python3 scripts/ddoc_adr.py next-number --cwd /tmp/t Then 返回 {\"ok\": true, \"data\": {\"next_number\": 1}}",
+      "Given skills/ddoc/SKILL.md 更新后 When 读取 Then 含 ADR 模式章节（工作流/步骤/AI保留步骤/骨架模板），frontmatter keywords 含 \"ADR模式\"",
+      "Given commands/ddoc.md 重写后 When 读取 Then 支持 forward/reverse/adr 三种模式参数检测，含 ddoc_adr.py 脚本调用行",
+      "Given commands/dadr.md 删除后 When 检查 commands/ 目录 Then 不存在 dadr.md",
+      "Given test_ddoc_adr.py 存在 When 运行 pytest tests/level2_scripts/test_ddoc_adr.py -v Then 9 个用例全部通过（类名 TestDdocAdr*）"
+    ],
+    "steps": [
+      "1. [锁定] mv /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dadr.py /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ddoc_adr.py；更新 docstring 为 'diwu-flow ddoc: ADR 子模式脚本'",
+      "2. [锁定] mv /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dadr.py /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_ddoc_adr.py；类名 TestDadr* → TestDdocAdr*；run_script 参数 '\"dadr.py\"' → '\"ddoc_adr.py\"'",
+      "3. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md，在两种模式概述之后、四层示范之前插入 ADR 模式完整章节：工作流(决策描述→编号分配→AI澄清→骨架创建→AI撰写→索引维护)、5 步骤、AI 保留步骤(Step 2/4 由 AI 执行)、骨架模板、边界情况",
+      "4. [锁定] 更新 skills/ddoc/SKILL.md frontmatter：keywords 补充 \"ADR模式\"/\"架构决策\"；triggers 补充 \"记录架构决策、ADR、技术选型\"；argument-hint 增加 adr 模式选项",
+      "5. [锁定] 重写 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md：description 改为「产品文档工具（正向/逆向/ADR 三种模式）」；Step 0 增加 adr 关键词检测(adr/架构决策/决策记录/ADR)；新增 ADR 模式子命令表(next-number/create/update-status)和脚本调用行 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/ddoc_adr.py`；新增 ADR 子模式约束表(业务边界/时序约束/跨命令关系/感知信号)",
+      "6. [锁定] rm /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dadr.md",
+      "7. 运行 pytest tests/ -q 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dadr.py",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ddoc_adr.py",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dadr.py",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_ddoc_adr.py",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dadr.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 73,
+    "title": "dadr 并入 ddoc — Phase 2-3: 注册清理与文档更新",
+    "description": "Phase 2 清理注册声明（plugin.json 删 dadr 条目、marketplace.json 计数更新、install.sh 6处更新）。Phase 3 全面更新 README（6处 dadr 引用）和 .claude/CLAUDE.md（commands 列表删 dadr）。",
+    "acceptance": [
+      "Given plugin.json 更新后 When 读取 Then commands 数组长度为 11，不含 './commands/dadr.md'",
+      "Given marketplace.json 更新后 When 读取 Then description 含 '11 个 Command'",
+      "Given install.sh 更新后 When 检查 Then 无 dadr 映射行(L68已删)、计数均为 11(L20/L78/L95/L96)、版本号 0.0.11(L86)",
+      "Given README.md 更新后 When 读取 Then Layer 1 Commands 表无 /dadr* 标记、标题为 11、工作流示例含 '/ddoc --mode adr'、Commands 速查表无 /dadr 行且 /ddoc 行含三种模式、仓库结构注释 commands 为 11",
+      "Given .claude/CLAUDE.md 更新后 When 读取 L79 Then commands 列表不含 dadr"
+    ],
+    "steps": [
+      "1. [锁定] .claude-plugin/plugin.json：commands 数组删除 './commands/dadr.md' 条目（12→11）",
+      "2. [锁定] .claude-plugin/marketplace.json：'12 个 Command' → '11 个 Command'",
+      "3. [锁定] install.sh 6 处更新：L20 '12 个薄壳命令'→'11'；L68 dadr 整行删除；L78 注释 12→11；L95 '12 个 command'→'11'；L96 '12 个 command 映射'→'11'；L86 version '0.0.10'→'0.0.11'",
+      "4. [锁定] README.md Layer 1 Commands 表：文档组 `/dadr*` 移除，ADR 归入 /ddoc 行描述（PRD+ADR / 产品文档）；标题 (12) → (11)",
+      "5. [锁定] README.md 工作流示例：`→ /dadr 记录决策` → `→ /ddoc --mode adr 记录决策`",
+      "6. [锁定] README.md Commands 速查表：删除 /dadr 行；/ddoc 行改为 'ddoc | ddoc | 正向/逆向/ADR 三种文档模式'",
+      "7. [锁定] README.md：删除整个 `### /dadr — 架构决策记录` 命令参考段落（~8行），其约束内容合并到 /ddoc 段落末尾新增 ADR 子模式约束表",
+      "8. [锁定] README.md 仓库结构注释：'# 12 个薄壳 Command' → '# 11'；plugin.json 注释 '(10 Skill + 12 Command)' → '(10 Skill + 11 Command)'",
+      "9. [锁定] .claude/CLAUDE.md L79：commands 列表中删除 dadr（drun, dtask, dinit, dprd, ddoc, drec, ...）",
+      "10. 运行 pytest tests/ -q 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [
+      72
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 74,
+    "title": "dadr 并入 ddoc — Phase 4-5: Rules 同步与收尾验证",
+    "description": "Phase 4 同步 rules/ 三文件微调到 assets/ 副本（file-layout/constraints/judgments 中 dadr 提及更新）。Phase 5 追加 CHANGELOG v0.0.11 条目、全局版本号 bump 0.0.10→0.0.11(minor)、V1-V4 验证全套。",
+    "acceptance": [
+      "Given rules 同步完成 When diff rules/file-layout.md assets/dinit/assets/rules/file-layout.md Then 两文件一致，均含 '见 /ddoc --mode adr'",
+      "Given rules 同步完成 When diff rules/constraints.md assets/dinit/assets/rules/constraints.md Then 两文件一致，示例为 'ddoc 新增 adr 子模式'",
+      "Given CHANGELOG.md 更新后 When 读取 Then 含 v0.0.11 条目（dadr 并入 ddoc / Commands 12→11 / dadr.py→ddoc_adr.py）",
+      "Given 版本号 bump 完成 When 读取 plugin.json+marketplace.json+install.sh Then version 均为 0.0.11",
+      "Given V1 验证 When 运行 pytest tests/ -q Then 全量通过",
+      "Given V2 验证 When 运行 python3 scripts/ddoc_adr.py next-number --cwd /tmp/t Then 返回 next_number=1",
+      "Given V3 验证 When rg '/dadr' 排除 .diwu/CHANGELOG/test_ddoc_adr.py 后 Then 零命中",
+      "Given V4 验证 When diff rules/constraints.md assets/dinit/assets/rules/constraints.md Then 一致"
+    ],
+    "steps": [
+      "1. [锁定] rules/file-layout.md L47 + assets/dinit/assets/rules/file-layout.md L47：'.doc/adr/' 注释 '见 /diwu-adr' → '见 /ddoc --mode adr'",
+      "2. [锁定] rules/constraints.md L23 + assets 副本：示例 '\"新增 drun Skill、新增 dadr 命令\"' → '\"新增 drun Skill、ddoc 新增 adr 子模式\"'",
+      "3. [建议] rules/judgments.md L168 + assets 副本：可选微调 'ADR 输出' → 'ADR 输出（通过 /ddoc --mode adr）'",
+      "4. [锁定] 同步 assets/dinit/assets/rules/ 三文件确保与 rules/ 一致",
+      "5. [锁定] CHANGELOG.md 顶部追加 v0.0.11 条目：变更(dadr 并入 ddoc)、Removed(commands/dadr.md)、Changed(scripts/dadr.py→ddoc_adr.py / ddoc SKILL.md ADR 章节 / Commands 12→11)",
+      "6. [锁定] 全局版本号 bump：plugin.json version + marketplace.json version + install.sh L86 OpenCode stub version：0.0.10 → 0.0.11",
+      "7. V1: python3 -m pytest tests/ -q 全量回归",
+      "8. V1: python3 -c \"import json; p=json.load(open('.claude-plugin/plugin.json')); assert len(p['commands'])==11\"",
+      "9. V1: python3 -c \"import yaml; yaml.safe_load(open('skills/ddoc/SKILL.md'))\" frontmatter 合法性",
+      "10. V2: python3 scripts/ddoc_adr.py next-number --cwd /tmp/t && python3 scripts/ddoc_adr.py create --title '测试决策' --cwd /tmp/t && python3 scripts/ddoc_adr.py update-status --number 1 --status Accepted --cwd /tmp/t",
+      "11. V3: rg '/dadr' --include='*.md' --include='*.py' --include='*.json' --exclude-dir='.diwu' --exclude=CHANGELOG.md --exclude='test_ddoc_adr.py' . 确认零残留",
+      "12. V4: diff rules/constraints.md assets/dinit/assets/rules/constraints.md && diff rules/file-layout.md assets/dinit/assets/rules/file-layout.md"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/constraints.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/CHANGELOG.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+    ],
+    "category": "infra",
+    "blocked_by": [
+      73
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 75,
+    "title": "Agent 模型分级：explorer=haiku, implementer=sonnet",
+    "description": "三个 agent 当前均未声明 model 字段（继承父会话）。explorer 只读探索用 haiku（快速廉价）；implementer 代码实施用 sonnet（质量保证）；verifier 继承不改（复杂度波动大）。",
+    "acceptance": [
+      "Given agents/explorer.md 更新后 When 解析 frontmatter Then model 字段值为 haiku",
+      "Given agents/implementer.md 更新后 When 解析 frontmatter Then model 字段值为 sonnet",
+      "Given agents/verifier.md 不改动 When 解析 frontmatter Then 无 model 字段（继承父会话）",
+      "Given 全部修改完成 When 运行 pytest tests/level1/test_agents_config.py -v Then 全部通过"
+    ],
+    "steps": [
+      "1. [锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/agents/explorer.md frontmatter 中 tools 行之后加 model: haiku",
+      "2. [锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/agents/implementer.md frontmatter 中 tools 行之后加 model: sonnet",
+      "3. 运行 pytest tests/level1/test_agents_config.py -v 验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/agents/explorer.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/agents/implementer.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 76,
+    "title": "drun closeout 加入 verifier 终验 + rules 三副本同步",
+    "description": "verifier 当前仅在 S3/S4 子代理策略中触发，S1/S2 路径（小幅度任务）完全由主代理自审。在 drun closeout 阶段加入 verifier 终验作为 Done 前的默认独立验收门。关键约束：1) closeout 顺序 verifier→release→/drec（原子性铁律）；2) verifier 输出用 PASSED/GAPS_FOUND/HUMAN_NEEDED（与 agents/verifier.md 第 38 行一致）；3) verifier 输入用 implementer 交接报告的文件列表（非 git diff）；4) rules 三副本必须同步。",
+    "acceptance": [
+      "Given skills/drun/SKILL.md 更新后 When 读取 Session 结束章节 Then closeout 顺序为：整理摘要 → decisions → verifier 终验 → release → /drec",
+      "Given drun 更新后 When 读取 verifier 终验规则 Then 触发条件为 S1/S2 路径标 Done 前；跳过条件为 S3/S4 已调过 verifier；输出状态为 PASSED/GAPS_FOUND/HUMAN_NEEDED",
+      "Given drun 更新后 When 读取 verifier 输入定义 Then 文件来源为 implementer 交接报告（非 git diff --stat HEAD~1）",
+      "Given rules/task.md 更新后 When 读取状态转移判定锚点表 Then 小幅度自审 Done 行含 verifier 终验说明",
+      "Given rules/judgments.md 更新后 When 读取验收判断正例 Then 含 verifier 终验",
+      "Given rules/verification.md 更新后 When 读取 Done 判定规则表 Then L1-3 通过行含 verifier 终验",
+      "Given commands/drun.md 更新后 When 读取 closeout 说明 Then 含 verifier 终验提示",
+      "Given rules 三副本同步 When diff rules/task.md .claude/rules/task.md && diff rules/judgments.md .claude/rules/judgments.md && diff rules/verification.md .claude/rules/verification.md Then 各组一致",
+      "Given 全部修改完成 When 运行 pytest tests/ -q Then 全量通过"
+    ],
+    "steps": [
+      "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md 第 85-98 行（Session 结束章节），重排 closeout 顺序为：①整理摘要 → ②decisions → ③verifier 终验 → ④release → ⑤/drec",
+      "2. [锁定] 在 drun SKILL.md closeout 中新增 verifier 终验规则表：触发条件(S1/S2 路径标 Done 前)、跳过条件(S3/S4 已调过 verifier / infra/refactor 简单度量)、输入(acceptance + implementer 交接报告文件列表)、输出(PASSED/GAPS_FOUND/HUMAN_NEEDED 与 agents/verifier.md 第 38 行一致)、三分支(PASSED→release Done / GAPS_FOUND→保持 InProgress / HUMAN_NEEDED→release InReview)",
+      "3. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md 第 85 行：'小幅度，自审 Done | L3+ 至少一项 | 无需人工确认' → '小幅度，自审 Done + verifier 终验 | L3+ 至少一项 | verifier PASSED 后 Done'",
+      "4. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md 第 87 行：'可自审后直接 Done' → '可自审 + verifier 终验后 Done'",
+      "5. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/verification.md 第 23 行：'Agent 自审后 Done' → 'Agent 自审 + verifier 终验后 Done'",
+      "6. [锁定] 修改 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md 第 29 行后追加：S1/S2 路径标 Done 前先经 verifier 终验",
+      "7. [锁定] 同步 rules/task.md → .claude/rules/task.md + assets/dinit/assets/rules/task.md",
+      "8. [锁定] 同步 rules/judgments.md → .claude/rules/judgments.md + assets/dinit/assets/rules/judgments.md",
+      "9. [锁定] 同步 rules/verification.md → .claude/rules/verification.md + assets/dinit/assets/rules/verification.md",
+      "10. 运行 pytest tests/ -q 全量回归验证"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/verification.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/drun.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/task.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/verification.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/task.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/verification.md"
+    ],
+    "category": "functional",
+    "blocked_by": [
+      75
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 77,
+    "title": "Phase 1: 删除 ddoc ADR 模式与 dvfy skill 注册",
+    "description": "终局 D 重组第一步——先删后改。删除 ddoc_adr.py 脚本与测试、ddoc SKILL.md ADR 章节、commands/ddoc.md ADR 段落、plugin.json dvfy 注册。同时版本号 0.0.11→0.0.12 的 plugin.json 更新在此 task 完成。",
+    "acceptance": [
+      "Given scripts/ddoc_adr.py 存在 When 执行删除 Then 文件不存在",
+      "Given tests/level2_scripts/test_ddoc_adr.py 存在 When 执行删除 Then 文件不存在",
+      "Given skills/ddoc/SKILL.md 含 ADR 模式章节(L108-151) When 删除该章节及 frontmatter 中 ADR 相关条目 Then 文件不含 '### ADR 模式'、不含 'adr' 关键词（除历史遗留 description 外）",
+      "Given commands/ddoc.md 含 ADR 子命令表(L45-51)和约束表(L53-60) When 删除所有 ADR 相关内容 Then 文件不含 'ddoc_adr.py' 且不含 'ADR 子命令表'",
+      "Given plugin.json skills 数组含 dvfy When 删除该行 Then len(skills)==9 且 version=='0.0.12'",
+      "Given marketplace.json version 0.0.11 When 更新 Then version=='0.0.12'",
+      "Given install.sh 含 0.0.11 When 更新 Then 版本号替换为 0.0.12 且 skills count 10→9 且 commands count 11→10",
+      "Given Phase 1 完成 When pytest tests/ -q Then 全量通过（test_ddoc_adr.py 已删除自动跳过）"
+    ],
+    "steps": [
+      "1. [锁定] rm /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ddoc_adr.py",
+      "2. [锁定] rm /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_ddoc_adr.py",
+      "3. [锁定] Edit skills/ddoc/SKILL.md: 删除 §ADR 模式章节(L108-151)、frontmatter L5 description 改'三种模式'→'两种模式'、L10 trigger 删除 ADR 行、L15 keyword 删除 'ADR模式'、L21 argument-hint 去 'adr'、L26 正文去 '和 **ADR（架构决策记录）**'",
+      "4. [锁定] Edit commands/ddoc.md: L2 description 改'三种'→'两种'、L3 argument-hint 去'adr'、L13-14 ADR 检测行删除、L28-41 ADR 模式段落删除（整块）、L45-51 ADR 子命令表删除、L53-60 ADR 子模式约束表删除",
+      "5. [锁定] Edit .claude-plugin/plugin.json: skills 数组删除 './skills/dvfy' 行、version '0.0.11'→'0.0.12'",
+      "6. [锁定] Edit .claude-plugin/marketplace.json: L9 version '0.0.11'→'0.0.12'、L10 description 10→9/11→10",
+      "7. [锁定] Edit install.sh: L18/20/68/85/92/94/95 的 10/11 计数调整、0.0.11→0.0.12 版本号替换"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/ddoc_adr.py",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_ddoc_adr.py",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/ddoc.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh"
+    ],
+    "category": "refactor",
+    "status": "Done"
+  },
+  {
+    "id": 78,
+    "title": "Phase 2: drec 补回踩坑聚合协议与设计决策记录",
+    "description": "修复 v0.0.10 精简时的历史遗漏：darc→drec 合并丢失了踩坑聚合 9 步协议和 Task#32 引入的 decisions.md 写入指引。在 drec SKILL.md 归档聚合指引后追加踩坑聚合章节，在 Session 格式模板后追加设计决策记录章节。",
+    "acceptance": [
+      "Given skills/drec/SKILL.md 归档聚合指引后 When 追加踩坑聚合章节 Then 含 9 步完整协议（同session合并/禁止跨session去重/禁止过期清理/来源列规范）",
+      "Given skills/drec/SKILL.md Session 模板后 When 追加设计决策记录章节 Then 含三档标准表（必须写/建议写/不写）和追加格式模板",
+      "Given drec 修改完成 When 检查 rules/judgments.md L134 Then 引用 'skills/drec/SKILL.md §设计决策记录' 有效（章节存在）"
+    ],
+    "steps": [
+      "1. [锁定] Edit skills/drec/SKILL.md: 在 L197 ('## 工具失败处理协议'之前) 插入 '### 踩坑聚合（9 步协议）' 章节，含 9 步详细描述（扫描/来源追踪/聚类/同session合并/禁止跨session去重/禁止过期清理/追加写入/来源列规范/无数据跳过）",
+      "2. [锁定] Edit skills/drec/SKILL.md: 在 L65 (现有 '---' 和 '## 本次踩坑/经验（必填）' 之间) 插入 '## 设计决策记录' 章节，含三档标准表+追加格式模板"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md"
+    ],
+    "category": "bugfix",
+    "blocked_by": [
+      77
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 79,
+    "title": "Phase 3: dvfy 溶解+ dprd 瘦身 + verifier 引用更新",
+    "description": "内容重组核心动作：dtask SKILL.md 吸收 Done 判定矩阵、drun SKILL.md 吸收完成前四问+运行态验证方法、dcorr SKILL.md 吸收无法验证处理模板、dvfy SKILL.md 改为历史索引页面、dprd SKILL.md 砍掉完整模式技术方案部分、agents/verifier.md dvfy引用更新。所有 depends 链同步清理。",
+    "acceptance": [
+      "Given dtask SKILL.md depends 含 dvfy When 删除该依赖 Then frontmatter depends 无 dvfy",
+      "Given dtask SKILL.md When 追加 Done 判定矩阵 Then 含 L1-3/L4/L5 四档判定表和 dtask §InReview→Done 锚点的交叉引用",
+      "Given drun SKILL.md depends 含 dvfy When 删除该依赖 Then frontmatter depends 无 dvfy",
+      "Given drun SKILL.md When 追加完成前四问 Then §Session 结束 前含四问表",
+      "Given drun SKILL.md When 追加运行态验证方法 Then §执行验证循环 后含四种方法表",
+      "Given dcorr SKILL.md When 追加无法验证处理 Then §与 BLOCKED 的边界 前含三段式模板+禁止行为+区分表",
+      "Given dvfy SKILL.md When 改为索引 Then frontmatter 含 deprecated:true + migrated_to 数组、正文仅含迁移对照表",
+      "Given dprd SKILL.md 含方案对比/五维约束/非功能需求/双端落地 When 删除这些章节 Then 仅保留产品论证核心(竞品/画像/迭代层次/业务指标/写作原则/反模式)且在删除位置引用 ddoc 正向模式",
+      "Given agents/verifier.md L61 When 更新 Then 'dvfy 体系'→'dtask Done 判定矩阵'",
+      "Given Phase 3 完成 When pytest tests/ -q Then 全量通过"
+    ],
+    "steps": [
+      "1. [锁定] Edit skills/dtask/SKILL.md: depends 删除 dvfy 行(L23)；在 §子代理策略 后追加'## Done 判定矩阵'章节（从 dvfy L45-62 迁移，含证据门槛表和验证映射表）",
+      "2. [锁定] Edit skills/drun/SKILL.md: depends 删除 dvfy 行(L21)；在 §Session 结束 内(L88前)插入'### 完成前四问'表；在 §执行验证循环 后(L146后)插入'## 运行态验证方法'表；L131 'dvfy 证据等级'→'证据等级(L1-L3主判，见 dtask §Done判定矩阵)'；L146 'dtask(实施)→dvfy(验证)→dcorr(纠偏)'→'dtask(实施/验证)→dcorr(纠偏)'",
+      "3. [锁定] Edit skills/dcorr/SKILL.md: 在 §与 BLOCKED 的边界 前(L189前)插入'## 无法验证时的处理'章节（三段式模板+禁止行为+与 BLOCKED 区分表）",
+      "4. [锁定] Write skills/dvfy/SKILL.md: 整文件重写为历史索引（frontmatter: deprecated:true + migrated_to 数组 + type:index；正文: 迁移对照表）",
+      "5. [锁定] Edit skills/dprd/SKILL.md: 删除 §方案对比方法论(L137-160)、§约束发现方法含五维约束(L163-205)、§非功能性需求分类(L208-240)、§双端落地 Checklist(L244-263)；在原位置插入'## 技术方案深度设计'引用段指向 ddoc 正向模式",
+      "6. [锁定] Edit agents/verifier.md: L61 'dvfy 体系或人工确认'→'dtask Done 判定矩阵（见 skills/dtask/SKILL.md §Done 判定矩阵）或人工确认'"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dcorr/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dvfy/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dprd/SKILL.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/agents/verifier.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [
+      78
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 80,
+    "title": "Phase 4: 全局引用修复与版本同步",
+    "description": "清理 10+ 文件中对 dvfy 的残留引用、ddd ADR 残留引用、版本号同步到所有文件。覆盖 rules/workflow.md 三副本、rules/mindset.md 三副本、rules/README.md、README.md、CHANGELOG.md、.claude/CLAUDE.md。",
+    "acceptance": [
+      "Given rules/workflow.md 三副本 L3 引用 dvfy When 更新 Then 均改为'dtask / drun'",
+      "Given rules/workflow.md 三副本 L98 引用 dvfy When 更新 Then 均改为'rules/verification.md'",
+      "Given rules/mindset.md 三副本 L87 示例含 dvfy When 更新 Then 均改为 dtask",
+      "Given rules/README.md 含 dvfy 行 When 更新 Then 删除或改为 'dtask + drun + dcorr'",
+      "Given README.md 多处 dvfy 引用 + '10 个' When 更新 Then 全部修正为 9 个 + dvfy 行删除 + ADR 残留清理",
+      "Given CHANGELOG.md When 追加 Then 含完整 v0.0.12 条目（Changed/Removed/Fixed 三栏）",
+      "Given .claude/CLAUDE.md L28/L82 含 dvfy When 更新 Then 删除",
+      "Given install.sh 含 ADR 残留 When 检查 Then 确认无 dadr/ddoc_adr 引用"
+    ],
+    "steps": [
+      "1. [锁定] Edit rules/workflow.md: L3 'dtask / dvfy'→'dtask / drun'、L98 'dvfy 定义了'→'rules/verification.md 定义了'",
+      "2. [锁定] Edit .claude/rules/workflow.md: 同步 Step 1",
+      "3. [锁定] Edit assets/dinit/assets/rules/workflow.md: 同步 Step 1",
+      "4. [锁定] Edit rules/mindset.md: L87 'dvfy'→'dtask'",
+      "5. [锁定] Edit .claude/rules/mindset.md: 同步 Step 4",
+      "6. [锁定] Edit assets/dinit/assets/rules/mindset.md: 同步 Step 4",
+      "7. [锁定] Edit rules/README.md: 删除 dvfy 行或改为'dtask + drun + dcorr'",
+      "8. [锁定] Edit README.md: L7 10→9 + version v0.0.11→v0.0.12、L34 dvfy 行删除、L122/128 dvfy 行删除、L508 重写、L552 dvfy 删除、ADR 残留行清理（L91/L303/L306/L315-322）、L588 version 更新",
+      "9. [锁定] Edit CHANGELOG.md: 在 v0.0.11 条目(L1)前追加完整 v0.0.12 条目",
+      "10. [锁定] Edit .claude/CLAUDE.md: L28 表格 dvfy 删除、L82 skills 列表 dvfy 删除、L3 版本号 0.0.11→0.0.12"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/workflow.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/workflow.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/README.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/README.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/CHANGELOG.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md"
+    ],
+    "category": "refactor",
+    "blocked_by": [
+      79
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 81,
+    "title": "Phase 5: 全量验证与残留检查",
+    "description": "终局 D 最终验收：pytest 全量、JSON 合法性、grep 残留引用扫描、cross-reference 完整性。",
+    "acceptance": [
+      "Given 所有修改完成 When pytest tests/ -q Then 全量通过（排除已删除的 test_ddoc_adr.py）",
+      "Given plugin.json When JSON 检查 Then len(skills)==9 且 version=='0.0.12'",
+      "Given 所有常规文件 When grep dvfy 残留 Then 仅 skills/dvfy/SKILL.md 和 CHANGELOG.md/.diwu/ 含 dvfy（索引文件+历史记录合法）",
+      "Given 所有常规文件 When grep dadr|ddoc_adr Then 仅 .diwu/ 含引用（历史 recording 合法）",
+      "Given rules/judgments.md L134 When 检查 Then 引用'skills/drec/SKILL.md §设计决策记录'有效"
+    ],
+    "steps": [
+      "1. [锁定] bash: pytest tests/ -q",
+      "2. [锁定] bash: python3 -c 验证 plugin.json skills 计数=9 + version=0.0.12",
+      "3. [锁定] bash: python3 -c 验证 marketplace.json version=0.0.12",
+      "4. [锁定] bash: grep 扫描 dvfy 残留（排除 .diwu/ + CHANGELOG.md + skills/dvfy）",
+      "5. [锁定] bash: grep 扫描 dadr/ddoc_adr 残留（排除 .diwu/）",
+      "6. [锁定] bash: grep 确认 judgments.md L134 引用 drec 设计决策记录章节存在"
+    ],
+    "files_modified": [],
+    "category": "infra",
+    "blocked_by": [
+      80
+    ],
+    "status": "Done"
+  },
+  {
+    "id": 82,
+    "title": "Phase A: Stop hook 误判链路诊断（不修改产品代码，允许 /drec closeout）",
+    "description": "确定 Stop hook 误提示究竟来自链路 A（InProgress match）还是链路 B（pending_recording gate）。不修改任何产品代码（scripts/hooks/tests），但允许通过 /drec 将诊断结论 closeout 到 recording 供 Task#87 引用。",
+    "acceptance": [
+      "Given tmpdir 中构造模拟 dtask.json（含 InProgress 任务）+ dtask-state.json（含对应 task_sessions） When 调用 resolve_session_inprogress_task(tasks, state, non_empty_sid) Then 诊断结论标注 is_match=True/False",
+      "Given tmpdir git init + baseline commit + 构造 dtask-state.json（含 pending_recording）+ 制造 .diwu/ dirty When 设 CLAUDE_SESSION_ID + 调 _resolve_stop_session_id 返回 resolved_sid + _check_pending_recording_gate(cwd, resolved_sid) Then 诊断结论标注 pr_level 是否为 block",
+      "Given 诊断完成 When 通过 /drec 将 DECISION TRACE 写入 recording Then 遵循 drec 为唯一 closeout 入口的合同，供 Task#87 引用"
+    ],
+    "steps": [
+      "1. 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/dtask-state.json 当前 content（task_sessions + pending_recording）",
+      "2. [锁定] 链路 A 复现：tmpdir 构造 dtask.json（含 InProgress 任务）+ dtask-state.json（含对应 task_sessions）→ resolve_session_inprogress_task(tasks, state, non_empty_sid) → 记录 is_match",
+      "3. [锁定] 链路 B 复现：tmpdir git init + baseline commit + 构造 dtask-state.json（含 pending_recording，session_id 对应）+ 制造 .diwu/ dirty（touch .diwu/dtask.json）+ 设 CLAUDE_SESSION_ID env → _resolve_stop_session_id(\"\", cwd) → _check_pending_recording_gate(cwd, resolved_sid) → 记录 pr_level",
+      "4. 通过 /drec 将 DECISION TRACE 诊断结论写入 recording（遵循 drec 为唯一 closeout 入口）",
+      "5. 确定误判链路"
+    ],
+    "category": "infra",
+    "blocked_by": [],
+    "status": "Done",
+    "files_modified": []
+  },
+  {
+    "id": 83,
+    "title": "drec_archive.py 归档自动化脚本 + 测试",
+    "description": "创建 drec_archive.py 归档执行器：archive_tasks（追加归档+从 dtask.json 移除）、archive_recordings（按两轮规则移动源文件到 archive/recording/YYYY-MM/）、aggregate_pitfalls（9 步踩坑聚合从 moved files 扫描）、update_summary、run 主入口。Recording 归档用 shutil.move()，分片月份取 session 文件名自身月份。",
+    "acceptance": [
+      "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/drec_archive.py 不存在 When 创建脚本 Then 文件含 archive_tasks/archive_recordings/aggregate_pitfalls/update_summary/run 五个函数",
+      "Given archive_recordings() 被调用且 .diwu/recording/ 含 60 个文件（含 session-2026-04-* 和 session-2026-05-*） When 阈值=50 且超龄文件=5 Then ①移所有超龄 ②按 mtime 从旧到新继续移直到剩余 <50 ③ session-2026-04-* 进 archive/recording/2026-04/ ④ session-2026-05-* 进 archive/recording/2026-05/",
+      "Given archive_tasks() 被调用且 dtask.json 含 25 个 Done 任务 When 归档阈值=20 Then Done/Cancelled 任务追加到 archive/task_archive_YYYY-MM.json（按 id 去重）并从 dtask.json 移除",
+      "Given aggregate_pitfalls() 被调用且传入 moved_file_paths 列表 When 扫描文件中的踩坑段落 Then 按类别聚类→同 session 同类别合并→追加到 project-pitfalls.md，来源=文件名",
+      "Given 创建 tests/level2_scripts/test_drec_archive.py When pytest 运行 Then 5 个测试用例全部 PASS（archive_tasks/archive_recordings_move/idempotent/no_archive_needed/aggregate_pitfalls）"
+    ],
+    "steps": [
+      "1. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/drec_archive.py，实现 archive_tasks/archive_recordings/aggregate_pitfalls/update_summary/run",
+      "2. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_drec_archive.py（5 个用例：test_archive_tasks/test_archive_recordings_move/test_idempotent/test_no_archive_needed/test_aggregate_pitfalls_from_moved_files）",
+      "3. 运行 python3 -m pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_drec_archive.py -q 验证新增测试通过"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/drec_archive.py",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_drec_archive.py"
+    ],
+    "category": "functional",
+    "blocked_by": [],
+    "status": "Done"
+  },
+  {
+    "id": 85,
+    "title": ".doc/ 目录 bootstrap + file-layout 三处同步",
+    "description": "创建 .doc/ 下 4 份产品文档（README/架构规范/状态文件规格/工程规范），定位为\"导航+边界+传播矩阵\"层，不重复 README/CLAUDE.md 内容。同时同步 rules/file-layout.md、.claude/rules/file-layout.md、assets/dinit/assets/rules/file-layout.md 三处的 .doc/ 结构描述从占位符改为实际落地结构。",
+    "acceptance": [
+      "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/ 目录不存在 When 创建 Then 含 README.md + 架构规范.md + 状态文件规格.md + 工程规范.md 四文件",
+      "Given 架构规范.md When 编写 Hooks 实现链 Then 表按 hooks/hooks.json 反推 6 事件（SessionStart/TaskCreated/PreToolUse[3 matcher]/TaskCompleted/Stop/PreCompact），不含不存在的 UserPromptSubmit/PostToolUseFailure",
+      "Given 状态文件规格.md When 编写 writer matrix Then 含 task_completed.py clear owner + dend/dloop_state clear dloop，release 标注 4 种目标状态",
+      "Given 工程规范.md When 编写变更传播矩阵 Then 不维护静态 Command/Skill 数字，只做链接聚合",
+      "Given file-layout.md 三处 .doc/ 描述当前为占位符 When 同步更新 Then 三处均含 README.md/架构规范.md/状态文件规格.md/工程规范.md/adr/ 五条目"
+    ],
+    "steps": [
+      "1. 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/README.md（导航中枢：每份文档回答什么/不回答什么、推荐阅读顺序、维护规则）",
+      "2. 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/架构规范.md（Skills↔Commands 映射表、模块边界、Hooks 实现链按 hooks.json 反推、数据流图）",
+      "3. 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/状态文件规格.md（dtask.json 迁移表含 release 4 目标、dtask-state.json writer matrix 含 task_completed/dend/dloop_state、dsettings.json 参数表）",
+      "4. 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/工程规范.md（引用索引纯聚合、禁止事项、变更传播矩阵）",
+      "5. [锁定] 同步更新 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md 的 .doc/ 结构描述",
+      "6. [锁定] 同步更新 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md 的 .doc/ 结构描述",
+      "7. [锁定] 同步更新 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md 的 .doc/ 结构描述"
+    ],
+    "files_modified": [
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/README.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/架构规范.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/状态文件规格.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/工程规范.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md",
+      "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md"
+    ],
+    "category": "infra",
+    "blocked_by": [],
+    "status": "Done"
+  }
+]

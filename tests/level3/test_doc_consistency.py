@@ -1,8 +1,9 @@
 """Documentation cross-reference consistency checker.
 
 Validates that key numbers (script counts, event counts, rule counts, etc.)
-are consistent across CLAUDE.md, README.md, api.md, and actual filesystem.
-Also checks skills directory names against plugin.json references.
+are consistent across CLAUDE.md, README.md, and actual filesystem.
+Also checks skills directory names against plugin.json references
+and .doc/ index link integrity.
 
 Level 3 (documentation/consistency) — reads file contents, no subprocess needed.
 """
@@ -18,9 +19,6 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 
 PLUGIN_JSON = PROJECT_ROOT / '.claude-plugin' / 'plugin.json'
 MARKETPLACE_JSON = PROJECT_ROOT / '.claude-plugin' / 'marketplace.json'
-API_MD = PROJECT_ROOT / '.doc' / 'api.md'
-PRODUCT_MD = PROJECT_ROOT / '.doc' / 'product.md'
-SCHEMA_MD = PROJECT_ROOT / '.doc' / 'schema.md'
 CLAUDE_MD = PROJECT_ROOT / '.claude' / 'CLAUDE.md'
 README_MD = PROJECT_ROOT / 'README.md'
 FILE_LAYOUT_MD = PROJECT_ROOT / '.claude' / 'rules' / 'file-layout.md'
@@ -102,8 +100,13 @@ class TestDocConsistency:
 
     def test_rule_file_count_consistent(self):
         actual = len([p for p in RULES_DIR.glob("*.md") if not p.name.startswith("test_")])
-        # file-layout.md both copies
-        for label, path in [('local', FILE_LAYOUT_MD), ('asset', FILE_LAYOUT_ASSET)]:
+        # file-layout.md three copies: root, local, asset
+        copies = [
+            ('root', RULES_DIR / 'file-layout.md'),
+            ('local', FILE_LAYOUT_MD),
+            ('asset', FILE_LAYOUT_ASSET),
+        ]
+        for label, path in copies:
             if path.exists():
                 text = path.read_text(encoding='utf-8')
                 claimed = _extract_number(r'rules.*?(\d+)\s*文件', text)
@@ -116,8 +119,7 @@ class TestDocConsistency:
     def test_command_count_consistent(self):
         actual = len(list(COMMANDS_DIR.glob('*.md')))
         pj = _read_json(PLUGIN_JSON)
-        api = API_MD.read_text(encoding='utf-8') if API_MD.exists() else ''
-        for loc, text in [('plugin.json', str(pj)), ('api.md', api)]:
+        for loc, text in [('plugin.json', str(pj))]:
             if '**命令数量**' in text:
                 claimed = _extract_number(r'(\d+)\s*个命令', text)
                 if claimed is not None and claimed != actual:
@@ -139,12 +141,6 @@ class TestDocConsistency:
         claimed_pj = len(pj.get('skills', [])) if pj else None
         if claimed_pj is not None and claimed_pj != actual:
             assert False, f"plugin.json: claims {claimed_pj} skills, actual={actual} (excl. {deprecated_count} deprecated)"
-        # For api.md, use regex on markdown text only
-        api = API_MD.read_text(encoding='utf-8') if API_MD.exists() else ''
-        if 'Skill 数量' in api:
-            claimed = _extract_number(r'Skill\s*数量.*?(\d+)\s*个', api)
-            if claimed is not None and claimed != actual:
-                assert False, f"api.md: claims {claimed} skills, actual {actual}"
 
     def test_agent_count_consistent(self):
         actual = len([a for a in AGENTS_DIR.glob('*.md')])
@@ -225,7 +221,12 @@ class TestDocConsistency:
 
     def test_file_layout_rule_count_accurate(self):
         actual = len([p for p in RULES_DIR.glob("*.md") if not p.name.startswith("test_")])
-        for label, path in [('local', FILE_LAYOUT_MD), ('asset', FILE_LAYOUT_ASSET)]:
+        copies = [
+            ('root', RULES_DIR / 'file-layout.md'),
+            ('local', FILE_LAYOUT_MD),
+            ('asset', FILE_LAYOUT_ASSET),
+        ]
+        for label, path in copies:
             if not path.exists():
                 continue
             text = path.read_text(encoding='utf-8')
@@ -235,3 +236,25 @@ class TestDocConsistency:
                     f"file-layout.md ({label}): rules count claims {claimed}, "
                     f"actual {actual}"
                 )
+
+    # --- C5: .doc/ index link validity ---
+
+    def test_doc_index_links_valid(self):
+        """All markdown links in .doc/README.md should point to existing files."""
+        doc_readme = PROJECT_ROOT / '.doc' / 'README.md'
+        if not doc_readme.exists():
+            return
+        text = doc_readme.read_text(encoding='utf-8')
+        # Extract [text](url) links
+        links = re.findall(r'\[([^\]]*)\]\(([^)]+)\)', text)
+        broken = []
+        for label, url in links:
+            # Skip external URLs and anchor-only refs
+            if url.startswith(('http://', 'https://', '#', 'mailto:')):
+                continue
+            target = (doc_readme.parent / url).resolve()
+            if not target.exists():
+                broken.append(f"  [{label}]({url}) -> {target}")
+        assert not broken, (
+            f"Broken links in .doc/README.md:\n" + "\n".join(broken)
+        )

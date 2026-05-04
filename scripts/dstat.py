@@ -119,7 +119,7 @@ def get_archive_status(archive_dir: Path) -> dict:
     if not archive_dir.is_dir():
         return {"last_archive": None, "task_archives": 0, "recording_archives": 0}
     task_archives = list(archive_dir.glob("task_archive_*.json"))
-    rec_archives = list(archive_dir.glob("recording_*.md"))
+    rec_archives = list((archive_dir / "recording").glob("**/*.md"))
     last = None
     if task_archives or rec_archives:
         all_files = task_archives + rec_archives

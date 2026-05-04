@@ -151,86 +151,44 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 
 ## 归档聚合指引
 
-> **触发入口**：Stop hook 自动检测（`hooks/scripts/stop_archive.py`）或手动 `/drec` 执行归档操作。
+> **执行入口**：`/drec` 自动调用 `scripts/drec_archive.py run`；fallback 手动步骤在脚本不可用时使用。
 
 ### 双轨总览
 
-| 轨道 | 归档对象 | 触发条件 | 产物 |
-|------|---------|---------|------|
-| **Task 轨道** | Done / Cancelled 任务 | 数量 ≥ `task_archive_threshold`（默认 20） | `archive/task_archive_YYYY-MM.json` |
-| **Recording 轨道** | Session 记录文件 | 文件数 ≥ `recording_archive_threshold`（默认 50）**或** 存在超过 `recording_retention_days` 天（默认 30）的文件 | `archive/recording_YYYY-MM-DD.md` |
+| 轨道 | 归档对象 | 触发条件 | 产物 | 操作方式 |
+|------|---------|---------|------|---------|
+| **Task 轨道** | Done / Cancelled 任务 | 数量 ≥ `task_archive_threshold`（默认 20） | `archive/task_archive_YYYY-MM.json` | 序列化追加 + 从 dtask.json 移除 |
+| **Recording 轨道** | Session 记录文件 | 文件数 ≥ `recording_archive_threshold`（默认 50）或超龄 | `archive/recording/YYYY-MM/session-*.md` | **移动**源文件到按 session 月份分片的子目录 |
 
-### 触发条件与参数来源
+### 触发参数
 
-| 参数 | 默认值 | 配置来源 | 说明 |
-|------|--------|---------|------|
-| `task_archive_threshold` | 20 | `.diwu/dsettings.json` | Done/Cancelled 任务数达到此值触发 |
-| `recording_archive_threshold` | 50 | `.diwu/dsettings.json` | recording 文件数达到此值触发 |
-| `recording_retention_days` | 30 | `.diwu/dsettings.json` | 超过此天数的 recording 文件触发（即使总数未达阈值） |
+| 参数 | 默认值 | 配置来源 |
+|------|--------|---------|
+| `task_archive_threshold` | 20 | `.diwu/dsettings.json` |
+| `recording_archive_threshold` | 50 | `.diwu/dsettings.json` |
+| `recording_retention_days` | 30 | `.diwu/dsettings.json` |
 
-### 手动归档步骤
+### 选文件规则
 
-1. **读取阈值配置**：从 `.diwu/dsettings.json` 加载上述三个参数（缺失时使用默认值）
-2. **扫描待归档任务**：遍历 `dtask.json` 中 `status` 为 Done 或 Cancelled 的任务，收集到列表
-3. **扫描待归档 recording**：遍历 `.diwu/recording/*.md`，按文件数和修改时间筛选超阈值/超龄文件
-4. **执行归档写入**：
-   - Task 轨道：将任务定义序列化为 JSON 追加到 `archive/task_archive_YYYY-MM.json`
-   - Recording 轨道：将 session 文件内容合并写入 `archive/recording_YYYY-MM-DD.md`（最新在前）
-5. **更新索引**：写入/更新 `.diwu/archive/.last_archive_summary.json`，记录本次归档的时间、数量、产物路径
-6. **清理源文件**（可选）：确认归档成功后，从 `dtask.json` 移除已归档任务（仅 task 轨道）；recording 文件保留原位不删除
+① 移动所有超龄文件（mtime > retention_days 天）；② 若 `.diwu/recording/` 剩余数 ≥ threshold，按 mtime 从旧到新继续移动，直到活跃目录文件数严格 < threshold。目标子目录月份取 **session 文件名自身月份**。
 
-### 产物格式
+### 踩坑聚合协议（9 步）
 
-**Task 归档产物** (`task_archive_YYYY-MM.json`)：
-```json
-[
-  {"id": 1, "title": "...", "status": "Done", "description": "...", ...},
-  {"id": 2, "title": "...", "status": "Cancelled", ...}
-]
-```
+> 在 `run()` 的双轨归档完成后自动执行。扫描被移动的 recording 文件中的踩坑经验。
 
-**Recording 归档产物** (`recording_YYYY-MM-DD.md`)：
-```markdown
-## Archived Sessions — 2026-05-03
+1. **扫描**：遍历本次移动的 `archive/recording/YYYY-MM/session-*.md` 中所有 `### 本次踩坑/经验` 段落
+2. **来源追踪**：来源 = 文件名（如 `session-2026-05-04-021452.md`），无需额外 Source metadata
+3. **按类别聚类**：按六类标签分组（环境漂移/数据缺口/读层现象/路由护栏契约/验证误读/分层未拆清/其他）
+4. **同 session 同类别合并**：同一文件 + 同类别标签的多条踩坑合并为一条
+5. **禁止跨 session 去重**：不同文件遇到同一问题是复发信号，各自保留独立条目
+6. **禁止过期清理**：保留所有历史条目
+7. **追加写入**：追加到 `.diwu/project-pitfalls.md`
+8. **来源列规范**：来源列写文件名（如 `session-2026-05-04-021452.md`）
+9. **无数据跳过**：如无踩坑数据则跳过
 
-### ← 原始 session 文件内容完整保留 →
-### ← 多个 session 按时间倒序拼接，每个以 --- 分隔 →
-```
+### Fallback 手动步骤（脚本不可用时）
 
-**归档摘要** (`.last_archive_summary.json`)：
-```json
-{"archived_at": "2026-05-03T10:00:00Z", "tasks_count": 22, "recordings_count": 5, "files": ["archive/task_archive_2026-05.json", "archive/recording_2026-05-03.md"]}
-```
-
-### 验收清单
-
-- [ ] 归档后 `dtask.json` 中 Done/Cancelled 任务数 < 阈值（或已清零）
-- [ ] 归档 JSON 可被 `json.load()` 正确解析（无语法错误）
-- [ ] Recording 归档文件中每个 session 的 `### 本次踩坑/经验` 字段完整存在
-- [ ] `.last_archive_summary.json` 存在且 `archived_at` 为近期时间戳
-- [ ] 未归档的任务/Recording 不受影响（无误删）
-
-### 约束
-
-1. **不自动删除源文件**：归档是追加式写入，原始 recording 文件保留不动（避免误删活跃引用）
-2. **Task 归档后从 dtask.json 移除**：防止下次重复归档同一批任务；移除前必须确认 JSON 已写入磁盘
-3. **按月分片**：文件名含 `YYYY-MM` 或 `YYYY-MM-DD`，同月多次归档追加到同一文件
-4. **幂等安全**：重复执行归档不会产生重复条目（task 按 id 去重，recording 按文件名去重）
-5. **归档检测函数签名**：`check(cwd=None) -> list[(level, message)]`，内部调用 `check_task_archive()` + `check_recording_archive()`
-
-### 踩坑聚合（9 步协议）
-
-> 在手动归档步骤 Step 4 执行。将本批归档涉及的全部 recording 文件中的踩坑经验聚合到 `.diwu/project-pitfalls.md`。
-
-1. **扫描**（Step 4a）：遍历本次归档相关的 `.diwu/recording/session-*.md` 中所有 `### 本次踩坑/经验` 段落
-2. **来源追踪**（Step 4b）：在归档文件内按 `## Source: session-xxx.md` 分隔符追踪每条踩坑所属的具体 session
-3. **按类别聚类**（Step 4c）：按六类标签分组（环境漂移/数据缺口/读层现象/路由护栏契约/验证误读/分层未拆清/其他）
-4. **同 session 同类别合并**（Step 4d）：同一 session + 同一类别标签的多条踩坑合并为一条，现象描述要点保留并用 `; ` 连接
-5. **禁止跨 session 去重**（Step 4e）：不同 session 遇到同一问题是复发信号，各自保留独立条目
-6. **禁止过期清理**（Step 4f）：保留所有历史条目，不按时间或代码状态清理
-7. **追加写入**（Step 4g）：追加到 `.diwu/project-pitfalls.md`，不覆盖已有条目
-8. **来源列规范**（Step 4h）：来源列必须写具体 session 文件名（如 `session-2026-04-18-213522.md`），禁止写占位符或归档文件名
-9. **无数据跳过**（Step 4i）：如无踩坑数据则跳过，在 summary 中标注 "0 new pitfalls"
+[保留原 5 步手动流程作为降级路径，标注"优先使用脚本"]
 
 ---
 
@@ -340,11 +298,12 @@ CONTINUOUS MODE COMPLETE - 所有可执行任务已完成
 
 1. 按 Session 文件格式模板写入 `.diwu/recording/session-{timestamp}.md`
 2. 运行 `date '+%Y-%m-%d %H:%M:%S'` 获取时间戳用于 commit message
-3. 检查 `git status --short` 是否有变更
-4. 有变更 → `git add -A && git commit -m "[recording] Session {timestamp} ..."`（或 amend 模式下用 `git commit --amend -m "..."`)
-5. 无变更 → 输出跳过提示，返回成功
-6. 将 commit hash 作为输出返回给调用方
-7. **[收尾]** closeout 成功后清除标记：`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py clear-pending --cwd .`
+3. 执行归档：`python3 scripts/drec_archive.py run --cwd <项目根目录>` → 输出归档摘要；无归档需求则输出"无待归档内容"
+4. 检查 `git status --short` 是否有变更（含归档产物）
+5. 有变更 → `git add -A && git commit -m "[recording] Session {timestamp} ..."`（或 amend 模式下用 `git commit --amend -m "..."`; 归档产物纳入同一原子 commit）
+6. 无变更 → 输出跳过提示，返回成功
+7. 将 commit hash 作为输出返回给调用方
+8. **[收尾]** closeout 成功后清除标记：`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py clear-pending --cwd .`
 
 ---
 
