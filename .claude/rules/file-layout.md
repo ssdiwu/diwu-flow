@@ -38,12 +38,15 @@
 
 > 规则文件由插件 UserPromptSubmit hook 注入。**mindset.md 为独立注入**（由 UserPromptSubmit hook 单独读取注入，不随 rules/ 目录批量加载）。
 
-## .doc/ 目录结构（SDD 规范产物）
+## .doc/ 目录结构（产品文档层）
 
 ```
 .doc/
-├── [domain 或分层文件]   # 见 /diwu-doc
-└── adr/                  # 架构决策记录，见 /diwu-adr
+├── README.md              # 导航索引：定位/阅读顺序/维护规则
+├── 架构规范.md            # Skills<->Commands 映射/模块边界/Hooks 实现链(6 事件)/数据流图
+├── 状态文件规格.md          # dtask.json 字段+状态机+迁移表/dtask-state.json writer matrix/self-heal
+├── 工程规范.md            # 引用索引纯聚合/禁止事项/变更传播矩阵
+└── adr/                   # 架构决策记录，通过 /ddoc --mode adr 管理
     └── ADR-NNN-kebab-case-title.md
 ```
 

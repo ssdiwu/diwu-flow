@@ -128,3 +128,41 @@ class TestDstatDeepMode:
         rc2, out2, _ = run_script("dstat.py", "--cwd", str(tmp_project_dir))
         data2 = json.loads(out2)
         assert len(data["formatted_text"]) >= len(data2["formatted_text"])
+
+
+class TestDstatArchiveNestedDirs:
+    """适配 archive/recording/YYYY-MM/ 嵌套目录结构。"""
+
+    def test_archive_nested_recording_dirs(self, tmp_project_dir):
+        """get_archive_status 应能统计嵌套子目录中的 recording 归档文件。"""
+        archive_dir = tmp_project_dir / ".diwu" / "archive"
+        rec_archive = archive_dir / "recording" / "2026-05"
+        rec_archive.mkdir(parents=True)
+        (rec_archive / "session-2026-05-01-120000.md").write_text("# archived session 1")
+        (rec_archive / "session-2026-05-02-130000.md").write_text("# archived session 2")
+        # 也创建一个更深的嵌套层（防御性测试）
+        deep_dir = archive_dir / "recording" / "2026-04"
+        deep_dir.mkdir(parents=True)
+        (deep_dir / "session-2026-04-15-100000.md").write_text("# older session")
+
+        rc, out, err = run_script("dstat.py", "--cwd", str(tmp_project_dir))
+        assert rc == 0
+        data = json.loads(out)
+        assert data["ok"] is True
+        # 应检测到 3 个 recording 归档文件（跨两个月份子目录）
+        assert data["summary"]["archive_last"] is not None
+        # formatted_text 中应体现 recording_archives 数量
+        ft = data["formatted_text"]
+        assert "归档状态" in ft
+
+    def test_archive_no_nested_dirs_graceful(self, tmp_project_dir):
+        """无嵌套 recording 目录时不应崩溃。"""
+        archive_dir = tmp_project_dir / ".diwu" / "archive"
+        archive_dir.mkdir(parents=True)
+        # 只创建 task_archive，不创建 recording 子目录
+        (archive_dir / "task_archive_2026-05.json").write_text("[]")
+
+        rc, out, err = run_script("dstat.py", "--cwd", str(tmp_project_dir))
+        assert rc == 0
+        data = json.loads(out)
+        assert data["ok"] is True

@@ -464,8 +464,18 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
     extra = _prompt_suffix(additional_prompts)
     resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, session_id or "")
 
-    if resolution.is_match:
+    if resolution.is_match and resolution.task.get("status") == "InProgress":
         return True, {"decision": "block", "reason": format_task("继续完成当前任务（断点恢复）：", resolution.task) + extra}
+
+    # is_match 但 status 非 InProgress → stale task_sessions entry，降级为 hint
+    if resolution.is_match:
+        task_id = resolution.task.get("id") if resolution.task else "?"
+        print(
+            f"[STOP_HINT] Task#{task_id} task_sessions 有 stale owner 但当前状态为 "
+            f"{resolution.task.get('status')}（非 InProgress），已跳过断点恢复。",
+            file=sys.stderr,
+        )
+        return False, {}
 
     if resolution.status in ("missing_owner", "owner_mismatch", "invalid_runtime_state"):
         task_id = resolution.task.get("id") if resolution.task else "?"
@@ -521,11 +531,20 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
     extra = _prompt_suffix(additional_prompts)
 
     resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, session_id or "")
-    if resolution.is_match:
+    if resolution.is_match and resolution.task.get("status") == "InProgress":
         return True, {
             "decision": "block",
             "reason": format_task(f"🔄 dloop iteration {iteration + 1} | 继续当前任务（断点恢复）：", resolution.task) + extra,
         }
+    # is_match 但 status 非 InProgress → stale task_sessions entry，降级为 hint
+    if resolution.is_match:
+        task_id = resolution.task.get("id") if resolution.task else "?"
+        print(
+            f"[STOP_HINT] [dloop] Task#{task_id} task_sessions 有 stale owner 但当前状态为 "
+            f"{resolution.task.get('status')}（非 InProgress），已跳过断点恢复。",
+            file=sys.stderr,
+        )
+        return False, {}
     if resolution.status in ("missing_owner", "owner_mismatch", "invalid_runtime_state"):
         task_id = resolution.task.get("id") if resolution.task else "?"
         action = _repair_action(resolution.status)
