@@ -2,6 +2,7 @@
 # diwu-flow 多平台安装脚本
 # ./install.sh --platform <cc|codex|opencode|all>
 # ./install.sh --uninstall
+# ./install.sh --uninstall --dry-run
 
 set -euo pipefail
 
@@ -9,7 +10,7 @@ FLOW_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 usage() {
     echo "Usage: $0 --platform <cc|codex|opencode|all>"
-    echo "       $0 --uninstall"
+    echo "       $0 --uninstall [--dry-run] [--verbose]"
     exit 1
 }
 
@@ -96,30 +97,111 @@ PLUGIN_EOF
 }
 
 uninstall() {
-    echo "Uninstalling diwu-flow symlinks..."
+    if [ "$DRY_RUN" = true ]; then
+        echo "Dry-run: scanning diwu-flow symlinks..."
+    else
+        echo "Uninstalling diwu-flow symlinks..."
+    fi
+
+    _normalize_path_shell() {
+        local path="$1"
+        local old_ifs part normalized
+        local -a parts
+
+        [[ "$path" = /* ]] || path="$PWD/$path"
+
+        normalized=""
+        old_ifs="$IFS"
+        IFS="/"
+        read -r -a parts <<< "$path"
+        IFS="$old_ifs"
+
+        for part in "${parts[@]}"; do
+            case "$part" in
+                ""|.) ;;
+                ..)
+                    if [[ "$normalized" == */* ]]; then
+                        normalized="${normalized%/*}"
+                    else
+                        normalized=""
+                    fi
+                    ;;
+                *) normalized="${normalized:+$normalized/}$part" ;;
+            esac
+        done
+
+        printf '/%s\n' "$normalized"
+    }
+
+    _normalize_path() {
+        local path="$1"
+        local base="${2:-}"
+        local resolved
+
+        if [[ -n "$base" && "$path" != /* ]]; then
+            path="$base/$path"
+        fi
+
+        if command -v realpath >/dev/null 2>&1; then
+            if resolved=$(realpath "$path" 2>/dev/null); then
+                printf '%s\n' "$resolved"
+                return 0
+            fi
+        fi
+
+        if command -v python3 >/dev/null 2>&1; then
+            if resolved=$(python3 - "$path" <<'PY'
+import os
+import sys
+
+print(os.path.realpath(sys.argv[1]))
+PY
+            ); then
+                printf '%s\n' "$resolved"
+                return 0
+            fi
+        fi
+
+        _normalize_path_shell "$path"
+    }
+
+    _is_under_flow_root() {
+        local normalized_root="$1"
+        local norm_target="$2"
+
+        [[ "$norm_target" == "$normalized_root" || "$norm_target" == "$normalized_root"/* ]]
+    }
 
     # 安全删除辅助函数：只删除指向 FLOW_ROOT 规范化路径下的 symlink
     _safe_rm_symlinks() {
         local dir="$1"
         [ -d "$dir" ] || return 0
-        # 预计算 FLOW_ROOT 的真实路径（解析 symlink 和 ..）
         local normalized_root
-        normalized_root=$(realpath "$FLOW_ROOT" 2>/dev/null) || echo "$FLOW_ROOT"
+        normalized_root=$(_normalize_path "$FLOW_ROOT")
 
         find "$dir" -type l | while read -r link; do
+            local target link_dir norm_target
+
             target=$(readlink "$link" 2>/dev/null) || continue
-            # 规范化 target 路径后做精确前缀匹配（排除 sibling/backup 等非本 repo 路径）
-            local norm_target="$target"
-            if [[ "$target" = /* ]]; then
-                norm_target=$(realpath "$target" 2>/dev/null) || echo "$target"
-            fi
-            # realpath 规范化后：必须在 FLOW_ROOT 树内才算 diwu-flow 的 symlink（路径边界检查防 sibling 误删）
-            if [[ "$(realpath -q -- "$norm_target" 2>/dev/null)" == "$normalized_root" || "$(realpath -q -- "$norm_target" 2>/dev/null)" == "$normalized_root"/* ]]; then
-                rm -f "$link"
+            link_dir=$(dirname "$link")
+            norm_target=$(_normalize_path "$target" "$link_dir") || continue
+
+            # 必须在 FLOW_ROOT 树内才算 diwu-flow 的 symlink（路径边界检查防 sibling 误删）
+            if _is_under_flow_root "$normalized_root" "$norm_target"; then
+                if [ "$DRY_RUN" = true ]; then
+                    echo "Would remove symlink: $link -> $norm_target"
+                else
+                    if [ "$VERBOSE" = true ]; then
+                        echo "Removing symlink: $link -> $norm_target"
+                    fi
+                    rm -f "$link"
+                fi
             fi
         done
         # 清理空目录
-        find "$dir" -type d -empty -delete 2>/dev/null || true
+        if [ "$DRY_RUN" = false ]; then
+            find "$dir" -type d -empty -delete 2>/dev/null || true
+        fi
     }
 
     # Codex cleanup
@@ -128,26 +210,53 @@ uninstall() {
 
     # OpenCode cleanup
     if [ -d ".opencode" ]; then
-        rm -f ".opencode/plugins/diwu-flow.ts" 2>/dev/null || true
+        if [ -f ".opencode/plugins/diwu-flow.ts" ]; then
+            if [ "$DRY_RUN" = true ]; then
+                echo "Would remove file: .opencode/plugins/diwu-flow.ts"
+            else
+                if [ "$VERBOSE" = true ]; then
+                    echo "Removing file: .opencode/plugins/diwu-flow.ts"
+                fi
+                rm -f ".opencode/plugins/diwu-flow.ts" 2>/dev/null || true
+            fi
+        fi
         _safe_rm_symlinks ".opencode/skills"
         _safe_rm_symlinks ".opencode/agents"
-        find ".opencode" -type d -empty -delete 2>/dev/null || true
+        if [ "$DRY_RUN" = false ]; then
+            find ".opencode" -type d -empty -delete 2>/dev/null || true
+        fi
     fi
 
-    echo "✓ Uninstall complete"
+    if [ "$DRY_RUN" = true ]; then
+        echo "✓ Dry-run complete"
+    else
+        echo "✓ Uninstall complete"
+    fi
 }
 
 # Main
 PLATFORM=""
 UNINSTALL=false
+DRY_RUN=false
+VERBOSE=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --platform) PLATFORM="$2"; shift 2 ;;
+        --platform)
+            [ $# -ge 2 ] || usage
+            PLATFORM="$2"
+            shift 2
+            ;;
         --uninstall) UNINSTALL=true; shift ;;
+        --dry-run) DRY_RUN=true; VERBOSE=true; shift ;;
+        --verbose) VERBOSE=true; shift ;;
         *) usage ;;
     esac
 done
+
+if [ "$UNINSTALL" != true ] && { [ "$DRY_RUN" = true ] || [ "$VERBOSE" = true ]; }; then
+    usage
+fi
 
 if [ "$UNINSTALL" = true ]; then
     uninstall
