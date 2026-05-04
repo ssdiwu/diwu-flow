@@ -1,11 +1,16 @@
 {
   "version": 1,
-  "task_sessions": {},
+  "task_sessions": {
+    "88": {
+      "session_id": "dloop-1777892538",
+      "started_at": "2026-05-04T11:02:18.925910+00:00"
+    }
+  },
   "dloop": null,
   "pending_recording": {
-    "task_id": 87,
+    "task_id": 90,
     "target_status": "Done",
-    "released_at": "2026-05-04T08:17:43.103561+00:00",
-    "session_id": "dloop-1777882663"
+    "released_at": "2026-05-04T11:02:13.801456+00:00",
+    "session_id": "dloop-1777892533"
   }
 }

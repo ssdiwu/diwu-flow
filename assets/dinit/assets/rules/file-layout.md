@@ -46,7 +46,7 @@
 ├── 架构规范.md            # Skills<->Commands 映射/模块边界/Hooks 实现链(6 事件)/数据流图
 ├── 状态文件规格.md          # dtask.json 字段+状态机+迁移表/dtask-state.json writer matrix/self-heal
 ├── 工程规范.md            # 引用索引纯聚合/禁止事项/变更传播矩阵
-└── adr/                   # 架构决策记录，通过 /ddoc --mode adr 管理
+└── adr/                   # 架构决策记录（可选），通过 /ddoc 管理
     └── ADR-NNN-kebab-case-title.md
 ```
 
