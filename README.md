@@ -88,7 +88,7 @@ claude plugin add /path/to/diwu-flow
 /dstat                   # 项目全局状态快照
 ```
 
-> 示例：做「消息通知」功能 → `/dprd` 讨论推送方式 → 确定用 WebSocket 时 `/ddoc --mode adr` 记录决策 → `/dref` 细化关键需求 → `/dtask` 拆集成任务 → `/dloop` 开始循环。
+> 示例：做「消息通知」功能 → `/dprd` 讨论推送方式 → 确定用 WebSocket 时 `/ddoc` 记录决策 → `/dref` 细化关键需求 → `/dtask` 拆集成任务 → `/dloop` 开始循环。
 
 ### 接手老项目
 
@@ -110,7 +110,7 @@ claude plugin add /path/to/diwu-flow
 
 | 平台 | 命令 | 产物 |
 |------|------|------|
-| Claude Code | `claude plugin add <path>` | 10 Skill + 3 Agent + 11 Command + 7 Hook |
+| Claude Code | `claude plugin add <path>` | 9 Skill + 3 Agent + 11 Command + 6 Hook 事件 / 10 脚本 |
 | Codex CLI | `./install.sh --platform codex` | Skills + Agents symlink 到 `~/.codex/` |
 | OpenCode | `./install.sh --platform opencode` | Plugin + symlink 到 `.opencode/` |
 | 全部 | `./install.sh --platform all` | 以上全部 |
@@ -133,7 +133,7 @@ claude plugin add /path/to/diwu-flow
 | **dstat** | tool | 项目状态只读聚合 | 任务进度 / Session / 决策 / Git 状态 |
 | **dloop** | rule | drun 薄壳循环包装 | `while(未停止){ /drun }` |
 
-### Commands（12 个）
+### Commands（11 个）
 
 | Command | 对应 Skill | 一句话 |
 |---------|-----------|--------|
@@ -161,7 +161,7 @@ claude plugin add /path/to/diwu-flow
 
 > 使用默认路径自动发现，不在 plugin.json 中声明。故障隔离：任何非核心 agent 失败时退化回 explorer→implementer→verifier 闭环。
 
-### Hooks（7 事件 / 9 脚本）
+### Hooks（6 事件 / 10 脚本）
 
 | 事件 | 脚本 | 功能 |
 |------|------|------|
@@ -427,10 +427,10 @@ BLOCKED 时：任务退回 `InSpec`，禁止 commit，禁止标记 Done，记录
 
 | 能力 | Claude Code | Codex CLI | OpenCode |
 |------|------------|-----------|----------|
-| 10 Skills | plugin.json 声明 | symlink SKILL.md | symlink SKILL.md |
+| 9 Skills | plugin.json 声明 | symlink SKILL.md | symlink SKILL.md |
 | 3 Agents | 默认路径自动发现 | symlink .md | symlink .md |
-| 12 Commands | Slash Commands | 不支持 | 声明式索引(.md) |
-| 7 Hook 事件 | hooks.json | 不支持 | v1 不移植 |
+| 11 Commands | Slash Commands | 不支持 | 声明式索引(.md) |
+| 6 Hook 事件 / 10 脚本 | hooks.json | 不支持 | v1 不移植 |
 | Python 脚本 | CLAUDE_PLUGIN_ROOT | 不支持 | 不支持 |
 
 ---
@@ -536,18 +536,18 @@ InDraft → InSpec → InProgress → InReview → Done
 ```
 diwu-flow/
 ├── .claude-plugin/
-│   ├── plugin.json              # 插件声明（9 Skill + 10 Command）
+│   ├── plugin.json              # 插件声明（9 Skill + 11 Command）
 │   └── marketplace.json         # 发布市场元数据
 ├── skills/                      # 9 个方法论 Skill（唯一真相源）
 │   └── {drun,dtask,dcorr,...}/SKILL.md
-├── commands/                    # 10 个薄壳 Command（CC Slash Command）
+├── commands/                    # 11 个薄壳 Command（CC Slash Command）
 │   └── {drun,dtask,dinit,...}.md
 ├── agents/                      # 3 个核心执行 Agent（默认路径自动发现）
 │   ├── explorer.md              #   只读探索
 │   ├── implementer.md           #   代码实施
 │   └── verifier.md              #   独立验收
 ├── hooks/
-│   ├── hooks.json               # 7 事件 / 11 脚本注册表
+│   ├── hooks.json               # 6 事件 / 10 脚本注册表
 │   └── scripts/                 # Python hook 实现
 ├── scripts/                     # 共享脚本库（dinit/dloop/dstat/dtask_transition/...）
 ├── rules/                       # 12 个参考规则文件（渐进式披露，Read on demand）
@@ -575,7 +575,7 @@ git remote -v # 哪个 remote？
 
 ## Version
 
-v0.0.11 — dadr 并入 ddoc（Commands 12→11）+ Agent 模型分级 + drun verifier 终验门控。
+v0.0.11 — `.doc/` 产品文档目录 bootstrap + drec 归档自动化（drec_archive.py）+ Stop hook 防御加固 + test 一致性收口。
 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License

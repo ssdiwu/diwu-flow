@@ -20,7 +20,7 @@
 | 变更类型 | 升级 | 示例 |
 |---------|------|------|
 | 不兼容变更（删 API/Skill/Command 参数/改变数据结构） | **major** | 移除某个 Command、修改 task.json 结构 |
-| 新增功能（新 Skill/新 Command/新能力/新增 hooks） | **minor** | 新增 drun Skill、ddoc 新增 adr 子模式 |
+| 新增功能（新 Skill/新 Command/新能力/新增 hooks） | **minor** | 新增 drun Skill、新增 drec_archive.py 脚本 |
 | Bug 修复 / 文案修正 / 规则微调 / 模板调整 | **patch** | 修复 plugin.json 验证错误、修正 recording 格式 |
 
 ## Constraints 判断锚点

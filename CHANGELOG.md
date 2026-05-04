@@ -1,19 +1,18 @@
 ## [v0.0.11] - 2026-05-04
 
+### Added
+- **`.doc/` 产品文档目录**：bootstrap 四文档——README（索引+快速开始）、架构规范、状态文件规格（dtask.json / dtask-state.json）、工程规范（commit/message/session/pitfalls）
+- **`scripts/drec_archive.py` 归档自动化脚本**：move 策略（移动非 symlink 至 archive 子目录按月份分片）+ 11 个行为测试覆盖选文件规则/分片逻辑/踩坑聚合/边界条件
+
 ### Changed
-- **dvfy 溶解**：L1-L5 证据保留在 `rules/verification.md`；Done 判定矩阵迁至 dtask；完成前四问+运行态验证方法迁至 drun；无法验证处理迁至 dcorr
-- **dprd 瘦身**：删除完整模式技术方案（方案对比/五维约束/非功能需求分类/双端落地），改为引用 ddoc 正向模式
-- **skills 10→9**：dvfy 改为历史索引，plugin.json 取消注册
-- **dadr 并入 ddoc + 再次删除**：先并入 ddoc 作为 ADR 模式 → 随后彻底删除 ADR 模式（ddoc_adr.py 脚本+测试+章节全删）
-- **Commands 12→10**：ddadr 先删→ddoc 含 ADR→再删 ADR 子模式，最终 10 个 command
+- **drec 主执行顺序合同变更**：`/drec` 执行流程从"先 commit 再可选归档"改为"先归档后 commit"，归档产物纳入同一 commit（commands/drec.md 全文替换 + SKILL.md 归档章节重写 + 执行步骤 Step 4/5 对调）
+- **dstat nested archive 目录适配**：`get_archive_status()` 从 `glob("recording_*.md")` 改为 `(archive_dir / "recording").glob("**/*.md")`，支持归档后嵌套子目录结构
+- **test_doc_consistency 三副本收口**：file-layout 检查从两副本（root/local）扩展为三副本（root/local/asset）；删除对不存在文件（api.md/product.md/schema.md）的引用；新增 `.doc/README.md` 链接有效性检查
+- **file-layout `.doc/` 结构描述同步**：rules/file-layout.md 及其 .claude/rules/ 和 assets/ 副本共三处，均补充 `.doc/` 目录结构定义
 
 ### Fixed
-- **drec 踩坑聚合补回**：原 darc 的 9 步踩坑聚合协议恢复至 drec SKILL.md（去重规则/禁止跨session/禁止过期清理/来源列规范）
-- **drec 设计决策记录补回**：decisions.md 三档标准（必须写/建议写/不写）恢复至 drec SKILL.md
-
-### Removed
-- **commands/dadr.md**：独立 ADR 命令（先并入 ddoc，随后 ADR 模式也删除）
-- **scripts/ddoc_adr.py + tests/level2_scripts/test_ddoc_adr.py**：ADR 后端脚本彻底删除
+- **Stop hook Chain A status 二次防御**：`decide_default_mode()` / `decide_loop_mode()` 在 resolution.is_match 后增加 task['status']=='InProgress' 二次验证，防止 stale entry 导致误判 block
+- **verifier 遗留修复（3 项）**：drec SKILL.md 前缀修正、drec_archive.py docstring 补全、Chain A 加固后测试断言同步更新
 
 ---
 
