@@ -10,14 +10,22 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 STOP_DECISION_SCRIPT = PROJECT_ROOT / "hooks" / "scripts" / "stop_decision.py"
 TASK_GUARD_SCRIPT = PROJECT_ROOT / "hooks" / "scripts" / "task_entry_guard.py"
 RUNTIME_STATE_NAME = ".diwu/dtask-state.json"
+SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from session_scope import scoped_session_file  # noqa: E402
 
 
-def _run_stop_decision(tmp_path, **kwargs):
+def _run_stop_decision(tmp_path, env_overrides=None, **kwargs):
     """Run stop_decision.py with given tmp_path and optional stdin data."""
     cmd = [sys.executable, str(STOP_DECISION_SCRIPT), "--task-json", str(tmp_path / ".diwu" / "dtask.json")]
     stdin_data = json.dumps(kwargs) if kwargs else ""
     env = os.environ.copy()
     env["DIWU_SILENT"] = "1"
+    env.pop("CLAUDE_SESSION_ID", None)
+    if env_overrides:
+        env.update(env_overrides)
     result = subprocess.run(
         cmd,
         input=stdin_data,
@@ -403,6 +411,42 @@ def test_stop_decision_missing_session_with_inprogress_allows_stop(tmp_path):
     # 必须 allow stop（不能落入 default mode 的 resolve_session_inprogress_task）
     assert result.returncode == 1
     assert "STOP_HINT" in result.stderr
+
+
+def test_stop_decision_missing_event_session_uses_env_for_dloop(tmp_path):
+    """Stop event 无 session_id 但 env 有 SID → 用 env 驱动 dloop。"""
+    tasks = [{"id": 1, "title": "T1", "status": "InSpec", "blocked_by": []}]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(tmp_path, session_id="dloop-20260504-120000")
+
+    result = _run_stop_decision(
+        tmp_path,
+        env_overrides={"CLAUDE_SESSION_ID": "env-loop-session"},
+        cwd=str(tmp_path),
+    )
+
+    assert result.returncode == 0
+    assert json.loads(result.stdout)["decision"] == "block"
+    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert state["dloop"]["session_id"] == "env-loop-session"
+
+
+def test_stop_decision_missing_event_session_uses_scoped_file_for_dloop(tmp_path):
+    """Stop event/env 无 session_id 但 scoped 文件有 SID → 用 scoped 文件驱动 dloop。"""
+    tasks = [{"id": 1, "title": "T1", "status": "InSpec", "blocked_by": []}]
+    _make_dtask(tasks, tmp_path)
+    _make_dloop_state(tmp_path, session_id="dloop-20260504-120001")
+    session_file = scoped_session_file(tmp_path)
+    try:
+        session_file.write_text("file-loop-session\n", encoding="utf-8")
+        result = _run_stop_decision(tmp_path, cwd=str(tmp_path))
+    finally:
+        session_file.unlink(missing_ok=True)
+
+    assert result.returncode == 0
+    assert json.loads(result.stdout)["decision"] == "block"
+    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert state["dloop"]["session_id"] == "file-loop-session"
 
 
 def test_stop_decision_loop_mode_reason_delegates_drun(tmp_path):

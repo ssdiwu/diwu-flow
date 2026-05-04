@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from common import load_json_or_empty, save_json
+from session_scope import read_scoped_session_id
 from dtask_state import (
     clear_pending_recording,
     clear_task_owner,
@@ -134,11 +135,11 @@ def cmd_mark_inspec(cwd: Path, task_ids: list[int]) -> dict:
     return _result(True, "marked_inspec", task_ids=changed)
 
 
-def _resolve_session_id(session_id: str) -> str:
+def _resolve_session_id(session_id: str, cwd: Path | None = None) -> str:
     """解析 session_id：auto 时按优先级链获取真实 SID。
 
     优先级：(1) CLAUDE_SESSION_ID 环境变量（进程级可靠）
-           (2) /tmp/.claude_main_session 文件内容（session_start hook 写入）
+           (2) /tmp/.claude_main_session_<repo_hash> 文件内容（session_start hook 写入）
            (3) fallback 到 drun-<timestamp> + stderr 警告
     """
     if session_id and session_id != "auto":
@@ -149,15 +150,11 @@ def _resolve_session_id(session_id: str) -> str:
     if env_sid:
         return env_sid
 
-    # 优先级 2：session_start hook 写入的文件
-    session_file = Path("/tmp/.claude_main_session")
-    if session_file.exists():
-        try:
-            content = session_file.read_text(encoding="utf-8").strip()
-            if content and len(content) > 4:
-                return content
-        except OSError:
-            pass
+    # 优先级 2：session_start hook 写入的仓库作用域文件
+    if cwd is not None:
+        file_sid = read_scoped_session_id(cwd)
+        if file_sid:
+            return file_sid
 
     # 优先级 3：fallback
     fallback = f"drun-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
@@ -166,7 +163,7 @@ def _resolve_session_id(session_id: str) -> str:
 
 
 def cmd_claim(cwd: Path, task_id: int, session_id: str) -> dict:
-    session_id = _resolve_session_id(session_id)
+    session_id = _resolve_session_id(session_id, cwd)
     task_payload, tasks = _load_tasks(cwd)
     index = _task_index(tasks)
     task = index.get(task_id)
@@ -195,7 +192,7 @@ def cmd_claim(cwd: Path, task_id: int, session_id: str) -> dict:
 
 
 def cmd_release(cwd: Path, task_id: int, session_id: str, target: str) -> dict:
-    session_id = _resolve_session_id(session_id)
+    session_id = _resolve_session_id(session_id, cwd)
     task_payload, tasks = _load_tasks(cwd)
     index = _task_index(tasks)
     task = index.get(task_id)
@@ -227,7 +224,7 @@ def cmd_release(cwd: Path, task_id: int, session_id: str, target: str) -> dict:
 
 
 def cmd_adopt(cwd: Path, task_id: int, session_id: str) -> dict:
-    session_id = _resolve_session_id(session_id)
+    session_id = _resolve_session_id(session_id, cwd)
     task_payload, tasks = _load_tasks(cwd)
     index = _task_index(tasks)
     task = index.get(task_id)

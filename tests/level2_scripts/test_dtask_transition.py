@@ -1,10 +1,17 @@
 import json
+import sys
 import unittest
 from pathlib import Path
 
 import pytest
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
 from conftest import run_script  # noqa: E402
+from session_scope import scoped_session_file  # noqa: E402
 
 
 def _write_dtask(root: Path, tasks):
@@ -175,21 +182,21 @@ class TestAutoSessionIdResolution(unittest.TestCase):
         self.tmp_dir = Path(__file__).resolve().parent / f"tmp_auto_sid_{id(self)}"
         self.tmp_dir.mkdir(exist_ok=True, parents=True)
         # 清理可能残留的 session 文件
-        sf = Path("/tmp/.claude_main_session")
+        sf = scoped_session_file(self.tmp_dir)
         if sf.exists():
             sf.unlink()
 
     def tearDown(self):
         import shutil
-        shutil.rmtree(self.tmp_dir, ignore_errors=True)
-        sf = Path("/tmp/.claude_main_main_session")
+        sf = scoped_session_file(self.tmp_dir)
         if sf.exists():
             sf.unlink()
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
     def test_auto_uses_file_when_exists(self):
         """文件存在且非空时使用文件内容作为 SID。"""
         _write_dtask(self.tmp_dir, [{"id": 1, "title": "T", "status": "InSpec"}])
-        Path("/tmp/.claude_main_session").write_text("real-session-abc-123\n")
+        scoped_session_file(self.tmp_dir).write_text("real-session-abc-123\n", encoding="utf-8")
         rc, out, _ = self._run()
         assert rc == 0
         payload = json.loads(out)
@@ -222,7 +229,7 @@ class TestAutoSessionIdResolution(unittest.TestCase):
     def test_explicit_session_id_overrides_auto(self):
         """显式传入 --session-id 时忽略 auto 解析，直接使用传入值。"""
         _write_dtask(self.tmp_dir, [{"id": 1, "title": "T", "status": "InSpec"}])
-        Path("/tmp/.claude_main_session").write_text("file-sid-should-ignore\n")
+        scoped_session_file(self.tmp_dir).write_text("file-sid-should-ignore\n", encoding="utf-8")
         rc, out, _ = self._run(["--session-id", "explicit-sid-999"])
         assert rc == 0
         state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
@@ -231,7 +238,7 @@ class TestAutoSessionIdResolution(unittest.TestCase):
     def test_env_overrides_file_when_both_exist(self):
         """env 和文件同时存在时，CLAUDE_SESSION_ID 优先于文件内容（防跨会话污染）。"""
         _write_dtask(self.tmp_dir, [{"id": 1, "title": "T", "status": "InSpec"}])
-        Path("/tmp/.claude_main_session").write_text("other-session-from-file\n")
+        scoped_session_file(self.tmp_dir).write_text("other-session-from-file\n", encoding="utf-8")
         rc, out, _ = self._run(["--session-id", "auto"], env={"CLAUDE_SESSION_ID": "current-session-env"})
         assert rc == 0
         state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
@@ -240,7 +247,7 @@ class TestAutoSessionIdResolution(unittest.TestCase):
     def test_adopt_also_supports_auto(self):
         """adopt 命令同样支持 auto 解析。"""
         _write_dtask(self.tmp_dir, [{"id": 1, "title": "T", "status": "InProgress"}])
-        Path("/tmp/.claude_main_session").write_text("adopt-sid-file\n")
+        scoped_session_file(self.tmp_dir).write_text("adopt-sid-file\n", encoding="utf-8")
         # 先 claim 用一个假 SID
         self._run(["--session-id", "old-sid"])
         # adopt 用 auto → 应读取文件

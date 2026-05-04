@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/task_completed.py 2>/dev/null || true"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event TaskCompleted --script task_completed.py --mode strict"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/task_created_validate.py 2>/dev/null || true"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event TaskCreated --script task_created_validate.py --mode strict"
           }
         ]
       }
@@ -27,11 +27,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/drift_detect_pre.py 2>/dev/null || true"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event 'PreToolUse(Bash)' --script drift_detect_pre.py --mode tolerant"
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/context_monitor.py 2>/dev/null || true"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event 'PreToolUse(Bash)' --script context_monitor.py --mode tolerant"
           }
         ]
       },
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/plan_exit_hint.py"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event 'PreToolUse(ExitPlanMode)' --script plan_exit_hint.py --mode tolerant"
           }
         ]
       },
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/task_entry_guard.py"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event 'PreToolUse(Edit|Write)' --script task_entry_guard.py --mode strict"
           }
         ]
       }
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/stop_decision.py 2>/dev/null || true"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event Stop --script stop_decision.py --mode strict"
           }
         ]
       }
@@ -69,7 +69,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/pre_compact.py 2>/dev/null || true"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event PreCompact --script pre_compact.py --mode tolerant"
           }
         ]
       }
@@ -79,7 +79,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session_start.py 2>/dev/null || true"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event SessionStart --script session_start.py --mode tolerant"
           }
         ]
       }

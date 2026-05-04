@@ -4,11 +4,17 @@ import json
 import os
 import subprocess
 import tempfile
+import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 SESSION_START = PROJECT_ROOT / "hooks" / "scripts" / "session_start.py"
 MAX_PITFALLS_LEN = 8000  # 与 session_start.py 中的上限一致
+SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from session_scope import scoped_session_file  # noqa: E402
 
 
 def _run_session_start(cwd: str, stdin_data: dict = None) -> dict:
@@ -43,6 +49,34 @@ def test_no_pitfalls_file():
         os.makedirs(diwu)
         output = _run_session_start(tmpdir)
         assert "项目历史踩坑经验" not in output.get("additionalSystemPrompt", "")
+
+
+def test_writes_scoped_session_file():
+    """SessionStart 将 session_id 写入 cwd scoped 文件，不写全局裸文件。"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        diwu = os.path.join(tmpdir, ".diwu")
+        os.makedirs(diwu)
+        scoped_file = scoped_session_file(tmpdir)
+        global_file = Path("/tmp/.claude_main_session")
+        scoped_file.unlink(missing_ok=True)
+        old_global = global_file.read_text(encoding="utf-8") if global_file.exists() else None
+        try:
+            output = _run_session_start(
+                tmpdir,
+                {"cwd": tmpdir, "session_id": "session-start-sid-123"},
+            )
+            assert output == {}
+            assert scoped_file.read_text(encoding="utf-8").strip() == "session-start-sid-123"
+            if old_global is None:
+                assert not global_file.exists()
+            else:
+                assert global_file.read_text(encoding="utf-8") == old_global
+        finally:
+            scoped_file.unlink(missing_ok=True)
+            if old_global is None:
+                global_file.unlink(missing_ok=True)
+            else:
+                global_file.write_text(old_global, encoding="utf-8")
 
 
 def test_empty_pitfalls_file():

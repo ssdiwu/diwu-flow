@@ -9,6 +9,7 @@ if SHARED_SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SHARED_SCRIPTS_DIR)
 
 from dtask_state import sync_runtime_state  # noqa: E402
+from session_scope import atomic_write_session_id  # noqa: E402
 
 
 def _load_json(path):
@@ -28,11 +29,11 @@ except (json.JSONDecodeError, ValueError):
     event = {}
 
 sid = event.get("session_id") or event.get("sessionId") or ""
-if sid:
-    open("/tmp/.claude_main_session", "w").write(sid)
-
 result = {}
 cwd = event.get("cwd", "")
+if sid and cwd:
+    atomic_write_session_id(cwd, sid)
+
 if cwd:
     task_data = _load_json(os.path.join(cwd, ".diwu", "dtask.json"))
     sync_result = sync_runtime_state(cwd, task_data, persist=True, ensure_exists=True)

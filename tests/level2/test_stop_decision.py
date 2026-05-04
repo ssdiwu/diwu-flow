@@ -169,6 +169,7 @@ from stop_decision import (
     decide_default_mode,
     decide_loop_mode,
 )
+from session_scope import scoped_session_file
 
 
 class _PendingRecordingTestBase(unittest.TestCase):
@@ -386,33 +387,21 @@ class TestResolveStopSessionId(unittest.TestCase):
                 os.environ["CLAUDE_SESSION_ID"] = old_val
 
     def test_falls_back_to_session_file(self):
-        """空 event/env 但 /tmp/.claude_main_session 存在时返回文件内容。"""
-        import tempfile as _tf
-        fd, path = _tf.mkstemp(prefix=".claude_main_session_test_", dir="/tmp")
+        """空 event/env 但 scoped session 文件存在时返回文件内容。"""
+        cwd = tempfile.mkdtemp()
+        session_file = scoped_session_file(cwd)
+        old_val = os.environ.get("CLAUDE_SESSION_ID")
         try:
-            os.write(fd, b"file-session-xyz\n")
-            os.close(fd)
-            target = "/tmp/.claude_main_session"
-            backup = None
-            if os.path.exists(target):
-                with open(target, "r") as f:
-                    backup = f.read()
-            try:
-                with open(target, "w") as f:
-                    f.write("file-session-xyz\n")
-                result = _resolve_stop_session_id("", "/tmp/fake")
-                self.assertEqual(result, "file-session-xyz")
-            finally:
-                if backup is not None:
-                    with open(target, "w") as f:
-                        f.write(backup)
-                elif os.path.exists(target):
-                    os.unlink(target)
+            os.environ.pop("CLAUDE_SESSION_ID", None)
+            session_file.write_text("file-session-xyz\n", encoding="utf-8")
+            result = _resolve_stop_session_id("", cwd)
+            self.assertEqual(result, "file-session-xyz")
         finally:
-            try:
-                os.unlink(path)
-            except OSError:
-                pass
+            if old_val is not None:
+                os.environ["CLAUDE_SESSION_ID"] = old_val
+            session_file.unlink(missing_ok=True)
+            import shutil
+            shutil.rmtree(cwd, ignore_errors=True)
 
 
 class TestPendingRecordingIntegration(_PendingRecordingTestBase):

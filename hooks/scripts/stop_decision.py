@@ -23,6 +23,7 @@ if SHARED_SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SHARED_SCRIPTS_DIR)
 
 from dloop_state import get_terminal_stop_reason  # noqa: E402
+from session_scope import read_scoped_session_id  # noqa: E402
 
 _DUMMY_PREFIX = "dloop-"  # dloop.py start 生成的 dummy session_id 前缀
 from dtask_state import (  # noqa: E402
@@ -78,7 +79,7 @@ def hook_session_id(event: dict) -> str:
 
 
 def _resolve_stop_session_id(event_session_id: str, cwd: str = "") -> str:
-    """Stop Hook 的 session_id 解析：event → env → session file → empty downgrade。
+    """Stop Hook 的 session_id 解析：event → env → scoped session file → empty downgrade。
 
     与 dtask_transition._resolve_session_id() 的差异 ——
     本函数**不生成** drun-<timestamp> fallback SID。
@@ -93,14 +94,9 @@ def _resolve_stop_session_id(event_session_id: str, cwd: str = "") -> str:
     if env_sid:
         return env_sid
 
-    session_file = "/tmp/.claude_main_session"
-    try:
-        if os.path.exists(session_file):
-            content = open(session_file).read().strip()
-            if content and len(content) > 4:
-                return content
-    except OSError:
-        pass
+    file_sid = read_scoped_session_id(cwd)
+    if file_sid:
+        return file_sid
 
     return ""
 
@@ -462,7 +458,8 @@ def _check_pending_recording_gate(cwd, current_session_id=""):
 
 def decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state, session_id, cwd=None):
     extra = _prompt_suffix(additional_prompts)
-    resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, session_id or "")
+    resolved_sid = _resolve_stop_session_id(session_id or "", cwd or "")
+    resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, resolved_sid)
 
     if resolution.is_match and resolution.task.get("status") == "InProgress":
         return True, {"decision": "block", "reason": format_task("继续完成当前任务（断点恢复）：", resolution.task) + extra}
@@ -515,7 +512,6 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
         print(recording_hint, file=sys.stderr)
 
     # Layer 1: pending_recording 强制门控
-    resolved_sid = _resolve_stop_session_id(session_id or "", cwd)
     pr_level, pr_hint = _check_pending_recording_gate(cwd, resolved_sid)
     if pr_level == "block":
         return True, {"decision": "block", "reason": pr_hint + extra}
@@ -529,8 +525,9 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
     max_tasks = loop_state.get("max_tasks", 0)
     iteration = loop_state.get("current_iteration", 0)
     extra = _prompt_suffix(additional_prompts)
+    resolved_sid = _resolve_stop_session_id(session_id or "", cwd)
 
-    resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, session_id or "")
+    resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, resolved_sid)
     if resolution.is_match and resolution.task.get("status") == "InProgress":
         return True, {
             "decision": "block",
@@ -577,7 +574,6 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
     # Layer 1: pending_recording 提示注入（dloop 模式不独立 block，只注入提示）
     # 必须在 save_runtime_state 之前检查：save 会覆写 dtask-state.json，
     # 若 runtime_state dict 不含 pending_recording 字段则标记会被擦除。
-    resolved_sid = _resolve_stop_session_id(session_id or "", cwd)
     pr_level, pr_hint = _check_pending_recording_gate(cwd, resolved_sid)
     if pr_hint:
         extra += f"\n\n{pr_hint}"
@@ -662,7 +658,8 @@ if __name__ == "__main__":
         new_done_ids = [tid for tid in done_ids_from_json
                         if tid not in current_completed and tid not in initial_done]
         _effective_completed_for_check = current_completed + new_done_ids
-    session_id = hook_session_id(stdin_data)
+    event_session_id = hook_session_id(stdin_data)
+    session_id = _resolve_stop_session_id(event_session_id, cwd)
 
     if loop_state is not None:
         loop_sid = loop_state.get("session_id", "")

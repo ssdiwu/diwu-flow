@@ -110,7 +110,7 @@ claude plugin add /path/to/diwu-flow
 
 | 平台 | 命令 | 产物 |
 |------|------|------|
-| Claude Code | `claude plugin add <path>` | 9 Skill + 3 Agent + 11 Command + 6 Hook 事件 / 10 脚本 |
+| Claude Code | `claude plugin add <path>` | 9 Skill + 3 Agent + 11 Command + 6 Hook 事件 / 10 业务脚本 + 1 wrapper |
 | Codex CLI | `./install.sh --platform codex` | Skills + Agents symlink 到 `~/.codex/` |
 | OpenCode | `./install.sh --platform opencode` | Plugin + symlink 到 `.opencode/` |
 | 全部 | `./install.sh --platform all` | 以上全部 |
@@ -161,18 +161,33 @@ claude plugin add /path/to/diwu-flow
 
 > 使用默认路径自动发现，不在 plugin.json 中声明。故障隔离：任何非核心 agent 失败时退化回 explorer→implementer→verifier 闭环。
 
-### Hooks（6 事件 / 10 脚本）
+### Hooks（6 事件 / 10 业务脚本 + 1 wrapper）
 
-| 事件 | 脚本 | 功能 |
-|------|------|------|
-| `TaskCompleted` | task_completed.py | 确认 recording 已写入 + decisions 已更新 |
-| `TaskCreated` | task_created_validate.py | 新建任务校验 |
-| `PreToolUse(Bash)` | drift_detect_pre.py + context_monitor.py | 退化信号检测 + 上下文监控（WARNING@30 / CRITICAL@50） |
-| `PreToolUse(ExitPlanMode)` | plan_exit_hint.py | Plan→Dtask 门控提示 |
-| `PreToolUse(Edit\|Write)` | task_entry_guard.py | 实施入口守卫 |
-| `Stop` | stop_decision.py（内联 stop_archive.py） | 调度器：完整性检查 → 归档聚合 → continuous_mode 决策 |
-| `PreCompact` | pre_compact.py | 压缩前保存 checkpoint 到 recording/ |
-| `SessionStart` | session_start.py | 写 session ID；注入环境变量；自动注入 project-pitfalls.md（跳过纯模板+长度裁剪） |
+所有 hook 命令经 `run_hook.py` 包装执行，输出统一带 `[事件/脚本名]` 前缀；stderr 会追加到 `.diwu/logs/hooks.log`，不再使用 `2>/dev/null` 全吞。
+
+| 事件 | 脚本 | 行为 | 失败处理 |
+|------|------|------|----------|
+| `TaskCompleted` | task_completed.py | 确认 recording 已写入 + decisions 已更新 | `strict`：脚本非零退出不降级 |
+| `TaskCreated` | task_created_validate.py | 新建任务字段/GWT/依赖校验 | `strict`：校验失败阻断 |
+| `PreToolUse(Bash)` | drift_detect_pre.py + context_monitor.py | 退化信号检测 + 上下文监控（WARNING@30 / CRITICAL@50） | `tolerant`：失败只告警/记日志 |
+| `PreToolUse(ExitPlanMode)` | plan_exit_hint.py | Plan→Dtask 门控提示 | `tolerant`：失败只告警/记日志 |
+| `PreToolUse(Edit\|Write)` | task_entry_guard.py | 实施入口守卫 | `strict`：硬阻断场景保留非零退出码 |
+| `Stop` | stop_decision.py（内联 stop_archive.py） | 调度器：完整性检查 → 归档聚合 → continuous_mode 决策 | `strict`：停止/续跑决策保留非零退出码 |
+| `PreCompact` | pre_compact.py | 压缩前保存 checkpoint 到 recording/ | `tolerant`：失败只告警/记日志 |
+| `SessionStart` | session_start.py | 写 session ID；注入环境变量；自动注入 project-pitfalls.md（跳过纯模板+长度裁剪） | `tolerant`：失败只告警/记日志 |
+
+阻断类脚本：`task_entry_guard.py`、`stop_decision.py`、`task_created_validate.py`、`task_completed.py`。这些脚本的非零退出码会传递给 Hook 框架。提示类/可降级脚本：`drift_detect_pre.py`、`context_monitor.py`、`plan_exit_hint.py`、`pre_compact.py`、`session_start.py`。这些脚本异常时不阻断主流程，但会输出前缀化告警并记录 stderr。
+
+#### session id 存储作用域与回退顺序
+
+`SessionStart` 不再写全局 `/tmp/.claude_main_session`，而是按当前 `cwd` 计算仓库指纹，写入 `/tmp/.claude_main_session_<repo_hash>`。写入使用临时文件 + `rename` 原子替换，避免并发 hook 写出半截内容。
+
+读取侧（如 `stop_decision.py`、`dtask_transition.py --session-id auto`）按以下顺序解析：
+
+1. Hook event 中的 `session_id` / `sessionId`，或显式传入的 `--session-id`。
+2. `CLAUDE_SESSION_ID` 环境变量。
+3. 当前 `cwd` 对应的 scoped session 文件：`/tmp/.claude_main_session_<repo_hash>`。
+4. 读不到时保持原降级策略：`stop_decision.py` 降级为空 session 并只做 warn/allow；`dtask_transition.py --session-id auto` 生成 `drun-<timestamp>` fallback 并输出警告。
 
 ---
 
@@ -430,7 +445,7 @@ BLOCKED 时：任务退回 `InSpec`，禁止 commit，禁止标记 Done，记录
 | 9 Skills | plugin.json 声明 | symlink SKILL.md | symlink SKILL.md |
 | 3 Agents | 默认路径自动发现 | symlink .md | symlink .md |
 | 11 Commands | Slash Commands | 不支持 | 声明式索引(.md) |
-| 6 Hook 事件 / 10 脚本 | hooks.json | 不支持 | v1 不移植 |
+| 6 Hook 事件 / 10 业务脚本 + 1 wrapper | hooks.json | 不支持 | v1 不移植 |
 | Python 脚本 | CLAUDE_PLUGIN_ROOT | 不支持 | 不支持 |
 
 ---
@@ -547,7 +562,7 @@ diwu-flow/
 │   ├── implementer.md           #   代码实施
 │   └── verifier.md              #   独立验收
 ├── hooks/
-│   ├── hooks.json               # 6 事件 / 10 脚本注册表
+│   ├── hooks.json               # 6 事件 / 10 业务脚本注册表（run_hook.py 包装执行）
 │   └── scripts/                 # Python hook 实现
 ├── scripts/                     # 共享脚本库（dinit/dloop/dstat/dtask_transition/...）
 ├── rules/                       # 12 个参考规则文件（渐进式披露，Read on demand）
