@@ -223,6 +223,60 @@
         90
       ],
       "status": "Done"
+    },
+    {
+      "id": 92,
+      "title": "dtask SKILL.md 瘦身：删除 rules/task.md 重复内容",
+      "description": "延续 drec 分层重构（rules 权威源原则）。dtask/SKILL.md 当前 323 行，其中 ~133 行与 rules/task.md 完全重复（状态机定义+转移表、GWT acceptance 格式、task.json 结构、blocked_by 规范、提交规范、Checkpoint）。应删除这些规则定义，替换为引用 rules/ 权威源，只保留 dtask 独有的操作流程（规划、实施步骤、max-id 脚本调用、子代理策略、Done 判定矩阵）。",
+      "acceptance": [
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md 当前 323 行含状态定义表(L33-44)、状态转移表(L46-62)、InReview→Done判定锚点(L64-73)、blocked_by循环依赖锚点(L75-81) When 删除这些段落并替换为引用 rules/task.md §状态定义与转移 Then 新文件不含上述表格且 §0 前置依赖索引含 '状态机 → rules/task.md'",
+        "Given dtask/SKILL.md 当前含 GWT acceptance 格式规范(L85-93) When 删除并替换为引用 rules/task.md §acceptance 格式规范 Then 正文无 GWT 格式定义（仅保留引用）",
+        "Given dtask/SKILL.md 当前含 task.json 结构表(L97-110)、任务分类表(L117-125)、blocked_by 规范(L127-139) When 全部删除并替换为引用 rules/task.md 对应章节 Then §0 索引含 task.json/blocked_by/category 引用",
+        "Given dtask/SKILL.md 当前含提交规范(L233-262: commit message格式+并行task格式+粒度约束) 和 Checkpoint机制(L263-270) When 删除提交规范(→rules/task.md §提交规范)和Checkpoint(→rules/templates.md §Checkpoint) Then 保留的内容为操作流程（不确定性决策节点、6步实施步骤、偏差规则L1-L4）",
+        "Given 所有修改完成 When python3 -m pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ -q Then 全量通过",
+        "Given 重构后 When wc -l /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md Then 行数 ≤ 200（从323行瘦身≥38%）"
+      ],
+      "steps": [
+        "1. [锁定] Read /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md 和 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md 确认重复边界",
+        "2. [锁定] 在 SKILL.md frontmatter 后新增 §0 前置依赖：引用索引表（状态机/GWT/task.json结构/blocked_by/分类/提交规范/Checkpoint → 对应 rules/ 路径）",
+        "3. [锁定] 删除 §状态机 整段（L33-82）：状态定义表+转移表+InReview→Done锚点+循环依赖锚点 → 替换为一行引用",
+        "4. [锁定] 删除 §Acceptance 格式 L85-93 → 替换为一行引用 rules/task.md",
+        "5. [锁定] 删除 §task.json 结构中重复部分（结构表L99-110 + 分类表L117-125 + blocked_by规范L127-139），保留运行时真相源说明(L111-115) → 替换为引用",
+        "6. [锁定] 删除 §提交规范 L233-262 和 §Checkpoint L263-270 → 替换为引用",
+        "7. [锁定] 更新 frontmatter description 和 keywords：去掉已移走的主题词（状态机、GWT格式、task.json、blocked_by、commit），聚焦 dtask 独有职责",
+        "8. [建议] 消除内部残留重复：§Done 判定矩阵中验证方式映射表(L312-320)如与 verification.md 完全一致则压缩为引用",
+        "9. 运行 python3 -m pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ -q 验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "Done"
+    },
+    {
+      "id": 93,
+      "title": "commands/dcorr.md 薄壳化：从完整方法论回退为触发条件+引用",
+      "description": "commands/ 应为薄壳封装。dcorr.md 当前 241 行，包含完整方法论（退化信号6类表格、四行重写模板完整版+轻量变体、误判排查六类表、入口门控A/B/C+最小规格模板、恢复骨架+判断依据+验证优先级L1-L5、InProgress共存行为、结束前四问）。这些内容已在 skills/dcorr/SKILL.md 和多个 rules/ 文件中完整定义。应删掉 ~200 行重复内容，只保留触发条件（command 的核心价值）+ 一句话指向 skills/dcorr/SKILL.md。",
+      "acceptance": [
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dcorr.md 当前 241 行含 Step1-5 完整方法论 When 重写为薄壳 Then 新文件 ≤ 40 行",
+        "Given 薄壳化后 When 读 commands/dcorr.md Then 仅含 frontmatter + 触发条件列表(6条) + 执行指引(指向 skills/dcorr/SKILL.md 五步协议)",
+        "Given 薄壳化后 When 不含以下内容 Then 验证通过：退化信号表格、四行重写模板代码块、误判排查六类表、门控A/B/C判定表、最小规格模板代码块、恢复骨架代码块、验证优先级L1-L5表格、InProgress共存行为段、结束前四问列表",
+        "Given 所有修改完成 When python3 -m pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ -q Then 全量通过"
+      ],
+      "steps": [
+        "1. [锁定] Read /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dcorr.md 当前完整内容确认范围",
+        "2. [锁定] Read /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dcorr/SKILL.md 确认五步协议章节名（用于生成准确引用）",
+        "3. [锁定] 重写 commands/dcorr.md：保留 frontmatter + 标题 + 定位说明 + 触发条件(6条原样保留) + 执行指引(一句话引用 skills/dcorr/SKILL.md 五步)",
+        "4. [锁定] 更新 frontmatter description：聚焦'纠偏触发+指向SKILL'",
+        "5. 运行 python3 -m pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ -q 验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/dcorr.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "Done"
     }
   ]
 }

@@ -1,3 +1,14 @@
+## [v0.0.12] - 2026-05-05
+
+### Refactoring — drec SKILL.md 分层瘦身（rules 权威源原则）
+- **drec SKILL.md 403 → 225 行（-44%）**：删除与 rules/ 重复的格式规则内容（时间戳、Session 模板、踩坑四段式+示例、Stop hook 正则、3-Strike 协议、错误追踪表、Checkpoint、CONTINUOUS_MODE_COMPLETE），替换为 `rules/session.md` + `rules/templates.md` 引用索引
+- **Amend 碎片合并**：触发条件/保护检查/R3 标记清除从 3 处分散描述合并为 §4 单一权威章节；删除与 R3 文字 100% 语义重复的完整失败处理表
+- **归档策略压缩**：踩坑聚合 9 步协议压缩为 3 行摘要 + 引用 `drec_archive.py aggregate_pitfalls()`；删除过时的 Fallback 手动步骤
+- **commands/drec.md 同步更新**：执行步骤引用路径从 `skills/drec/SKILL.md` 改为 `rules/session.md` / `rules/templates.md`
+- **所有权原则确立**：rules/ = 宪法级格式约束（hook 注入 system prompt），skills/ = 操作手册（仅保留独有流程和契约）
+
+---
+
 ## [v0.0.11] - 2026-05-04
 
 ### Added
