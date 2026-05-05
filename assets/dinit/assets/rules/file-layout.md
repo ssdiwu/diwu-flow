@@ -87,7 +87,7 @@
 | 归档目标 | 触发条件 | 阈值来源 |
 |---------|---------|---------|
 | task_archive_YYYY-MM.json | Done/Cancelled 任务数超阈值 | dsettings.json `task_archive_threshold`（默认 20）|
-| recording_YYYY-MM-DD.md | session 文件数超阈值 | dsettings.json `recording_archive_threshold`（默认 50）|
+| recording_YYYY-MM-DD.md | session 文件数超阈值 | dsettings.json `recording_archive_threshold`（默认 30）|
 
 ## 数据所有权
 

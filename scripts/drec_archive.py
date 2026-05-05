@@ -29,7 +29,7 @@ LAST_SUMMARY = ".last_archive_summary.json"
 
 DEFAULTS = {
     "task_archive_threshold": 20,
-    "recording_archive_threshold": 50,
+    "recording_archive_threshold": 30,
     "recording_retention_days": 30,
 }
 

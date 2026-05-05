@@ -42,6 +42,11 @@
 - **`rules/constraints.md`**（三副本同步）：Concurrency 约束补充原子写入实例说明
 - **测试修复**：`test_task_168_no_hardcoded_paths` 补充三元表达式 else fallback 白名单正则
 
+### Configuration — recording_archive_threshold 调降
+- **阈值从 50 → 30**：活跃 session 项目（如本插件自身开发）47 个 recording 即触发归档，50 偏高
+- **全量同步 9 处**：dsettings.json（运行时配置）+ stop_archive.py + drec_archive.py（代码 DEFAULTS）+ file-layout.md（三副本）+ 状态文件规格.md + dsettings-guide.md + README.md + dsettings.json.template + drec SKILL.md（文档/模板）
+- **归档执行**：19 个 session 文件归档至 archive/recording/2026-04/ 和 2026-05/，36 条 pitfalls 聚合
+
 ---
 
 ## [v0.0.10] - 2026-05-03

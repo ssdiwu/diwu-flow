@@ -14,7 +14,7 @@ RECORDING_DIR = ".diwu/recording"
 
 DEFAULTS = {
     "task_archive_threshold": 20,
-    "recording_archive_threshold": 50,
+    "recording_archive_threshold": 30,
     "recording_retention_days": 30,
 }
 

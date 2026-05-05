@@ -1,6 +1,6 @@
 {
   "task_archive_threshold": 20,
-  "recording_archive_threshold": 50,
+  "recording_archive_threshold": 30,
   "recording_retention_days": 30,
   "continuous_mode": true,
   "review_limit": 5,

@@ -400,7 +400,7 @@ stateDiagram-v2
 | `error_injection.enabled` | `true` | 跨 session 错误模式学习（历史踩坑注入预防提示） | 保持开启 |
 | `subagent_concurrency` | `3` | 并行子代理最大数量 | 算力充足可调高 |
 | `task_archive_threshold` | `20` | Done/Cancelled 任务数触发归档 | 按项目规模调整 |
-| `recording_archive_threshold` | `50` | session 文件数触发归档 | 长期项目可调高 |
+| `recording_archive_threshold` | `30` | session 文件数触发归档 | 长期项目可调高 |
 
 ---
 

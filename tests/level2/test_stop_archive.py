@@ -37,7 +37,7 @@ class TestLoadSettings:
 
         s = _load_settings()
         assert s["task_archive_threshold"] == 20
-        assert s["recording_archive_threshold"] == 50
+        assert s["recording_archive_threshold"] == 30
         assert s["recording_retention_days"] == 30
 
     def test_custom_values(self, tmp_path, monkeypatch):

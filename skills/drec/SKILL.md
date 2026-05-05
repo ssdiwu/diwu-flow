@@ -158,7 +158,7 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 | 轨道 | 归档对象 | 触发条件 | 产物 | 操作方式 |
 |------|---------|---------|------|---------|
 | **Task 轨道** | Done / Cancelled 任务 | 数量 ≥ `task_archive_threshold`（默认 20） | `archive/task_archive_YYYY-MM.json` | 序列化追加 + 从 dtask.json 移除 |
-| **Recording 轨道** | Session 记录文件 | 文件数 ≥ `recording_archive_threshold`（默认 50）或超龄 | `archive/recording/YYYY-MM/session-*.md` | **移动**源文件到按 session 月份分片的子目录 |
+| **Recording 轨道** | Session 记录文件 | 文件数 ≥ `recording_archive_threshold`（默认 30）或超龄 | `archive/recording/YYYY-MM/session-*.md` | **移动**源文件到按 session 月份分片的子目录 |
 
 ### 触发参数
 

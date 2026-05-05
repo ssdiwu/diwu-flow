@@ -26,7 +26,7 @@
 
 Done/Cancelled 任务数达到此值时触发归档（写入 `.diwu/archive/task_archive_YYYY-MM.json`）。
 
-### `recording_archive_threshold`（数字，默认 `50`）
+### `recording_archive_threshold`（数字，默认 `30`）
 
 Session 记录文件数达到此值时触发归档（写入 `.diwu/archive/recording_YYYY-MM-DD.md`）。
 
