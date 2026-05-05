@@ -1,0 +1,11 @@
+{
+  "enabledPlugins": {
+    "diwu-workflow@ssdiwu": false
+  },
+  "permissions": {
+    "allow": [
+      "Bash(rm ~/.claude/plugins/data/diwu-workflow-ssdiwu -rf)",
+      "Bash(rm ~/Documents/codes/Githubs/diwu-flow/.claude/settings.local.json)"
+    ]
+  }
+}

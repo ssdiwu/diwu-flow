@@ -7,6 +7,13 @@
 - **commands/drec.md 同步更新**：执行步骤引用路径从 `skills/drec/SKILL.md` 改为 `rules/session.md` / `rules/templates.md`
 - **所有权原则确立**：rules/ = 宪法级格式约束（hook 注入 system prompt），skills/ = 操作手册（仅保留独有流程和契约）
 
+### Refactoring — dtask SKILL.md 瘦身（同原则延续）
+- **dtask SKILL.md 323 → 181 行（-44%）**：删除与 `rules/task.md` 重复的 ~133 行（状态机定义+转移表、GWT acceptance 格式、task.json 结构表、任务分类表、blocked_by 规范、提交规范、Checkpoint 机制），替换为 §0 前置依赖引用索引
+- **保留 dtask 独有内容**：运行时真相源说明、任务规划流程（触发+分解+粒度标准+max-id 脚本调用+写入规则）、任务实施（不确定性决策节点+6 步骤+偏差规则 L1-L4）、子代理策略（并行/串行条件+派发三件套）、Done 判定矩阵
+
+### Refactoring — commands/dcorr.md 薄壳化
+- **dcorr.md 241 → 34 行（-86%）**：删除完整方法论（退化信号 6 类表格、四行重写模板完整版+轻量变体、误判排查六类表、门控 A/B/C + 最小规格模板、恢复骨架+判断依据+验证优先级 L1-L5、InProgress 共存行为、结束前四问），仅保留触发条件（6 条）+ 执行指引（引用 `skills/dcorr/SKILL.md` 五步协议）
+
 ---
 
 ## [v0.0.11] - 2026-05-04
