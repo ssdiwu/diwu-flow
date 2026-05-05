@@ -16,6 +16,34 @@
 
 ---
 
+## [v0.0.12] - 2026-05-05
+
+### Infrastructure — Hook 可观测性与阻断策略重构
+- **`run_hook.py` 统一包装层**：所有 hook 经 `run_hook.py` 执行，输出统一带 `[事件/脚本名]` 前缀；stderr 追加到 `.diwu/logs/hooks.log`；消除裸 `2>/dev/null || true` 吞错
+- **Hook 脚本分级**：`--mode strict`（阻断级，4 个：task_entry_guard/task_created_validate/task_completed/stop_decision）保留退出码；`--mode tolerant`（提示级，5 个）异常时降级为 exit 0 但记录日志
+- **hooks.json 全量改造**：所有条目统一走 `run_hook.py --event --script --mode` 三参数格式
+
+### Infrastructure — Session ID 存储隔离与并发安全
+- **scoped session 文件**：全局 `/tmp/.claude_main_session` → `/tmp/.claude_main_session_<repo_hash[:16]>`，多仓库并行互不污染
+- **原子写入**：`scripts/session_scope.py` 使用 tempfile + fsync + os.replace 四步原子替换，防并发写坏文件
+- **读取优先级链统一**：event session_id → `CLAUDE_SESSION_ID` 环境变量 → scoped session 文件 → fallback（dtask_transition）/ 空 string 降级（stop_decision）
+- **测试覆盖**：session_start 测试新增 scoped 写入验证 + dtask_transition 新增 TestAutoSessionIdResolution 7 用例
+
+### Infrastructure — 卸载脚本健壮性与跨平台兼容
+- **`--uninstall --dry-run`**：预览要删除的 symlink 不实际执行，降低误操作风险
+- **realpath 三级 fallback**：`realpath` 命令 → `python3 -c 'os.path.realpath'` → 纯 shell `_normalize_path_shell`，GNU/BSD 兼容
+- **路径边界检查**：`_is_under_flow_root()` 归一化后比对 FLOW_ROOT 树内路径，防 sibling 目录同名 symlink 误删
+
+### Documentation — 三迭代文档补全与规则同步
+- **README.md**：安装表补充 `--uninstall [--dry-run]`；仓库结构 scripts/ 补充 session_scope
+- **`.doc/架构规范.md`**：Hook 表头更新为 run_hook.py 包装格式；新增包装层语义章节；SessionStart 写入目标改为 scoped 路径
+- **`.doc/工程规范.md`**：引用索引表新增卸载健壮性条目
+- **`rules/file-layout.md`**（三副本同步）：运行时文件表新增 scoped session 文件条目
+- **`rules/constraints.md`**（三副本同步）：Concurrency 约束补充原子写入实例说明
+- **测试修复**：`test_task_168_no_hardcoded_paths` 补充三元表达式 else fallback 白名单正则
+
+---
+
 ## [v0.0.10] - 2026-05-03
 
 ### Added

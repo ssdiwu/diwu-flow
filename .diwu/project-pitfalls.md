@@ -203,3 +203,5 @@
 - [分层未拆清] 抽共享 stop helper 时只迁移了“终止条件”，但漏了继续分支仍依赖的 `nx/rev` 局部变量 → 误判为 helper 本身逻辑有问题，实际是 stop 判定层和 continue 选任务层没有一起重构 → 抽公共判定时必须同时盘点调用方在非终止路径上还依赖哪些局部状态 （来源: session-2026-04-30-194500.md）- [验证误读] runtime 已支持 `DIWU_SILENT=1`，但 subprocess 测试入口没注入环境变量，导致“以为修了静默仍然弹窗” → 误判为运行时开关失效，实际是测试 harness 没接上 → 这类“测试期行为开关”必须同时落 runtime 和测试入口两层 （来源: session-2026-04-30-194500.md）
 ## Source: archive-aggregate-2026-05-04
 - [其他] /dinit 子代理 E 在首次创建 symlink 时，shell for 循环变量展开错误导致多个 skill 名被拼成一个长文件名 → 循环在第二次重试时清理了错误 symlink 并正确重建 → 根因是 shell 变量在 `for s in $VAR` 中未加引号，修复为 `for s in $SKILLS` 在赋值时已正确，但首次尝试时 SKILLS 变量本身包含空格分隔的多个 skill 名未被正确 word-split → 正确做法：确保循环变量的赋值和展开均无空格干扰，或用 `while IFS= read -r s` 方式 （来源: session-2026-04-30-213630.md）
+## Source: archive-aggregate-2026-05-05
+- [分层未拆清] 发现 recording 被单独 commit 成独立提交 → 追溯发现不是任何 rule/skill 约束导致的，而是执行惯性（先 code commit → 再 recording commit）→ 正确做法：在 rules/session.md 加铁律约束 + drun SKILL.md 执行层指引双保险；同时发现 CLAUDE.md 的 Rules 同步描述漏了 `.claude/rules/` 副本，已补全 （来源: session-2026-04-30-221947.md）

@@ -46,6 +46,10 @@ GETCWD_FALLBACK_PATTERN = re.compile(
 GETCWD_FILE_FALLBACK_PATTERN = re.compile(
     r'globals\(\)\.get\("__file__"\s*,.*?os\.getcwd\(\)'
 )
+# 合法的 ternary else fallback：... else os.getcwd()
+GETCWD_TERNARY_ELSE_PATTERN = re.compile(
+    r'\belse\s+os\.getcwd\(\)'
+)
 
 # commands 中引用插件脚本的相对路径模式（如 python3 scripts/xxx.py）
 COMMAND_RELATIVE_SCRIPT_PATTERN = re.compile(
@@ -132,7 +136,7 @@ class TestHookScriptsUseEventCwd:
         for fpath, lineno, line in _scan_py_files(HOOKS_SCRIPTS_DIR):
             if _is_comment_or_docstring(line):
                 continue
-            if GETCWD_PATH_PATTERN.search(line) and not GETCWD_FALLBACK_PATTERN.search(line) and not GETCWD_FILE_FALLBACK_PATTERN.search(line):
+            if GETCWD_PATH_PATTERN.search(line) and not GETCWD_FALLBACK_PATTERN.search(line) and not GETCWD_FILE_FALLBACK_PATTERN.search(line) and not GETCWD_TERNARY_ELSE_PATTERN.search(line):
                 offenders.append(f"{fpath.name}:{lineno}: {line.strip()}")
         assert offenders == [], (
             "hook 脚本使用了 os.getcwd()（应改用 event.cwd 或 cwd 参数）：\n"

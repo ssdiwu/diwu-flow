@@ -74,6 +74,7 @@
 | `.diwu/dsettings.json` | 可调参数配置 | 人工设置，Agent 读取 |
 | `.diwu/dtask.json` | 当前所有任务的定义与 `status` 真相源 | Agent 读写 |
 | `.diwu/dtask-state.json` | runtime owner / dloop 元数据真相源；不重复保存 task status | Agent 读写 |
+| `/tmp/.claude_main_session_<repo_hash>` | Session ID scoped 持久化文件；由 `scripts/session_scope.py` 的 `atomic_write_session_id()` 写入，`read_scoped_session_id()` 读取 | session_start.py 写入 / stop_decision.py + dtask_transition.py(auto 模式) 读取 |
 | `.diwu/recording/` | Session 进度记录，每个 session 一个文件 | Agent 写 |
 | `.diwu/decisions.md` | 重大设计决策记录（影响范围 ≥2 模块） | Agent 写 |
 | `.diwu/archive/` | 归档目录（tasks + recordings + summary） | Agent 写 |

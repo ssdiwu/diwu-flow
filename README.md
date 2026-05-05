@@ -113,6 +113,7 @@ claude plugin add /path/to/diwu-flow
 | Claude Code | `claude plugin add <path>` | 9 Skill + 3 Agent + 11 Command + 6 Hook 事件 / 10 业务脚本 + 1 wrapper |
 | Codex CLI | `./install.sh --platform codex` | Skills + Agents symlink 到 `~/.codex/` |
 | OpenCode | `./install.sh --platform opencode` | Plugin + symlink 到 `.opencode/` |
+| 卸载 | `./install.sh --uninstall [--dry-run]` | 清理 symlink（dry-run 仅预览不删除） |
 | 全部 | `./install.sh --platform all` | 以上全部 |
 
 ---
@@ -564,7 +565,7 @@ diwu-flow/
 ├── hooks/
 │   ├── hooks.json               # 6 事件 / 10 业务脚本注册表（run_hook.py 包装执行）
 │   └── scripts/                 # Python hook 实现
-├── scripts/                     # 共享脚本库（dinit/dloop/dstat/dtask_transition/...）
+├── scripts/                     # 共享脚本库（common.py/dtask_transition/session_scope/dloop/dstat/...）
 ├── rules/                       # 12 个参考规则文件（渐进式披露，Read on demand）
 ├── assets/                      # /dinit 初始化模板资产
 ├── tests/                       # 三级测试（L1 配置 / L2 脚本 / L3 一致性）

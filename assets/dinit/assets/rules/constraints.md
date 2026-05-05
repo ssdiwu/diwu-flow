@@ -9,7 +9,7 @@
 | Business     | 命令/接口描述层与实现逻辑层分离；描述文件不包含可执行代码                                            | 描述文件内无可执行代码，仅有行为指令或接口定义                      |
 | Temporal     | 功能变更时版本号同步更新；遵循语义化版本规范（X.Y.Z）                                              | 功能变更 commit 包含版本号更新；格式符合 semver                     |
 | Cross-platform | 路径引用兼容目标平台；禁止使用平台特定分隔符                                                     | 路径中无平台特定分隔符                                             |
-| Concurrency  | 明确并发策略；静态资源无需并发控制时声明                                                          | 并发场景有明确策略或无并发声明                                      |
+| Concurrency  | 明确并发策略；静态资源无需并发控制时声明                                                          | 并发场景有明确策略或无并发声明；`session_scope.py` 的 tempfile+fsync+os.replace 原子写入是具体实例 |
 | Perception   | 关键路径可观测；降级行为用户可感知                                                                | 降级时有明确报错或警告，不静默失败                                  |
 | FileOps      | 先读后写(分层)+JSON indent=2+原子替换优先+.diwu/.claude 谨慎修改                                 | Write/Edit前有Read; JSON含indent=2; 敏感文件修改有确认                          |
 
