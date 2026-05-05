@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/ssdiwu/diwu-flow)
 
-多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合等 **9 个核心 Skill**。（v0.0.11）
+多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合等 **9 个核心 Skill**。（v0.0.12）
 
 ---
 
@@ -18,7 +18,7 @@
 
 | 分组 | Commands | 定位 |
 |------|----------|------|
-| **执行** | `/drun` `/dloop` `/dend*` | 单任务 / 连续循环 / 停止循环 |
+| **执行** | `/drun` `/dloop` `/dstop*` | 单任务 / 连续循环 / 停止循环 |
 | **规划** | `/dtask` `/dref` `/dinit*` | 任务管理 / 需求细化 / 项目初始化 |
 | **文档** | `/dprd` `/ddoc` `/drec` | PRD / 产品文档 / Session 记录 |
 | **辅助** | `/dcorr` `/dstat` | 纠偏恢复 / 状态快照 |
@@ -148,7 +148,7 @@ claude plugin add /path/to/diwu-flow
 | `/dcorr` | dcorr | 纠偏恢复协议 |
 | `/dstat` | dstat | 项目状态快照 |
 | `/dloop` | dloop | 启动连续循环 |
-| `/dend` | dloop | 取消连续循环 |
+| `/dstop` | dloop | 停止连续循环 |
 
 > 每个命令的约束表说明「必须同时为真的约束集合」——违反任一约束，输出即不可信。
 
@@ -222,7 +222,7 @@ flowchart LR
 | 维度 | /drun | /dloop |
 |------|-------|--------|
 | 定位 | 单任务执行器 | 多任务连续循环包装 |
-| 停止条件 | 本任务完成即停 | max_tasks / 无可执行 / PENDING REVIEW / /dend |
+| 停止条件 | 本任务完成即停 | max_tasks / 无可执行 / PENDING REVIEW / /dstop |
 | 元数据 | task_sessions（owner） | dloop（session_id + completed_ids） |
 | 关系 | dloop 每轮调用一次完整 drun | drun 不知道 dloop 存在 |
 
@@ -370,11 +370,11 @@ stateDiagram-v2
 | 维度 | 约束 |
 |------|------|
 | **业务边界** | drun 的薄壳循环包装；自身不含任何执行逻辑，每轮委托 drun 完成 |
-| **时序约束** | 初始化元数据 → while(未停止){ 调用 /drun } → 收尾汇总。停止条件：max_tasks 达标 / 无可执行任务 / PENDING REVIEW / /dend |
-| **跨命令关系** | 上游：/dtask（提供任务池）；下游：/dend（外部停止）；依赖 /drun 作为执行引擎 |
+| **时序约束** | 初始化元数据 → while(未停止){ 调用 /drun } → 收尾汇总。停止条件：max_tasks 达标 / 无可执行任务 / PENDING REVIEW / /dstop |
+| **跨命令关系** | 上游：/dtask（提供任务池）；下游：/dstop（外部停止）；依赖 /drun 作为执行引擎 |
 | **感知信号** | continuous_mode=false 且无未提交变更且当前无 InProgress(owner 匹配) 时不续跑 |
 
-### /dend — 取消连续循环
+### /dstop — 停止连续循环
 
 | 维度 | 约束 |
 |------|------|
@@ -591,7 +591,7 @@ git remote -v # 哪个 remote？
 
 ## Version
 
-v0.0.11 — `.doc/` 产品文档目录 bootstrap + drec 归档自动化（drec_archive.py）+ Stop hook 防御加固 + test 一致性收口。
+v0.0.12 — `.doc/` 产品文档目录 bootstrap + drec 归档自动化（drec_archive.py）+ Stop hook 防御加固 + test 一致性收口。
 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License

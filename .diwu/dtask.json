@@ -277,6 +277,59 @@
       "category": "refactor",
       "blocked_by": [],
       "status": "Done"
+    },
+    {
+      "id": 94,
+      "title": "dloop.py stop 子命令 + /dend → /dstop 迁移",
+      "description": "dloop.py 新增 stop 子命令（内联 dend.py cancel 逻辑），删除 scripts/dend.py，/dend 重命名为 /dstop，全量同步文档引用，版本号升至 0.0.12。",
+      "acceptance": [
+        "Given scripts/dloop.py 当前无 stop 子命令 When 新增 cmd_stop() + argparse 注册 Then python3 scripts/dloop.py --help 含 start/stop/status 三件套",
+        "Given scripts/dend.py 存在 When 删除且 cancel 逻辑内联到 dloop.py cmd_stop() Then ls scripts/dend.py 不存在",
+        "Given commands/dend.md 存在 When 重写为 commands/dstop.md 且 plugin.json 注册更新 Then plugin.json 含 dstop.md 不含 dend.md",
+        "Given tests/test_dend.py 存在 When 重命名+适配为 test_dstop.py（入口改 dloop.py stop）Then pytest tests/ -q 全量通过",
+        "Given 活跃文件中含 /dend 引用（~13处）When 全量替换为 /dstop Then grep -rn '/dend' 在 skills/ commands/ hooks/ README.md .doc/ 中零匹配",
+        "Given 版本号当前 0.0.11 When 升级至 0.0.12（6处：plugin.json marketplace.json×2 install.sh CLAUDE.md README.md×2）Then 全部一致"
+      ],
+      "steps": [
+        "1. [锁定] 修改 scripts/dloop.py：顶部注释+import clear_loop_state+cmd_stop()+main注册dispatch+描述字符串+6处提示同步",
+        "2. [锁定] 删除 scripts/dend.py",
+        "3. [锁定] 创建 commands/dstop.md + 删除 commands/dend.md",
+        "4. [锁定] .claude-plugin/plugin.json：注册 dend.md→dstop.md + 版本号 0.0.11→0.0.12",
+        "5. [锁定] .claude-plugin/marketplace.json：版本号 0.0.11→0.0.12 (×2)",
+        "6. [锁定] install.sh：stub 版本号 0.0.11→0.0.12",
+        "7. [锁定] tests/test_dend.py→test_dstop.py：重命名+类名适配+run_script 入口改为 dloop.py stop",
+        "8. [锁定] skills/dloop/SKILL.md：4 处 /dend→/dstop",
+        "9. [锁定] commands/dloop.md：1 处 /dend→/dstop",
+        "10. [锁定] hooks/scripts/task_entry_guard.py:234：1 处 /dend→/dstop",
+        "11. [锁定] README.md：6 处 /dend→/dstop",
+        "12. [锁定] .doc/架构规范.md：1 处 /dend→/dstop",
+        "13. [锁定] .doc/状态文件规格.md：writer列+command列双改",
+        "14. [锁定] .claude/CLAUDE.md + README.md：版本号 ×3 处 0.0.11→0.0.12",
+        "15. [锁定] CHANGELOG.md：顶部追加 ## [v0.0.12] 条目",
+        "16. 运行 pytest tests/ -q 全量回归",
+        "17. 验证 dloop.py --help 含三件套 + grep /dend 零匹配 + ls dend.py 确认删除"
+      ],
+      "files_modified": [
+        "scripts/dloop.py",
+        "scripts/dend.py",
+        "commands/dend.md",
+        "commands/dstop.md",
+        ".claude-plugin/plugin.json",
+        ".claude-plugin/marketplace.json",
+        "install.sh",
+        "tests/level2_scripts/test_dstop.py",
+        "skills/dloop/SKILL.md",
+        "commands/dloop.md",
+        "hooks/scripts/task_entry_guard.py",
+        "README.md",
+        ".doc/架构规范.md",
+        ".doc/状态文件规格.md",
+        ".claude/CLAUDE.md",
+        "CHANGELOG.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "InProgress"
     }
   ]
 }

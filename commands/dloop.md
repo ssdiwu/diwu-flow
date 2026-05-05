@@ -29,7 +29,7 @@ effort: low
 - `start`：启动新 loop；若已存在活跃 loop owner，返回 `already_running`
 - `status`：显示当前 iteration / completed / max_tasks
 - `stale_cleaned`：检测到 terminal stale 后自动清理残留 loop 元数据
-- `/dend`：清空 `.diwu/dtask-state.json.dloop`，不负责 stale 检测
+- `/dstop`：停止 dloop 循环（清除 `.diwu/dtask-state.json.dloop`），不负责 stale 检测
 
 ## Stale-State 规则
 

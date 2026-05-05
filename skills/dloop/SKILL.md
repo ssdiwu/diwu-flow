@@ -42,7 +42,7 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 | 1 | 无可执行任务 | dtask.json 中无未阻塞的 InSpec 且无 InProgress 任务 |
 | 2 | 达到 max_tasks 上限 | completed_task_ids.length >= max_tasks |
 | 3 | PENDING REVIEW | 超前实施达 review_limit 上限 |
-| 4 | 用户取消 | 执行 `/dend` |
+| 4 | 用户停止 | 执行 `/dstop` |
 
 ## 循环状态文件（`.diwu/dtask-state.json.dloop`）
 
@@ -120,7 +120,7 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 
 ## 结束检查清单（必做）
 
-循环结束后（无论自然停止、`/dend` 手动取消、或 `stop_decision` 阶段报告清理）**commit 前**必须确认：
+循环结束后（无论自然停止、`/dstop` 手动停止、或 `stop_decision` 阶段报告清理）**commit 前**必须确认：
 
 | # | 检查项 | 方法 |
 |---|--------|------|
@@ -132,7 +132,7 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 ## 安全限制
 
 - `--max-tasks N`（0=无限）：防止无限循环失控
-- `/dend` 可随时手动取消
+- `/dstop` 可随时手动停止
 - session_id 隔离防止跨 session 干扰
 - 被 blocked_by 阻塞的 InSpec 任务立即停止（不重试）
 
@@ -155,7 +155,7 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 - **status 命中**：清理旧 state → 返回 `stale_cleaned`
 - **invalid_state**（JSON 损坏/字段矛盾）：返回 `invalid_state_file`，不自动删除
 - **legacy 兼容**：若只存在旧 `.diwu/dloop-state.json`，`start/status/stop_decision` 会先迁移到 `dtask-state.json.dloop`
-- **/dend** 仍是活跃循环的手动取消入口，不负责 stale 检测
+- **/dstop** 仍是活跃循环的手动停止入口，不负责 stale 检测
 - **/drun** 不承担 dloop-state 生命周期管理职责
 
 ## 适用场景

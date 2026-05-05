@@ -1,6 +1,6 @@
 # diwu-flow
 
-**插件版本：0.0.11**
+**插件版本：0.0.12**
 
 **当前项目是一个 Claude Code Plugin（插件）项目**
 
@@ -27,7 +27,7 @@
 |------|------|---------|
 | `dtask` `drun` `dcorr` `drec` | rule | 任务/执行/纠偏/记录 |
 | `dprd` `ddoc` `dref` `dstat` | product/tool | PRD/文档/细化/状态 |
-| `dloop` `dend` | command | 连续循环/结束循环 |
+| `dloop` `dstop` | command | 连续循环/停止循环 |
 | `rules/*` | 参考 | exceptions/templates/file-layout/constraints |
 
 ## 行为铁律
@@ -78,7 +78,7 @@ git remote add public git@github.com:ssdiwu/diwu-flow.git
 
 ## 项目结构
 
-- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, ddoc, drec, dref, dcorr, dstat, dloop, dend）
+- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, ddoc, drec, dref, dcorr, dstat, dloop, dstop）
 - `skills/` — 技能文件（dtask, drun, dcorr, drec, dprd, ddoc, dref, dstat, dloop）
 - `scripts/` — 共享脚本工具库（common.py 含 plugin_root/load_json/save_json/max_task_id 等函数），新增 script-backed 执行通道
 - `rules/` — 方法论规则文件

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""diwu-flow dloop: 启动和状态查询（CRUD 子集）。
+"""diwu-flow dloop: 启动、状态查询和停止（CRUD 全集）。
 
-只做 start + status 两项 CRUD。
-T2: 停止逻辑真相源在 stop_decision.py，本脚本不碰停止判断。
-T3: cancel 归 dend.py 唯一入口，本脚本无 cancel 子命令。
+start/status/stop：循环生命周期管理（三件套）。
+T2: 停止判断真相源仍在 stop_decision.py（hook 层自动终止）；
+    本脚本的 stop 子命令仅处理「用户主动清除」路径。
 T17: start 的可执行任务检查只判断 InProgress 或未阻塞 InSpec 是否存在。
 T19: 固定语义 {ok, status, data?}；所有路径 exit 0。
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from common import load_json_or_empty, save_json  # noqa: E402
 from dloop_state import classify, cleanup_state, get_active_tasks, get_done_ids, get_executable_tasks  # noqa: E402
-from dtask_state import loop_state, runtime_state_path, save_runtime_state, set_loop_state, sync_runtime_state  # noqa: E402
+from dtask_state import clear_loop_state, loop_state, runtime_state_path, save_runtime_state, set_loop_state, sync_runtime_state  # noqa: E402
 
 
 def _task_payload(diwu_dir: Path) -> dict:
@@ -44,7 +44,7 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
         return {
             "ok": False,
             "status": "invalid_state_file",
-            "message": f"dtask-state.json 损坏或无效：{classification.reason}。请用 /dend 清理或人工检查。",
+            "message": f"dtask-state.json 损坏或无效：{classification.reason}。请用 /dstop 清理或人工检查。",
             "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
         }
 
@@ -53,7 +53,7 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
         return {
             "ok": False,
             "status": "invalid_state_file",
-            "message": f"dtask-state.json 损坏或无效：{runtime_sync.reason}。请用 /dend 清理或人工检查。",
+            "message": f"dtask-state.json 损坏或无效：{runtime_sync.reason}。请用 /dstop 清理或人工检查。",
             "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
         }
     existing_loop = loop_state(runtime_sync.state)
@@ -61,8 +61,8 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
         return {
             "ok": False,
             "status": "already_running",
-            "message": "dloop 已在运行中。请先执行 /dend 取消当前循环。",
-            "formatted_text": "⚠️ dloop 已在运行中。请先执行 /dend 取消当前循环。",
+            "message": "dloop 已在运行中。请先执行 /dstop 停止当前循环。",
+            "formatted_text": "⚠️ dloop 已在运行中。请先执行 /dstop 停止当前循环。",
         }
 
     # 任务可用性检查（T17）
@@ -148,7 +148,7 @@ def cmd_status(cwd: Path) -> dict:
         return {
             "ok": False,
             "status": "invalid_state_file",
-            "message": f"dtask-state.json 损坏或无效：{classification.reason}。请用 /dend 清理或人工检查。",
+            "message": f"dtask-state.json 损坏或无效：{classification.reason}。请用 /dstop 清理或人工检查。",
             "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
         }
 
@@ -157,7 +157,7 @@ def cmd_status(cwd: Path) -> dict:
         return {
             "ok": False,
             "status": "invalid_state_file",
-            "message": f"dtask-state.json 损坏或无效：{runtime_sync.reason}。请用 /dend 清理或人工检查。",
+            "message": f"dtask-state.json 损坏或无效：{runtime_sync.reason}。请用 /dstop 清理或人工检查。",
             "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
         }
 
@@ -199,8 +199,49 @@ def cmd_status(cwd: Path) -> dict:
     }
 
 
+def cmd_stop(cwd: Path) -> dict:
+    """停止 dloop 循环。读取 dtask-state.json.dloop → 摘要 → 清除 → 持久化。"""
+    sync_result = sync_runtime_state(cwd, persist=True, ensure_exists=False)
+    if sync_result.is_invalid:
+        return {
+            "ok": False,
+            "status": "invalid_state_file",
+            "message": f"dtask-state.json 损坏或无效：{sync_result.reason}",
+            "formatted_text": "❌ dtask-state.json 无效，无法取消 dloop",
+        }
+
+    dloop = loop_state(sync_result.state)
+    if dloop is None:
+        return {
+            "ok": True,
+            "status": "no_loop",
+            "message": "无活跃的 dloop 循环",
+            "formatted_text": "✅ 无活跃的 dloop 循环",
+        }
+
+    completed = dloop.get("completed_task_ids", [])
+    iteration = dloop.get("current_iteration", 0)
+    completed_count = len(completed)
+
+    clear_loop_state(sync_result.state)
+    save_runtime_state(cwd, sync_result.state, remove_legacy=True)
+
+    return {
+        "ok": True,
+        "status": "cancelled",
+        "completed_count": completed_count,
+        "iteration": iteration,
+        "message": f"dloop 已取消（已完成 {completed_count} 个任务，第 {iteration} 轮）",
+        "formatted_text": (
+            f"✅ dloop 已取消\n"
+            f"   已完成任务数: {completed_count}\n"
+            f"   当前轮次: {iteration}"
+        ),
+    }
+
+
 def main():
-    parser = argparse.ArgumentParser(description="diwu-loop 启动与状态查询")
+    parser = argparse.ArgumentParser(description="diwu-loop 启动、状态查询与停止")
     sub = parser.add_subparsers(dest="command")
 
     # start 子命令
@@ -213,12 +254,18 @@ def main():
     p_status = sub.add_parser("status", help="查询 dloop 状态")
     p_status.add_argument("--cwd", type=str, default=".", help="项目根目录")
 
+    # stop 子命令
+    p_stop = sub.add_parser("stop", help="停止 dloop 循环")
+    p_stop.add_argument("--cwd", type=str, default=".", help="项目根目录")
+
     args = parser.parse_args()
 
     if args.command == "start":
         result = cmd_start(Path(args.cwd).resolve(), max_tasks=args.max_tasks, session_id=args.session_id)
     elif args.command == "status":
         result = cmd_status(Path(args.cwd).resolve())
+    elif args.command == "stop":
+        result = cmd_stop(Path(args.cwd).resolve())
     else:
         parser.print_help()
         result = {"ok": True, "status": "help"}

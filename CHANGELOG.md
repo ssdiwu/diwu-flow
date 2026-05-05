@@ -1,4 +1,10 @@
-## [v0.0.12] - 2026-05-05
+## [v0.0.12] - 2026-05-06
+
+### Changed — [Breaking] /dend → /dstop 迁移 + dloop 三件套统一
+- **[Breaking]** `/dend` 重命名为 `/dstop`（Command 名称变更）
+- **[Breaking]** 删除 `scripts/dend.py`，停止逻辑（cancel）内联到 `scripts/dloop.py stop` 子命令（三件套：start/status/stop）
+- `tests/test_dend.py` → `tests/test_dstop.py`，测试入口统一为 `dloop.py stop`
+- 全量同步所有文档中的 `/dend` 引用为 `/dstop`（skills/commands/hooks/README.md/.doc/ 共 ~13 处）
 
 ### Refactoring — drec SKILL.md 分层瘦身（rules 权威源原则）
 - **drec SKILL.md 403 → 225 行（-44%）**：删除与 rules/ 重复的格式规则内容（时间戳、Session 模板、踩坑四段式+示例、Stop hook 正则、3-Strike 协议、错误追踪表、Checkpoint、CONTINUOUS_MODE_COMPLETE），替换为 `rules/session.md` + `rules/templates.md` 引用索引
