@@ -114,20 +114,30 @@
 
 ### 结构化 commit message 格式
 
-推荐使用 5 行固定格式（commit message 最佳实践）：
+**标题行格式**：以内容类型为前缀，任务信息为主体。
 
 ```
-[Task#N] 标题 - completed
-Category: functional/ui/refactor/infra/bugfix
+[功能] [Task#179] DraftCleanup 主线程卸载 — completed
+Category: refactor
 Files: src/auth.ts, src/models/user.ts
 Evidence: L1-L3 (运行态+自动化)
 Status: Done
 ```
 
+**category 前缀映射**（标题行第一段，取自 dtask.json 的 `category` 字段）：
+
+| category | 前缀 |
+|----------|------|
+| `functional` | `[功能]` |
+| `ui` | `[界面]` |
+| `bugfix` | `[修复]` |
+| `refactor` | `[重构]` |
+| `infra` | `[基建]` |
+
 | 行 | 字段 | 说明 |
 |---|------|------|
-| 1 | 标题行 | `[Task#N] 标题 - completed` 或 `(超前 X/5, blocked_by Task#M)` |
-| 2 | Category | 任务分类 |
+| 1 | 标题行 | `[{前缀}] [Task#N] 标题 — completed` 或 `(超前 X/5, blocked_by Task#M)`；多任务用 `[Task#A-N]` |
+| 2 | Category | 任务分类（英文原始值） |
 | 3 | Files | 修改文件列表（逗号分隔） |
 | 4 | Evidence | 证据等级范围（L1-L5，见 verification.md） |
 | 5 | Status | `Done` 或 `InReview(超前 X/5)` |
@@ -137,7 +147,7 @@ Status: Done
 多子代理并行时，commit message 中每个子代理的产出分块列出：
 
 ```
-[Task#N] 标题 - completed (并行)
+[重构] [Task#N] 标题 — completed (并行)
 
 ## 子代理 A (auth 模块)
 Files: src/auth.ts, src/middleware.ts

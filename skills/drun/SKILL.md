@@ -115,6 +115,12 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 
 > **pending_recording 兜底**：`release` 命令会自动在 `dtask-state.json` 写入 `pending_recording` 标记。若忘记调 `/drec`，Stop Hook 会检测到此标记并强制拦截，要求先执行 `/drec` 清除标记后才允许继续。详见 stop_decision §pending_recording 门控。
 
+> **dtask-state.json 状态一致性检查（commit 前必做）**：
+> 在调用 `/drec` 前，必须 Read `.diwu/dtask-state.json` 确认磁盘内容与预期一致：
+> - **非 dloop 模式**：`task_sessions` 中当前任务的 owner 记录应已由 `release` 清理
+> - **dloop 模式（最后一轮）**：`stop_decision.py` 已通过 `clear_loop_state()` + `save_runtime_state()` 清理 dloop；后续 `sync_runtime_state()` 或 `dtask_transition.py release` 可能再次覆写该文件——**最终磁盘文件应为干净状态 `{version, task_sessions}`（不含 `dloop`/`pending_recording` key），若仍含 `dloop: null` 等冗余字段说明最后一次覆写未执行或失败**
+> - 若发现 `dloop.active=true` 残留则绝对禁止 commit
+
 > **（R1）**：写入 session 文件前必须 Read 当前 session 文件尾部，确认追加位置正确。
 
 > **closeout 顺序铁律**：整理摘要 → decisions → verifier → release → /drec。不可跳序，不可省略 verifier（除非命中跳过条件）。

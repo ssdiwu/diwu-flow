@@ -84,20 +84,25 @@ Session 记录写入操作手册：每次 session 结束前的必做事项。
 
 ### Commit Message 格式
 
-单任务：
-```
-[recording] Session YYYY-MM-DD HH:MM:SS — Task#N {title} ({status})
-```
+**优先级**：commit message 反映实际内容，而非固定前缀。
 
-多任务（同一 session 完成多个）：
-```
-[recording] Session YYYY-MM-DD HH:MM:SS — Task#A (Done), Task#B (InReview)
-```
+| 场景 | 格式 | 示例 |
+|------|------|------|
+| **有代码变更 + 有关联任务** | `[{前缀}] [Task#N] {title} — completed` | `[重构] [Task#179] DraftCleanup 主线程卸载 — completed` |
+| **多任务（同 session 完成）** | `[{前缀}] [Task#A-N] {简述} — completed` | `[重构] [Task#179-182] 性能优化四件套完成 — completed` |
+| **纯记录（无代码变更，仅 .diwu/ 状态文件）** | `[记录] Session YYYY-MM-DD HH:MM:SS — {简述}` | `[记录] Session 2026-05-06 23:01:18 — Review 修正：Task#176-178` |
 
-纯记录（无具体任务关联，如中间 checkpoint）：
-```
-[recording] Session YYYY-MM-DD HH:MM:SS — {简述}
-```
+**category 前缀映射**（取自 dtask.json 的 `category` 字段，详见 task.md §提交规范）：
+
+| category | 前缀 |
+|----------|------|
+| `functional` | `[功能]` |
+| `ui` | `[界面]` |
+| `bugfix` | `[修复]` |
+| `refactor` | `[重构]` |
+| `infra` | `[基建]` |
+
+> 多任务且 category 不同时，取占比最高的 category；或按主要变更内容判断。纯记录（无代码变更）不使用 task category 前缀，统一用 `[记录]`。
 
 ### Git Add 范围
 
@@ -124,7 +129,10 @@ Session 记录写入操作手册：每次 session 结束前的必做事项。
 2. 运行 `date '+%Y-%m-%d %H:%M:%S'` 获取时间戳用于 commit message
 3. 执行归档：`python3 scripts/drec_archive.py run --cwd <项目根目录>` → 输出归档摘要；无归档需求则输出"无待归档内容"
 4. 检查 `git status --short` 是否有变更（含归档产物）
-5. 有变更 → `git add -A && git commit -m "[recording] Session {timestamp} ..."`（或 amend 模式下用 `git commit --amend`；归档产物纳入同一原子 commit）
+5. 有变更 → 根据场景选择格式执行 `git add -A && git commit -m "..."`：
+   - 有代码变更：`git commit -m "[{category}] [Task#N] {title} — completed"` （或 amend 模式下用 `git commit --amend`）
+   - 纯记录：`git commit -m "[recording] Session {timestamp} — {简述}"`
+   - 归档产物纳入同一原子 commit
 6. 无变更 → 输出跳过提示，返回成功
 7. 将 commit hash 作为输出返回给调用方
 8. **[收尾]** closeout 成功后清除标记：`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py clear-pending --cwd .`

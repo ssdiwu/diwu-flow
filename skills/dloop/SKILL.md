@@ -124,10 +124,13 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 
 | # | 检查项 | 方法 |
 |---|--------|------|
-| 1 | `dtask-state.json.dloop` 为 `None` 或不存在 | `python3 -c "import json; s=json.load(open('.diwu/dtask-state.json')); assert s.get('dloop') is None"` |
-| 2 | 无残留 `active: true` 的 loop 状态 | 同上，或 `grep 'active.*true' .diwu/dtask-state.json` 应无输出 |
+| 1 | `dtask-state.json.dloop` 为 `None` 或 key 不存在 | `python3 -c "import json; s=json.load(open('.diwu/dtask-state.json')); assert s.get('dloop') is None"` |
+| 2 | 无残留 `active: true` 的 loop 状态 | `grep 'active.*true' .diwu/dtask-state.json` 应无输出 |
+| 3 | **最终文件为干净状态** | `Read .diwu/dtask-state.json`，确认内容为 `{version, task_sessions}`（不含 `dloop`/`pending_recording` 冗余 key） |
 
 > **为什么重要**：`dtask-state.json` 是 tracked 文件。若 `dloop.active=true` 被 commit，任何 clone 该仓库的人执行 `/dloop status` 会看到虚假的"运行中"循环，`/dloop start` 会被 `already_running` 拦截。
+
+> **正确格式**：commit 时 `dtask-state.json` 应为干净状态 `{version: N, task_sessions: {}}`——不含 `dloop`、`pending_recording` 等 key。`stop_decision.py` 清理时先写 `dloop: null`（中间态），后续 `sync_runtime_state()` / `dtask_transition.py release` 覆写时会自然消除这些冗余 key，这是**预期行为**。**只需确认最终不含 `active: true` 即可安全 commit**。
 
 ## 安全限制
 
