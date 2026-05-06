@@ -26,6 +26,15 @@ def _task_payload(diwu_dir: Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
+def _invalid_state_result(reason: str) -> dict:
+    return {
+        "ok": False,
+        "status": "invalid_state_file",
+        "message": f"dtask-state.json 损坏或无效：{reason}。请用 /dstop 清理或人工检查。",
+        "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
+    }
+
+
 def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
     """启动 dloop 循环。"""
     diwu_dir = cwd / ".diwu"
@@ -41,21 +50,11 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
         stale_cleanup_reason = classification.reason or "terminal_stale"
         cleanup_state(cwd)
     elif classification.is_invalid:
-        return {
-            "ok": False,
-            "status": "invalid_state_file",
-            "message": f"dtask-state.json 损坏或无效：{classification.reason}。请用 /dstop 清理或人工检查。",
-            "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
-        }
+        return _invalid_state_result(classification.reason)
 
     runtime_sync = sync_runtime_state(cwd, dtask_payload, persist=True, ensure_exists=True)
     if runtime_sync.is_invalid:
-        return {
-            "ok": False,
-            "status": "invalid_state_file",
-            "message": f"dtask-state.json 损坏或无效：{runtime_sync.reason}。请用 /dstop 清理或人工检查。",
-            "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
-        }
+        return _invalid_state_result(runtime_sync.reason)
     existing_loop = loop_state(runtime_sync.state)
     if existing_loop and existing_loop.get("active"):
         return {
@@ -145,21 +144,11 @@ def cmd_status(cwd: Path) -> dict:
             "formatted_text": f"🧹 已清理残留 dloop state（{reason}）",
         }
     if classification.is_invalid:
-        return {
-            "ok": False,
-            "status": "invalid_state_file",
-            "message": f"dtask-state.json 损坏或无效：{classification.reason}。请用 /dstop 清理或人工检查。",
-            "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
-        }
+        return _invalid_state_result(classification.reason)
 
     runtime_sync = sync_runtime_state(cwd, dtask_for_classify, persist=True)
     if runtime_sync.is_invalid:
-        return {
-            "ok": False,
-            "status": "invalid_state_file",
-            "message": f"dtask-state.json 损坏或无效：{runtime_sync.reason}。请用 /dstop 清理或人工检查。",
-            "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
-        }
+        return _invalid_state_result(runtime_sync.reason)
 
     data = loop_state(runtime_sync.state)
     if data is None:
