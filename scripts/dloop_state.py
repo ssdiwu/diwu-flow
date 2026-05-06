@@ -6,7 +6,14 @@ from __future__ import annotations
 from enum import Enum
 from pathlib import Path
 
-from dtask_state import clear_loop_state, loop_state, save_runtime_state, sync_runtime_state
+from dtask_state import (
+    clear_loop_state,
+    loop_state,
+    save_runtime_state,
+    sync_runtime_state,
+    _is_non_negative_int,
+    _task_list,
+)
 
 ACTIVE_STATUSES = ("InProgress", "InProcess")
 
@@ -34,19 +41,6 @@ class LoopStateResult:
     @property
     def is_invalid(self) -> bool:
         return self.cls == LoopStateClass.INVALID_STATE
-
-
-def _is_non_negative_int(value) -> bool:
-    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
-
-
-def _task_list(data) -> list:
-    if not isinstance(data, dict):
-        return []
-    tasks = data.get("tasks", [])
-    if not isinstance(tasks, list):
-        return []
-    return [task for task in tasks if isinstance(task, dict)]
 
 
 def get_done_ids(tasks: list) -> set[int]:

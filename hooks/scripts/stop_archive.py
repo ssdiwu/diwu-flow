@@ -5,8 +5,23 @@ have exceeded their archive thresholds.
 """
 import json
 import os
+import sys
 import time
 from pathlib import Path
+
+try:
+    from _shared import load_stdin_event  # noqa: E402
+except (ImportError, ModuleNotFoundError):
+    def load_stdin_event(*, check_tty=False):
+        try:
+            if check_tty and sys.stdin.isatty():
+                return {}
+            raw = sys.stdin.read()
+            if not raw.strip():
+                return {}
+            return json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return {}
 
 SETTINGS_PATH = ".diwu/dsettings.json"
 TASK_JSON_PATH = ".diwu/dtask.json"
@@ -147,14 +162,7 @@ if __name__ == "__main__":
     import sys
 
     # Read stdin (CC Stop hook may send JSON input)
-    stdin_data = {}
-    if not sys.stdin.isatty():
-        try:
-            raw = sys.stdin.read()
-            if raw.strip():
-                stdin_data = json.loads(raw)
-        except (json.JSONDecodeError, ValueError):
-            pass
+    stdin_data = load_stdin_event(check_tty=True)
 
     event_cwd = stdin_data.get("cwd", ".") if stdin_data else "."
     results = check(cwd=event_cwd)

@@ -7,18 +7,24 @@ import json
 import os
 import sys
 
+try:
+    from _shared import load_json_fallback  # noqa: E402
+except (ImportError, ModuleNotFoundError):
+    def load_json_fallback(path):
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return {}
+
 TASK_JSON_PATH = ".diwu/dtask.json"
 REQUIRED_FIELDS = ["id", "title", "description", "acceptance", "steps", "category", "status"]
 GWT_CATEGORIES = ["functional", "ui", "bugfix"]
 
 
-def _load(p):
-    if os.path.exists(p):
-        try:
-            return json.load(open(p))
-        except Exception:
-            pass
-    return {}
+# _load replaced by load_json_fallback from _shared
 
 
 def _has_gwt_keywords(text):
@@ -48,7 +54,7 @@ def validate_blocked_by_cycle(task):
     new_deps = task.get("blocked_by", [])
     if not new_deps:
         return True
-    all_deps = {t["id"]: t.get("blocked_by", []) for t in _load(TASK_JSON_PATH).get("tasks", [])}
+    all_deps = {t["id"]: t.get("blocked_by", []) for t in load_json_fallback(TASK_JSON_PATH).get("tasks", [])}
     all_deps[tid] = new_deps
     if _dfs_cycle(tid, all_deps, set(), []):
         print(f"[diwu] Task#{tid} blocked_by 循环依赖检测失败", file=sys.stderr)

@@ -6,6 +6,20 @@ import json
 import os
 import sys
 
+try:
+    from _shared import load_stdin_event  # noqa: E402
+except (ImportError, ModuleNotFoundError):
+    def load_stdin_event(*, check_tty=False):
+        try:
+            if check_tty and sys.stdin.isatty():
+                return {}
+            raw = sys.stdin.read()
+            if not raw.strip():
+                return {}
+            return json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return {}
+
 
 MESSAGE = (
     "[diwu-plan-guard] Plan→Dtask 门控提醒：\n\n"
@@ -21,13 +35,7 @@ _MARKER_PATH = os.path.join(".claude", ".plan-active")
 
 def _load_event():
     """Parse stdin JSON safely. Missing or invalid input degrades to empty dict."""
-    try:
-        raw = sys.stdin.read()
-        if not raw.strip():
-            return {}
-        return json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
-        return {}
+    return load_stdin_event()
 
 
 def _count_lines(text):

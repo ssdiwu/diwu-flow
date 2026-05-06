@@ -8,12 +8,9 @@ import os
 import sys
 from datetime import datetime
 
-_SELF_PATH = globals().get("__file__", os.path.join(os.getcwd(), "hooks", "scripts", "context_monitor.py"))
-HOOKS_DIR = os.path.dirname(os.path.abspath(_SELF_PATH))
-REPO_ROOT = os.path.dirname(os.path.dirname(HOOKS_DIR))
-SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
-if SHARED_SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, SHARED_SCRIPTS_DIR)
+from _shared import setup_sys_path, load_stdin_event  # noqa: E402
+
+setup_sys_path()
 
 from dtask_state import resolve_session_inprogress_task, sync_runtime_state  # noqa: E402
 
@@ -70,14 +67,7 @@ def _save_cache(cache):
 
 def _load_event():
     """Read PreToolUse payload once; fall back to env-only testing."""
-    try:
-        if not sys.stdin.isatty():
-            raw = sys.stdin.read()
-            if raw.strip():
-                return json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
-        pass
-    return {}
+    return load_stdin_event(check_tty=True)
 
 
 def _classify_tool(event):

@@ -2,31 +2,15 @@ import json
 import os
 import sys
 
-HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.dirname(os.path.dirname(HOOKS_DIR))
-SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
-if SHARED_SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, SHARED_SCRIPTS_DIR)
+from _shared import setup_sys_path, load_json_fallback, load_stdin_event  # noqa: E402
+
+setup_sys_path()
 
 from dtask_state import sync_runtime_state  # noqa: E402
 from session_scope import atomic_write_session_id  # noqa: E402
 
 
-def _load_json(path):
-    if not os.path.exists(path):
-        return {}
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return {}
-
-
-event = {}
-try:
-    event = json.load(sys.stdin)
-except (json.JSONDecodeError, ValueError):
-    event = {}
+event = load_stdin_event()
 
 sid = event.get("session_id") or event.get("sessionId") or ""
 result = {}
@@ -35,7 +19,7 @@ if sid and cwd:
     atomic_write_session_id(cwd, sid)
 
 if cwd:
-    task_data = _load_json(os.path.join(cwd, ".diwu", "dtask.json"))
+    task_data = load_json_fallback(os.path.join(cwd, ".diwu", "dtask.json"))
     sync_result = sync_runtime_state(cwd, task_data, persist=True, ensure_exists=True)
     if sync_result.is_invalid:
         result["additionalSystemPrompt"] = (

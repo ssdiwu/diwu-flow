@@ -19,6 +19,16 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+# ── 路径常量（集中管理，消除跨文件硬编码） ──
+DIWU_DIR = ".diwu"
+DTASK_JSON = ".diwu/dtask.json"
+DTASK_STATE_JSON = ".diwu/dtask-state.json"
+DSETTINGS_JSON = ".diwu/dsettings.json"
+RECORDING_DIR = ".diwu/recording"
+ARCHIVE_DIR = ".diwu/archive"
+DECISIONS_FILE = ".diwu/decisions.md"
+PITFALLS_FILE = ".diwu/project-pitfalls.md"
+
 
 def plugin_root() -> Path:
     """T4: 从本文件位置推导 diwu-flow 项目根目录（scripts/ 的父目录）。"""

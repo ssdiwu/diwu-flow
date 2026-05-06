@@ -16,11 +16,9 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.dirname(os.path.dirname(HOOKS_DIR))
-SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
-if SHARED_SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, SHARED_SCRIPTS_DIR)
+from _shared import setup_sys_path, load_json_fallback, load_stdin_event  # noqa: E402
+
+setup_sys_path()
 
 from dloop_state import get_terminal_stop_reason  # noqa: E402
 from session_scope import read_scoped_session_id  # noqa: E402
@@ -112,16 +110,6 @@ def format_task(prefix, task):
         + "\n".join(f"  {i + 1}. {step}" for i, step in enumerate(task.get("steps", []))) + "\n\n"
         + "按 workflow.md 流程执行。"
     )
-
-
-def _load_json(path):
-    if not os.path.exists(path):
-        return {}
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return {}
 
 
 def _save_task_data(path, data):
@@ -283,7 +271,6 @@ def _check_recording_reminder(cwd):
 
     # Compare timestamps: 如果最新 recording 早于代码变更（recording 过时），则提醒
     # 取代码变更文件中最近修改时间与 recording 时间对比
-    import time
     latest_recording_mtime = os.path.getmtime(sessions[0])
     # 覆盖 staged + unstaged + untracked 三类变更（排除 .diwu/ 内部状态）
     try:
@@ -616,14 +603,7 @@ if __name__ == "__main__":
     parser.add_argument("--settings-json", default=".diwu/dsettings.json", help="Path to dsettings.json")
     args = parser.parse_args()
 
-    stdin_data = {}
-    if not sys.stdin.isatty():
-        try:
-            raw = sys.stdin.read()
-            if raw.strip():
-                stdin_data = json.loads(raw)
-        except (json.JSONDecodeError, ValueError):
-            pass
+    stdin_data = load_stdin_event(check_tty=True)
 
     if stdin_data.get("stop_hook_active", False):
         print(json.dumps({"continue": False}, ensure_ascii=False))
@@ -632,8 +612,8 @@ if __name__ == "__main__":
     cwd = stdin_data.get("cwd") or os.getcwd()
     task_json_path = os.path.join(cwd, args.task_json) if not os.path.isabs(args.task_json) else args.task_json
     settings_path = os.path.join(cwd, args.settings_json) if not os.path.isabs(args.settings_json) else args.settings_json
-    data = _load_json(task_json_path)
-    settings = _load_json(settings_path)
+    data = load_json_fallback(task_json_path)
+    settings = load_json_fallback(settings_path)
     tasks = data.get("tasks", [])
 
     sync_result = sync_runtime_state(cwd, data, persist=True)
@@ -684,7 +664,7 @@ if __name__ == "__main__":
         import stop_archive
 
         additional_prompts = stop_archive.check(settings=settings, tasks=tasks, cwd=cwd)
-    except Exception:
+    except (ImportError, AttributeError, OSError):
         pass
 
     # 将 effective completed_task_ids 传入 decide/decide_loop_mode，

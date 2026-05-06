@@ -16,7 +16,7 @@ from pathlib import Path
 
 # 将 scripts/ 加入路径以导入 common
 sys.path.insert(0, str(Path(__file__).parent))
-from common import load_json_or_empty, rel_time  # noqa: E402
+from common import DIWU_DIR, DTASK_JSON, DECISIONS_FILE, RECORDING_DIR, ARCHIVE_DIR, load_json_or_empty, rel_time  # noqa: E402
 
 
 def _run_git(cwd: Path, *args) -> str:
@@ -46,9 +46,9 @@ def _read_recent_lines(path: Path, n: int = 20) -> str:
         return ""
 
 
-def get_tasks_summary(diwu_dir: Path) -> dict:
+def get_tasks_summary(cwd: Path) -> dict:
     """从 dtask.json 提取任务状态分布。"""
-    data = load_json_or_empty(diwu_dir / "dtask.json")
+    data = load_json_or_empty(cwd / DTASK_JSON)
     tasks = data.get("tasks", []) if isinstance(data, dict) else []
     summary = {"total": len(tasks), "InSpec": 0, "InProgress": 0, "InReview": 0, "Done": 0, "Blocked": 0, "Cancelled": 0}
     for t in tasks:
@@ -130,7 +130,8 @@ def get_archive_status(archive_dir: Path) -> dict:
 
 
 def format_output(summary: dict, sessions: list, decisions: list,
-                  git_info: dict, archive: dict, deep: bool = False) -> str:
+                  git_info: dict, archive: dict, deep: bool = False,
+                  diwu_dir: Path | None = None) -> str:
     """格式化输出文本，完全复刻 SKILL.md ASCII 表格。"""
     lines = []
     lines.append("## 项目状态概览\n")
@@ -201,9 +202,13 @@ def format_output(summary: dict, sessions: list, decisions: list,
     if deep:
         lines.append("")
         lines.append("**活跃任务详情**:")
-        # 需要重新读取原始数据获取详情
-        # 此处留占位——详情需要从 dtask.json 的完整 tasks 列表中提取 InProgress/InSpec
-        lines.append("(详见 dtask.json 中 InProgress/InSpec 任务)")
+        raw = load_json_or_empty(diwu_dir / "dtask.json")
+        active_tasks = [t for t in raw.get("tasks", []) if isinstance(t, dict) and t.get("status") in ("InProgress", "InSpec")]
+        if active_tasks:
+            for t in active_tasks[:5]:
+                lines.append(f"  Task#{t.get('id', '?')}: {t.get('title', '')} [{t.get('status')}]")
+        else:
+            lines.append("  (无活跃任务)")
 
     return "\n".join(lines)
 
@@ -215,15 +220,15 @@ def main():
     args = parser.parse_args()
 
     cwd = Path(args.cwd).resolve()
-    diwu_dir = cwd / ".diwu"
+    diwu_dir = cwd / DIWU_DIR
 
-    summary = get_tasks_summary(diwu_dir)
-    sessions = get_recent_sessions(diwu_dir / "recording")
-    decisions = get_recent_decisions(diwu_dir / "decisions.md")
+    summary = get_tasks_summary(cwd)
+    sessions = get_recent_sessions(cwd / RECORDING_DIR)
+    decisions = get_recent_decisions(cwd / DECISIONS_FILE)
     git_info = get_git_status(cwd)
-    archive = get_archive_status(diwu_dir / "archive")
+    archive = get_archive_status(cwd / ARCHIVE_DIR)
 
-    formatted = format_output(summary, sessions, decisions, git_info, archive, deep=args.deep)
+    formatted = format_output(summary, sessions, decisions, git_info, archive, deep=args.deep, diwu_dir=diwu_dir)
 
     # T8: 输出 JSON 结构化结果 + formatted_text
     result = {
@@ -243,7 +248,7 @@ def main():
     warnings = []
     if git_info.get("not_git"):
         warnings.append("非 git 目录，git 信息不可用")
-    if not (diwu_dir / "dtask.json").exists():
+    if not (cwd / DTASK_JSON).exists():
         warnings.append("dtask.json 不存在")
     if warnings:
         result["warnings"] = warnings

@@ -9,6 +9,20 @@ import json
 import os
 import sys
 
+try:
+    from _shared import load_stdin_event  # noqa: E402
+except (ImportError, ModuleNotFoundError):
+    def load_stdin_event(*, check_tty=False):
+        try:
+            if check_tty and sys.stdin.isatty():
+                return {}
+            raw = sys.stdin.read()
+            if not raw.strip():
+                return {}
+            return json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return {}
+
 
 ACTIVE_STATUSES = {"InSpec", "InProgress", "InReview"}
 WORKFLOW_DECISIONS = ".diwu/decisions.md"
@@ -37,13 +51,7 @@ BLOCK_SOFT_MESSAGE = (
 
 def _load_event():
     """Read hook event JSON from stdin safely."""
-    try:
-        raw = sys.stdin.read()
-        if not raw.strip():
-            return {}
-        return json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
-        return {}
+    return load_stdin_event()
 
 
 def _remove_file(path):

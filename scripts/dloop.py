@@ -15,14 +15,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import load_json_or_empty, save_json  # noqa: E402
+from common import DIWU_DIR, DTASK_JSON, DSETTINGS_JSON, load_json_or_empty, save_json  # noqa: E402
 from dloop_state import classify, cleanup_state, get_active_tasks, get_done_ids, get_executable_tasks  # noqa: E402
 from dtask_state import clear_loop_state, loop_state, runtime_state_path, save_runtime_state, set_loop_state, sync_runtime_state  # noqa: E402
 
 
-def _task_payload(diwu_dir: Path) -> dict:
+def _task_payload(cwd: Path) -> dict:
     """Load dtask payload once for start/status decisions."""
-    data = load_json_or_empty(diwu_dir / "dtask.json")
+    data = load_json_or_empty(cwd / DTASK_JSON)
     return data if isinstance(data, dict) else {}
 
 
@@ -37,11 +37,11 @@ def _invalid_state_result(reason: str) -> dict:
 
 def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
     """启动 dloop 循环。"""
-    diwu_dir = cwd / ".diwu"
+    diwu_dir = cwd / DIWU_DIR
     state_path = runtime_state_path(cwd)
-    dtask_payload = _task_payload(diwu_dir)
+    dtask_payload = _task_payload(cwd)
     tasks = [task for task in dtask_payload.get("tasks", []) if isinstance(task, dict)]
-    settings = load_json_or_empty(diwu_dir / "dsettings.json")
+    settings = load_json_or_empty(cwd / DSETTINGS_JSON)
 
     # Stale-state 兜底（#23）：检查已有 state 文件是否为 terminal_stale
     stale_cleanup_reason = None
@@ -75,8 +75,6 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
             "formatted_text": "❌ 无可执行任务。请先 /dtask 规划任务并确认为 InSpec/InProgress。",
         }
 
-    # 确定有效 max_tasks
-    # None=未传参→自动取活跃任务数; 0=显式无限; N>0=手动限制
     active_count = len(get_active_tasks(tasks))
     if max_tasks is not None and max_tasks >= 0:
         effective_max = max_tasks  # 显式值（0=无限, N>0=限制N）
@@ -127,11 +125,11 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
 
 def cmd_status(cwd: Path) -> dict:
     """查询 dloop 状态。T19: 固定语义，始终 exit 0。"""
-    diwu_dir = cwd / ".diwu"
+    diwu_dir = cwd / DIWU_DIR
 
     # Stale-state 兜底（#23）：与 cmd_start 相同的三分类判定
-    dtask_for_classify = _task_payload(diwu_dir)
-    settings = load_json_or_empty(diwu_dir / "dsettings.json")
+    dtask_for_classify = _task_payload(cwd)
+    settings = load_json_or_empty(cwd / DSETTINGS_JSON)
     classification = classify(cwd, dtask_data=dtask_for_classify, settings=settings)
     if classification.is_stale:
         reason = classification.reason or "terminal_stale"

@@ -7,6 +7,18 @@ Tolerance: high (only obvious drift triggers a prompt).
 
 import json, os, sys, re
 
+try:
+    from _shared import load_json_fallback  # noqa: E402
+except (ImportError, ModuleNotFoundError):
+    def load_json_fallback(path):
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return {}
+
 CTX_PREFIX = '/tmp/diwu_ctx_'
 TASK_FILE = '.diwu/dtask.json'
 SETTINGS_FILE = '.diwu/dsettings.json'
@@ -28,7 +40,7 @@ def _get_sid():
             _SID_CACHE = event.get('session_id', event.get('sessionId', str(os.getpid())))
         else:
             _SID_CACHE = str(os.getpid())
-    except Exception:
+    except (json.JSONDecodeError, ValueError, OSError):
         _SID_CACHE = str(os.getpid())
     return _SID_CACHE
 
@@ -37,21 +49,12 @@ def _ctx_path():
     return CTX_PREFIX + _get_sid()
 
 
-def _load(p):
-    if os.path.exists(p):
-        try:
-            with open(p) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
-
-
 def _save(p, d):
     try:
-        with open(p, 'w') as f:
-            json.dump(d, f)
-    except Exception:
+        with open(p, 'w', encoding='utf-8') as f:
+            json.dump(d, f, indent=2, ensure_ascii=False)
+            f.write('\n')
+    except OSError:
         pass
 
 
@@ -109,7 +112,7 @@ def detect_scope_drift(tool_name, input_str=''):
     fp = _extract_fp(input_str)
     if not fp:
         return None
-    task = _load(TASK_FILE)
+    task = load_json_fallback(TASK_FILE)
     it = [t for t in task.get('tasks', []) if t.get('status') == 'InProgress']
     if not it:
         return None
@@ -129,11 +132,11 @@ def detect_scope_drift(tool_name, input_str=''):
 def main():
     tool_name = os.environ.get('DIWU_TOOL_NAME', '')
     input_str = os.environ.get('DIWU_TOOL_INPUT', '')
-    settings = _load(SETTINGS_FILE)
+    settings = load_json_fallback(SETTINGS_FILE)
     if settings.get('drift_detection', {}).get('enabled') == False:
         sys.exit(0)
 
-    ctx = _load(_ctx_path())
+    ctx = load_json_fallback(_ctx_path())
     prompts = [r for r in [
         detect_edit_streak(ctx, tool_name),
         detect_pure_discussion(ctx, tool_name),

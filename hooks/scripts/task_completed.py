@@ -20,11 +20,9 @@ unconfirmed completions. Reminder sys.exit(0) comes after all bookkeeping.
 
 import json, os, sys
 
-HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.dirname(os.path.dirname(HOOKS_DIR))
-SHARED_SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
-if SHARED_SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, SHARED_SCRIPTS_DIR)
+from _shared import setup_sys_path, load_json_fallback, load_stdin_event  # noqa: E402
+
+setup_sys_path()
 
 from dtask_state import (  # noqa: E402
     clear_task_owner,
@@ -38,28 +36,6 @@ TASK_JSON_PATH = '.diwu/dtask.json'
 RUNTIME_STATE_PATH = '.diwu/dtask-state.json'
 
 _CWD: str = "."
-
-
-def _load(p):
-    """Load JSON file, return {} on error."""
-    if os.path.exists(p):
-        try:
-            with open(p) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
-
-
-def _get_event_data():
-    """Parse stdin JSON for TaskCompleted event."""
-    try:
-        raw = sys.stdin.read()
-        if not raw:
-            return {}
-        return json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
-        return {}
 
 
 def _task_summary(task):
@@ -79,7 +55,7 @@ def _track_loop_completion(task_id: int, session_id: str):
     此函数内部使用 sync_runtime_state（含 cleanup），此时 owner 已被清除，
     cleanup 不再影响当前 task 的 loop 计数逻辑。
     """
-    task_data = _load(TASK_JSON_PATH)
+    task_data = load_json_fallback(TASK_JSON_PATH)
     sync_result = sync_runtime_state(_CWD, task_data, persist=True, ensure_exists=True)
     if not sync_result.ok:
         return
@@ -96,19 +72,19 @@ def _track_loop_completion(task_id: int, session_id: str):
 
 def main():
     global _CWD
-    event = _get_event_data()
+    event = load_stdin_event()
     _CWD = event.get("cwd", ".")
     session_id = event.get("sessionId", event.get("session_id", ""))
 
     # === 阶段 1: Fallback heuristic + clear_task_owner + loop 追踪（必须在 reminder 之前完成）===
-    settings = _load(SETTINGS_FILE)  # 提前加载，后面还要用
+    settings = load_json_fallback(SETTINGS_FILE)  # 提前加载，后面还要用
 
     task_info = ''
     completed_task = event.get("task")
 
     if not completed_task:
         # Fallback: scan task.json for Done tasks (heuristic)
-        task_data = _load(TASK_JSON_PATH)
+        task_data = load_json_fallback(TASK_JSON_PATH)
         tasks = task_data.get("tasks", [])
         # Last Done task found (most recent completion)
         for t in reversed(tasks):

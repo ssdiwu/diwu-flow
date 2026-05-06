@@ -117,7 +117,7 @@ def main() -> int:
     prefix = f"[{args.event}/{args.script}] "
 
     completed = subprocess.run(
-        ["python3", str(script_path)],
+        [sys.executable, str(script_path)],
         input=raw_stdin,
         text=True,
         cwd=cwd,

@@ -17,14 +17,10 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-# ─── 常量 ──────────────────────────────────────────────
+sys.path.insert(0, str(Path(__file__).parent))
+from common import DIWU_DIR, ARCHIVE_DIR, DTASK_JSON, DSETTINGS_JSON, PITFALLS_FILE, RECORDING_DIR, save_json  # noqa: E402
 
-DIWU_DIR = ".diwu"
-TASK_JSON = "dtask.json"
-SETTINGS_JSON = "dsettings.json"
-RECORDING_DIR = "recording"
-ARCHIVE_DIR = "archive"
-PITFALLS_FILE = "project-pitfalls.md"
+# ── 本文件特有常量（不在 common.py 中） ──────────
 LAST_SUMMARY = ".last_archive_summary.json"
 
 DEFAULTS = {
@@ -37,8 +33,8 @@ DEFAULTS = {
 
 
 def _p(cwd: Path, *parts) -> Path:
-    """拼接 cwd 下的 .diwu 子路径。"""
-    return cwd / DIWU_DIR / Path(*parts)
+    """拼接 cwd 下的路径（常量已含 .diwu/ 前缀）。"""
+    return cwd / Path(*parts)
 
 
 def _load_json(path: Path):
@@ -49,19 +45,9 @@ def _load_json(path: Path):
         return json.load(f)
 
 
-def _save_json(data, path: Path):
-    """原子写入 JSON（indent=2, ensure_ascii=False）。"""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-        f.write("\n")
-    os.replace(str(tmp), str(path))
-
-
 def _load_settings(cwd: Path) -> dict:
     """加载 dsettings.json，缺失字段用默认值补全。"""
-    settings_path = _p(cwd, SETTINGS_JSON)
+    settings_path = _p(cwd, DSETTINGS_JSON)
     raw = _load_json(settings_path)
     result = dict(DEFAULTS)
     if raw and isinstance(raw, dict):
@@ -131,15 +117,15 @@ def archive_tasks(cwd: Path, tasks: list, settings: dict) -> int:
         return 0
 
     merged = existing + new_tasks
-    _save_json(merged, archive_file)
+    save_json(merged, archive_file)
 
     # 从 dtask.json 移除已归档任务
-    task_path = _p(cwd, TASK_JSON)
+    task_path = _p(cwd, DTASK_JSON)
     data = _load_json(task_path) or {"tasks": []}
     archived_ids = {t["id"] for t in new_tasks}
     remaining = [t for t in data.get("tasks", []) if t.get("id") not in archived_ids]
     data["tasks"] = remaining
-    _save_json(data, task_path)
+    save_json(data, task_path)
 
     return len(new_tasks)
 
@@ -375,7 +361,7 @@ def update_summary(
         "recordings_moved": rec_count,
         "files": files,
     }
-    _save_json(summary, summary_path)
+    save_json(summary, summary_path)
 
 
 # ─── 主入口 ────────────────────────────────────────────
@@ -395,7 +381,7 @@ def run(cwd: str = ".") -> dict:
     settings = _load_settings(root)
 
     # 加载任务
-    task_path = _p(root, TASK_JSON)
+    task_path = _p(root, DTASK_JSON)
     task_data = _load_json(task_path) or {"tasks": []}
     tasks = task_data.get("tasks", [])
 
