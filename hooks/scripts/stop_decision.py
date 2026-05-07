@@ -689,4 +689,4 @@ if __name__ == "__main__":
     )
     if output:
         print(json.dumps(output, ensure_ascii=False))
-    sys.exit(0 if should_continue else 1)
+    sys.exit(0)
