@@ -1,45 +1,3 @@
-## [v0.0.12] - 2026-05-06
-
-### Changed — [Breaking] /dend → /dstop 迁移 + dloop 三件套统一
-- **[Breaking]** `/dend` 重命名为 `/dstop`（Command 名称变更）
-- **[Breaking]** 删除 `scripts/dend.py`，停止逻辑（cancel）内联到 `scripts/dloop.py stop` 子命令（三件套：start/status/stop）
-- `tests/test_dend.py` → `tests/test_dstop.py`，测试入口统一为 `dloop.py stop`
-- 全量同步所有文档中的 `/dend` 引用为 `/dstop`（skills/commands/hooks/README.md/.doc/ 共 ~13 处）
-
-### Refactoring — drec SKILL.md 分层瘦身（rules 权威源原则）
-- **drec SKILL.md 403 → 225 行（-44%）**：删除与 rules/ 重复的格式规则内容（时间戳、Session 模板、踩坑四段式+示例、Stop hook 正则、3-Strike 协议、错误追踪表、Checkpoint、CONTINUOUS_MODE_COMPLETE），替换为 `rules/session.md` + `rules/templates.md` 引用索引
-- **Amend 碎片合并**：触发条件/保护检查/R3 标记清除从 3 处分散描述合并为 §4 单一权威章节；删除与 R3 文字 100% 语义重复的完整失败处理表
-- **归档策略压缩**：踩坑聚合 9 步协议压缩为 3 行摘要 + 引用 `drec_archive.py aggregate_pitfalls()`；删除过时的 Fallback 手动步骤
-- **commands/drec.md 同步更新**：执行步骤引用路径从 `skills/drec/SKILL.md` 改为 `rules/session.md` / `rules/templates.md`
-- **所有权原则确立**：rules/ = 宪法级格式约束（hook 注入 system prompt），skills/ = 操作手册（仅保留独有流程和契约）
-
-### Refactoring — dtask SKILL.md 瘦身（同原则延续）
-- **dtask SKILL.md 323 → 181 行（-44%）**：删除与 `rules/task.md` 重复的 ~133 行（状态机定义+转移表、GWT acceptance 格式、task.json 结构表、任务分类表、blocked_by 规范、提交规范、Checkpoint 机制），替换为 §0 前置依赖引用索引
-- **保留 dtask 独有内容**：运行时真相源说明、任务规划流程（触发+分解+粒度标准+max-id 脚本调用+写入规则）、任务实施（不确定性决策节点+6 步骤+偏差规则 L1-L4）、子代理策略（并行/串行条件+派发三件套）、Done 判定矩阵
-
-### Refactoring — commands/dcorr.md 薄壳化
-- **dcorr.md 241 → 34 行（-86%）**：删除完整方法论（退化信号 6 类表格、四行重写模板完整版+轻量变体、误判排查六类表、门控 A/B/C + 最小规格模板、恢复骨架+判断依据+验证优先级 L1-L5、InProgress 共存行为、结束前四问），仅保留触发条件（6 条）+ 执行指引（引用 `skills/dcorr/SKILL.md` 五步协议）
-
----
-
-## [v0.0.11] - 2026-05-04
-
-### Added
-- **`.doc/` 产品文档目录**：bootstrap 四文档——README（索引+快速开始）、架构规范、状态文件规格（dtask.json / dtask-state.json）、工程规范（commit/message/session/pitfalls）
-- **`scripts/drec_archive.py` 归档自动化脚本**：move 策略（移动非 symlink 至 archive 子目录按月份分片）+ 11 个行为测试覆盖选文件规则/分片逻辑/踩坑聚合/边界条件
-
-### Changed
-- **drec 主执行顺序合同变更**：`/drec` 执行流程从"先 commit 再可选归档"改为"先归档后 commit"，归档产物纳入同一 commit（commands/drec.md 全文替换 + SKILL.md 归档章节重写 + 执行步骤 Step 4/5 对调）
-- **dstat nested archive 目录适配**：`get_archive_status()` 从 `glob("recording_*.md")` 改为 `(archive_dir / "recording").glob("**/*.md")`，支持归档后嵌套子目录结构
-- **test_doc_consistency 三副本收口**：file-layout 检查从两副本（root/local）扩展为三副本（root/local/asset）；删除对不存在文件（api.md/product.md/schema.md）的引用；新增 `.doc/README.md` 链接有效性检查
-- **file-layout `.doc/` 结构描述同步**：rules/file-layout.md 及其 .claude/rules/ 和 assets/ 副本共三处，均补充 `.doc/` 目录结构定义
-
-### Fixed
-- **Stop hook Chain A status 二次防御**：`decide_default_mode()` / `decide_loop_mode()` 在 resolution.is_match 后增加 task['status']=='InProgress' 二次验证，防止 stale entry 导致误判 block
-- **verifier 遗留修复（3 项）**：drec SKILL.md 前缀修正、drec_archive.py docstring 补全、Chain A 加固后测试断言同步更新
-
----
-
 ## [v0.0.12] - 2026-05-05
 
 ### Infrastructure — Hook 可观测性与阻断策略重构
@@ -58,6 +16,18 @@
 - **realpath 三级 fallback**：`realpath` 命令 → `python3 -c 'os.path.realpath'` → 纯 shell `_normalize_path_shell`，GNU/BSD 兼容
 - **路径边界检查**：`_is_under_flow_root()` 归一化后比对 FLOW_ROOT 树内路径，防 sibling 目录同名 symlink 误删
 
+### Changed — [Breaking] /dend → /dstop 迁移 + dloop 三件套统一
+- **[Breaking]** `/dend` 重命名为 `/dstop`（Command 名称变更）
+- **[Breaking]** 删除 `scripts/dend.py`，停止逻辑（cancel）内联到 `scripts/dloop.py stop` 子命令（三件套：start/status/stop）
+- `tests/test_dend.py` → `tests/test_dstop.py`，测试入口统一为 `dloop.py stop`
+- 全量同步所有文档中的 `/dend` 引用为 `/dstop`（skills/commands/hooks/README.md/.doc/ 共 ~13 处）
+
+### Refactoring — Skills 分层瘦身（rules 权威源原则）
+- **drec SKILL.md 403 → 225 行（-44%）**：删除与 rules/ 重复的格式规则内容，替换为 `rules/session.md` + `rules/templates.md` 引用索引；Amend 碎片合并为 §4 单一权威章节；归档策略压缩为 3 行摘要 + 引用 `drec_archive.py aggregate_pitfalls()`
+- **dtask SKILL.md 323 → 181 行（-44%）**：删除与 `rules/task.md` 重复的 ~133 行（状态机/GWT/task 结构/blocked_by/提交规范/Checkpoint），替换为 §0 前置依赖引用索引
+- **dcorr.md 241 → 34 行（-86%）**：仅保留触发条件（6 条）+ 执行指引（引用 `skills/dcorr/SKILL.md` 五步协议）
+- **所有权原则确立**：rules/ = 宪法级格式约束（hook 注入 system prompt），skills/ = 操作手册（仅保留独有流程和契约）
+
 ### Documentation — 三迭代文档补全与规则同步
 - **README.md**：安装表补充 `--uninstall [--dry-run]`；仓库结构 scripts/ 补充 session_scope
 - **`.doc/架构规范.md`**：Hook 表头更新为 run_hook.py 包装格式；新增包装层语义章节；SessionStart 写入目标改为 scoped 路径
@@ -70,6 +40,45 @@
 - **阈值从 50 → 30**：活跃 session 项目（如本插件自身开发）47 个 recording 即触发归档，50 偏高
 - **全量同步 9 处**：dsettings.json（运行时配置）+ stop_archive.py + drec_archive.py（代码 DEFAULTS）+ file-layout.md（三副本）+ 状态文件规格.md + dsettings-guide.md + README.md + dsettings.json.template + drec SKILL.md（文档/模板）
 - **归档执行**：19 个 session 文件归档至 archive/recording/2026-04/ 和 2026-05/，36 条 pitfalls 聚合
+
+### Changed — Commit Message 格式重设计（中文分类前缀）
+- **前缀体系重构**：commit message 从固定 `[recording] Session ...` 前缀改为基于内容的中文分类前缀：`[功能]`/`[界面]`/`[修复]`/`[重构]`/`[基建]`/`[记录]`
+- **映射规则**：前缀取自 dtask.json 的 `category` 字段（functional→[功能], ui→[界面], bugfix→[修复], refactor→[重构], infra→[基建]）；纯 `.diwu/` 状态文件变更统一用 `[记录]`
+- **同步更新**：`skills/drec/SKILL.md` §Commit Message 格式 + `.claude/rules/task.md` §提交规范 + `assets/dinit/assets/rules/task.md` 模板三处同步
+- **历史清理**：30 个旧 `[recording]` 前缀 commit 通过 `filter-branch` 批量重写为分类格式
+
+### Fixed — dtask-state.json 一致性检查强化
+- **drun SKILL.md**：新增 commit 前必做步骤——Read `dtask-state.json` 确认磁盘状态干净（非 dloop 模式确认无残留 `active:true`；dloop 最后一轮确认最终文件不含冗余 key）
+- **dloop SKILL.md**：结束检查清单第 3 项从验证 `dloop: null` 存在改为验证**最终干净状态**（`{version, task_sessions}` 不含 `dloop`/`pending_recording` key）；新增字段丢失风险说明（`sync_runtime_state()` 覆写行为）
+
+### Refactoring — /simplify 路径常量提取与代码审查修复
+- **路径常量统一**：硬编码路径字符串提取为模块级常量，消除跨文件不一致风险
+- **代码审查修复**（2 项 commit）：/simplify 流程中发现并修复的边界条件和遗漏引用
+- **rules 同步更新**：`9a00e1d` 规则文件内容同步至 `.claude/rules/` 和 `assets/dinit/assets/rules/`
+
+### Infrastructure — pending_recording 自愈增强
+- **stale 标记清除**：Task#91 closeout 后自动清理残留的 `pending_recording` 标记，防止后续 session 误触发 Amend 模式
+
+### Cleanup
+- **worktree 残留清理**：删除 48 个带 `' 2'` 后缀的 worktree 副本文件（历史操作遗留）
+
+---
+
+## [v0.0.11] - 2026-05-04
+
+### Added
+- **`.doc/` 产品文档目录**：bootstrap 四文档——README（索引+快速开始）、架构规范、状态文件规格（dtask.json / dtask-state.json）、工程规范（commit/message/session/pitfalls）
+- **`scripts/drec_archive.py` 归档自动化脚本**：move 策略（移动非 symlink 至 archive 子目录按月份分片）+ 11 个行为测试覆盖选文件规则/分片逻辑/踩坑聚合/边界条件
+
+### Changed
+- **drec 主执行顺序合同变更**：`/drec` 执行流程从"先 commit 再可选归档"改为"先归档后 commit"，归档产物纳入同一 commit（commands/drec.md 全文替换 + SKILL.md 归档章节重写 + 执行步骤 Step 4/5 对调）
+- **dstat nested archive 目录适配**：`get_archive_status()` 从 `glob("recording_*.md")` 改为 `(archive_dir / "recording").glob("**/*.md")`，支持归档后嵌套子目录结构
+- **test_doc_consistency 三副本收口**：file-layout 检查从两副本（root/local）扩展为三副本（root/local/asset）；删除对不存在文件（api.md/product.md/schema.md）的引用；新增 `.doc/README.md` 链接有效性检查
+- **file-layout `.doc/` 结构描述同步**：rules/file-layout.md 及其 .claude/rules/ 和 assets/ 副本共三处，均补充 `.doc/` 目录结构定义
+
+### Fixed
+- **Stop hook Chain A status 二次防御**：`decide_default_mode()` / `decide_loop_mode()` 在 resolution.is_match 后增加 task['status']=='InProgress' 二次验证，防止 stale entry 导致误判 block
+- **verifier 遗留修复（3 项）**：drec SKILL.md 前缀修正、drec_archive.py docstring 补全、Chain A 加固后测试断言同步更新
 
 ---
 

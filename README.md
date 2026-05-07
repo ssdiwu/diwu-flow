@@ -591,7 +591,7 @@ git remote -v # 哪个 remote？
 
 ## Version
 
-v0.0.12 — `.doc/` 产品文档目录 bootstrap + drec 归档自动化（drec_archive.py）+ Stop hook 防御加固 + test 一致性收口。
+v0.0.12 — Hook 可观测性重构（run_hook.py 统一包装层）+ Session ID 隔离 + 卸载脚本健壮性 + **[Breaking]** /dend→/dstop 迁移 + Skills 分层瘦身（drec/dtask/dcorr 共 -174 行）+ Commit Message 中文分类前缀重设计 + dtask-state.json 一致性检查强化 + /simplify 路径常量提取。
 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License
