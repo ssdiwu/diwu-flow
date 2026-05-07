@@ -217,3 +217,5 @@
 - [分层未拆清] 截断循环引入新 bug（crop marker 自身成为匹配目标）→ 未考虑首轮裁剪后文本前缀变化 → 误判为简单 replace 即可 → 循环操作中必须考虑状态变化后搜索起点的偏移 （来源: session-2026-05-02-222938.md）- [验证误读] 将 completed_task_ids 未更新归因到 session_id 绑定 → 未 trace TaskCompleted hook 触发条件和 payload 契约 → 误判根因。当前已确认两层缺口：(1) dtask_transition.py release 不在官方 TaskCompleted 触发条件中 (2) task_completed.py 期望嵌套 event.task 对象但官方 payload 为平铺 task_id/task_subject/task_description。hook 是否完全未触发仍需继续 trace，现阶段不写死单一根因 （来源: session-2026-05-02-222938.md）
 ## Source: archive-aggregate-2026-05-07
 - [分层未拆清] Stop hook 在 Task#62 完成后阻止了 dloop 继续 → 根因：release 与 Stop hook 时序竞争导致 iteration 未递增 → 误判为 hook 代码 bug → 实际是瞬时状态问题，手动重试后正常通过。教训：dloop 的 iteration 递增依赖 Stop hook 执行，与 task_completed.py 的异步追踪存在时间窗口。 （来源: session-2026-05-03-001428.md）
+## Source: archive-aggregate-2026-05-07
+- [分层未拆清] Stop hook 阻止 dloop 继续 → 初步判断为时序竞争但不敢轻率下结论 → 手动复现无法重现具体条件 → 正确做法：加 fallback 兜底 + 记录为 follow-up 待观察，而非假装已完全理解根因 （来源: session-2026-05-03-002855.md）- [读层现象] Task#64 初始只修检测不修根因 → 用户指出「建出来的就不对为什么不追查」→ 根因是 expected_target 硬编码相对路径，用户项目中 skills/ 不存在 → 教训：发现 broken artifact 时必须追问「为什么第一次就建错了」，不能只修表面检测 （来源: session-2026-05-03-002855.md）
