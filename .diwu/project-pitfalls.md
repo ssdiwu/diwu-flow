@@ -219,3 +219,5 @@
 - [分层未拆清] Stop hook 在 Task#62 完成后阻止了 dloop 继续 → 根因：release 与 Stop hook 时序竞争导致 iteration 未递增 → 误判为 hook 代码 bug → 实际是瞬时状态问题，手动重试后正常通过。教训：dloop 的 iteration 递增依赖 Stop hook 执行，与 task_completed.py 的异步追踪存在时间窗口。 （来源: session-2026-05-03-001428.md）
 ## Source: archive-aggregate-2026-05-07
 - [分层未拆清] Stop hook 阻止 dloop 继续 → 初步判断为时序竞争但不敢轻率下结论 → 手动复现无法重现具体条件 → 正确做法：加 fallback 兜底 + 记录为 follow-up 待观察，而非假装已完全理解根因 （来源: session-2026-05-03-002855.md）- [读层现象] Task#64 初始只修检测不修根因 → 用户指出「建出来的就不对为什么不追查」→ 根因是 expected_target 硬编码相对路径，用户项目中 skills/ 不存在 → 教训：发现 broken artifact 时必须追问「为什么第一次就建错了」，不能只修表面检测 （来源: session-2026-05-03-002855.md）
+## Source: archive-aggregate-2026-05-07
+- [读层现象] symlink 路径问题初版只修检测未修根因 → 用户指出「建出来的就不对为什么不追查」→ 教训：broken artifact 必须追问首次创建逻辑，不能只修表面检测 （来源: session-2026-05-03-004525.md）- [验证误读] 引入 4 个 bug 的 PR 本身成为踩坑来源 → 根因：功能验证只覆盖「happy path」（插件仓库自身），未覆盖用户项目场景（tmp_dir 跨目录、默认模式无 dloop、有历史 Done 任务）→ 教训：修改涉及路径计算或全局状态读写时，必须在边界场景（跨盘/空值/预填充数据）下验证 （来源: session-2026-05-03-004525.md）
