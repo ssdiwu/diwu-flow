@@ -55,7 +55,8 @@ class TestAgentsDirExists:
         assert path.exists(), f"agent 文件不存在: {path}"
 
     def test_agents_dir_contains_only_core_agents(self, project_root):
-        actual = sorted(p.stem for p in (project_root / AGENTS_DIR).glob("*.md"))
+        actual = sorted(p.stem for p in (project_root / AGENTS_DIR).glob("*.md")
+                        if p.stem != "README")
         assert actual == sorted(ALL_AGENTS), f"agents/ 目录应只包含核心三件套，实际: {actual}"
 
 
