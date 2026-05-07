@@ -83,7 +83,7 @@
 
 ## 命名规范
 
-- **Command 名称 ≤5 字符**：所有 `/command` 不超过 5 字符（如 `/dstat`、`/dinit`、`/dcorr`、`/dtask`、`/prd`、`/adr`、`/ddoc`）
+- **Command 名称 ≤5 字符**：所有 `/command` 不超过 5 字符（如 `/dstat`、`/dinit`、`/dcorr`、`/dtask`、`/prd`、`/ddoc`）
 - **Skill 名称 ≤5 字符**：同上（如 `drun`、`dtask` 等）
 
 ---

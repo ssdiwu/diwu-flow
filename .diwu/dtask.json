@@ -330,6 +330,39 @@
       "category": "refactor",
       "blocked_by": [],
       "status": "Done"
+    },
+    {
+      "id": 95,
+      "title": "dadr 残留清理：5 文件 ADR 引用移除",
+      "description": "dadr 工具链已在 Task#77 中完整删除（scripts/ddoc_adr.py、tests/test_ddoc_adr.py、ddoc SKILL.md ADR 章节、commands/dadr.md），但 5 个文件仍有残留引用需清理：rules/file-layout.md adr/ 目录说明(×3 副本)、rules/mindset.md /adr Command 示例(×2 副本)、.doc/README.md ADR 条目。",
+      "acceptance": [
+        "Given rules/file-layout.md L49 含 '└── adr/ # 架构决策记录（可选），通过 /ddoc 管理' + '└── ADR-NNN-kebab-case-title.md' When 删除这两行 Then 三副本（root/.claude/rules/assets）均不含 adr/ 或 ADR-NNN",
+        "Given rules/mindset.md L86 Command 示例含 '/adr' When 从示例列表中删除 '/adr' Then 两副本均不含 /adr",
+        "Given .doc/README.md L24 含 'ADR 放入 adr/ 子目录，通过 /ddoc 管理' When 删除该行 Then .doc/README.md 无 ADR 引用",
+        "Given 所有修改完成 When python3 -m pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ -q Then 全量通过"
+      ],
+      "steps": [
+        "1. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md:49-50 删除 adr/ 两行",
+        "2. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md:49-50 同步删除",
+        "3. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md:49-50 同步删除",
+        "4. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md:86 示例中删除 '/adr'",
+        "5. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md:86 同步删除 '/adr'",
+        "6. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md:86 同步删除 '/adr'",
+        "7. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/README.md:24 删除 ADR 行",
+        "8. 运行 python3 -m pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ -q 全量验证"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.doc/README.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "Done"
     }
   ]
 }

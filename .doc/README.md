@@ -21,4 +21,3 @@
 
 - 本目录不维护静态 inventory（如 Command/Skill 计数），计数以 `plugin.json` 为准
 - 新增文档时更新本索引表
-- ADR 放入 `adr/` 子目录，通过 `/ddoc` 管理
