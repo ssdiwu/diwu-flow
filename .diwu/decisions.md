@@ -6,6 +6,30 @@
 
 ---
 
+### 2026-05-08 04:31:15 规则真相源 / 设计真相源 / README 说明层三分
+
+- **备选方案**:
+  - A) 将 `rules/`、`.doc/`、各层 `README.md` 混合作为说明与规范载体
+  - B) 明确三分：`rules/` = 运行规则真相源，`.doc/` = 设计文档真相源，`README` = 说明/导航层
+- **选定方案**: B
+- **影响范围**: `rules/README.md`、`rules/file-layout.md`、`rules/constraints.md`、未来 `rules/handoff.md` / `rules/testing.md`、`.doc/架构规范.md`、根 `README.md`、未来 `agents/README.md` / `skills/README.md`、Issue #6 / #8
+- **理由**:
+  - `rules/file-layout.md` 会被同步到非插件项目，不能混入插件源码仓结构视角
+  - `.doc/` 已被明确为项目唯一的设计文档真相源，应承接插件源码仓结构规范与架构 rationale
+  - README 的职责是说明与导航，不应新增规则，否则会造成规则正文与说明文档双轨漂移
+
+### 2026-05-08 04:31:15 PR1-PR5 分层实施策略
+
+- **备选方案**:
+  - A) 按 issue 直接一一对应开 PR，边讨论边扩展边界
+  - B) 先定义 issue map / PR map，再按实施层切 PR：PR1 规则先行，其余 PR 顺序接入
+- **选定方案**: B
+- **影响范围**: PR1（#5 + #6 + #4 的 rules 真相源部分）、PR2（#2 architect/debugger）、PR3（#1 产品思维层）、PR4（#3 didea）、PR5（#7 + #8 的说明层/表层能力模型），以及 Issue #8 的总设计地图
+- **理由**:
+  - `PR1` 只做 rules/协议/导航真相源重构，保持单个 PR 即可，不混入 agent/skill 本体实现
+  - `PR2` 依赖 `PR1` 中 handoff/task/workflow/judgments 的稳定边界，不能先接入 agent 行为
+  - `PR5` 依赖 `PR1` 规则边界与 `PR4` 的 didea 本体存在后，才能稳定重写 `.doc/架构规范.md` 与根 `README.md`
+
 ### 2026-04-30 22:38:08 统一 runtime state 真相源：引入 dtask-state.json
 
 - **备选方案**:

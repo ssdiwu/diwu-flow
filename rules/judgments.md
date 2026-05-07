@@ -143,7 +143,16 @@
 
 ## 五、Agent Dispatch 判断
 
-> 规则见 skills/dtask/SKILL.md §子代理策略（派发规则）及 rules/mindset.md §Agent 设计约束
+> 规则见 skills/dtask/SKILL.md §子代理策略（派发规则）及 `rules/handoff.md` §六 Agent 设计约束。
+
+### Handoff 判断锚点
+
+| 场景 | 判定 | 依据 |
+|------|------|------|
+| 子代理返回格式不完整 | **拒绝接收，要求补全** | 缺少 Acceptance/代码变更/阻塞点/前置条件 任一 |
+| 子代理越界修改了不属其域的文件 | **退回重做或跨域回退** | implementer 改了 dtask.json / rules/ 文件 |
+| explorer 发现需要写代码 | **评估后直修或回交** | <20 行直修；否则回交 implementer |
+| agent 失败 | **退化回 E→I→V 闭环** | 故障隔离铁律 |
 
 ### 节点粒度判断：单节点 vs 需分解
 

@@ -1,6 +1,7 @@
-# 任务状态机
+# 任务状态机 — Persistent Task 真相源
 
 > **规则约束级别说明**：本文件定义任务状态机核心规则。除非特别标注 `[建议]`，否则都是必须遵守的约束。
+> **定位**：本文件是 `.diwu/dtask.json` 中每个 task 条目的 schema 真相来源与状态机契约。不承载实施流程（见 `skills/drun/SKILL.md`）或验收证据标准（见 `rules/verification.md`）。
 
 ## acceptance 格式规范（Given/When/Then）
 
@@ -64,6 +65,7 @@
 | InProgress | 完成准备验证 | InReview | - |
 | InProgress | 遇阻塞 | InSpec | 记录原因 |
 | InProgress | 取消 | Cancelled | - |
+| InProgress | **定义需回退** | **InSpec** | **发现原定义有误，退回修正后重新实施** |
 | InReview | 通过(小幅度) | Done | 自审 |
 | InReview | 通过(大幅度) | Done | 需人工确认 |
 | InReview | 失败返工 | InProgress | - |
@@ -84,7 +86,7 @@
 | 字段默认值变化影响调用方 | 大幅度，需人工确认 | L1 调用链证据 | 即使行数未超也按大幅度 |
 | 小幅度+acceptance 全通过 | 小幅度，自审 Done + verifier 终验 | L3+ 至少一项 | verifier PASSED 后 Done |
 
-> **证据等级参考**（详见 verification.md）：L1=运行态真实输出变化 / L2=调用链命中+状态切换 / L3=自动化测试+断言 / L4=日志截图页面现象 / L5=代码 diff+说明文字。默认 L1-3 主判，L4-5 辅助。仅 L5 不可宣称完成。
+> **证据等级定义见 `rules/verification.md`**：L1=运行态真实输出变化 / L2=调用链命中+状态切换 / L3=自动化测试+断言 / L4=日志截图页面现象 / L5=代码 diff+说明文字。默认 L1-3 主判，L4-5 辅助。仅 L5 不可宣称完成。
 
 #### blocked_by 循环依赖锚点
 
@@ -93,6 +95,14 @@
 | A→B→C（无回边） | 合规 |
 | A→B→C→A（有回边） | 违规，拒绝 |
 | A→B 与 B→A 隐藏在不同描述 | 违规，拒绝 |
+
+### Architect 审稿 Gate
+
+当任务涉及架构级变更（新增模块、改变数据流、修改核心抽象）时：
+
+1. **InSpec 阶段必须经过 architect 审阅**：确认方案不影响现有 agent 边界和 rules 真相源结构
+2. **InReview 阶段必须验证**：变更后的文件是否仍满足 `rules/constraints.md` 六维约束
+3. **禁止绕过**：architect 审阅未通过不得进入 InProgress，约束验证未通过不得标记 Done
 
 ## blocked_by 规范
 
@@ -114,30 +124,18 @@
 
 ### 结构化 commit message 格式
 
-**标题行格式**：以内容类型为前缀，任务信息为主体。
-
 ```
-[功能] [Task#179] DraftCleanup 主线程卸载 — completed
-Category: refactor
+[Task#N] 标题 - completed
+Category: functional/ui/refactor/infra/bugfix
 Files: src/auth.ts, src/models/user.ts
 Evidence: L1-L3 (运行态+自动化)
 Status: Done
 ```
 
-**category 前缀映射**（标题行第一段，取自 dtask.json 的 `category` 字段）：
-
-| category | 前缀 |
-|----------|------|
-| `functional` | `[功能]` |
-| `ui` | `[界面]` |
-| `bugfix` | `[修复]` |
-| `refactor` | `[重构]` |
-| `infra` | `[基建]` |
-
 | 行 | 字段 | 说明 |
 |---|------|------|
-| 1 | 标题行 | `[{前缀}] [Task#N] 标题 — completed` 或 `(超前 X/5, blocked_by Task#M)`；多任务用 `[Task#A-N]` |
-| 2 | Category | 任务分类（英文原始值） |
+| 1 | 标题行 | `[Task#N] 标题 - completed` 或 `(超前 X/5, blocked_by Task#M)` |
+| 2 | Category | 任务分类 |
 | 3 | Files | 修改文件列表（逗号分隔） |
 | 4 | Evidence | 证据等级范围（L1-L5，见 verification.md） |
 | 5 | Status | `Done` 或 `InReview(超前 X/5)` |
@@ -147,7 +145,7 @@ Status: Done
 多子代理并行时，commit message 中每个子代理的产出分块列出：
 
 ```
-[重构] [Task#N] 标题 — completed (并行)
+[Task#N] 标题 - completed (并行)
 
 ## 子代理 A (auth 模块)
 Files: src/auth.ts, src/middleware.ts
@@ -164,39 +162,16 @@ Status: InReview(超前 3/5)
 
 ### Checkpoint 机制
 
-大任务实施过程中记录中间进度，写入 session 文件。
-
-**触发条件**（满足任一即触发）：
+触发条件（满足任一即触发）：
 - steps 数量 > `checkpoint_min_steps`（默认 5）
 - 预估修改行数 > `checkpoint_min_lines`（默认 500）
 
-**记录格式**（追加到当前 session 文件）：
+> 完整格式模板见 `rules/templates.md` §Checkpoint 格式模板。
 
-```
-### Checkpoint @ 步骤3/8
-进度: 完成 auth 模块重构，payment 模块进行中
-已修改: src/auth.ts(+120/-80), src/models/user.ts(+15/-5)
-下一步: 步骤4 payment 模块重构 → 步骤5 集成测试
-回滚方式: git checkout -- src/auth.ts src/models/user.ts
-         或 git reset --soft HEAD~1（如已提交）
-```
+### Commit 语言规范与分支命名
 
-> Checkpoint 格式模板见 `rules/templates.md` §Checkpoint 格式模板。
-
-### Commit 语言规范
-
-- **标题行**：中文（与项目文档语言一致）
-- **Category / Files / Evidence / Status**：英文标准化标识符
-- **正文描述**（如有）：中文
-
-### 分支命名规范
-
-| 类型 | 格式 | 说明 |
-|------|------|------|
-| 功能开发 | `feature/{task-id}-{short-title}` | 关联 dtask 任务 ID |
-| 修复 | `fix/{task-id}-{short-title}` | bugfix 类任务 |
-| 发布 | `release/v{version}` | 对应 semver 版本号 |
-| 热修复 | `hotfix/v{version}` | 生产环境紧急修复 |
+- **标题行**：中文（与项目文档语言一致）；**Category / Files / Evidence / Status**：英文标准化标识符
+- 分支命名：`feature/{task-id}-{short-title}` / `fix/{task-id}-{short-title}` / `release/v{version}` / `hotfix/v{version}`
 
 ## 不做的事
 
