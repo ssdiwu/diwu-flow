@@ -113,6 +113,34 @@ CONTINUOUS MODE COMPLETE - 所有可执行任务已完成
 > 退化信号与止损动作见 `skills/dcorr/SKILL.md` §Step 1 触发条件。
 > 可调参数见 `assets/dinit/assets/dsettings.json.template`（唯一真实来源）。
 
+## Handoff Report 模板（交接报告）
+
+> 从 `rules/handoff.md` §二 交接清单提取标准化。子代理完成工作后必须输出此结构。
+
+```text
+## 交接报告 - Task#N
+
+### Acceptance 验证结果
+- [x] GWT-1: PASS — [证据简述]
+- [ ] GWT-2: FAIL — [失败原因]
+
+### 代码变更摘要
+- 新增: path/to/file.ts (+/- 行数)
+- 修改: path/to/other.ts (+/- 行数)
+- 删除: path/to/old.ts
+
+### 遗留阻塞点
+- [阻塞描述] → 影响: [具体影响] → 建议: [下一步操作]
+
+### 下一步前置条件
+- [条件1]
+- [条件2]
+```
+
+**PASS/FAIL 判定规则**：逐条对照 acceptance 的 GWT 条目，每条必须标注 PASS 或 FAIL 并附证据。存在 FAIL 时不得标记 InReview。
+
+> 完整交接协议（注入格式、回交模型、Handoff Matrix）见 `rules/handoff.md`。
+
 ## 验证脚本模板
 
 **smoke.sh**：JSON 合法性检查（dtask + dsettings.json），exit 0。

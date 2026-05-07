@@ -363,6 +363,160 @@
       "category": "refactor",
       "blocked_by": [],
       "status": "Done"
+    },
+    {
+      "id": 96,
+      "title": "统一三副本基线 + 创建 handoff.md / testing.md / agents/README.md",
+      "description": "PR #9 Step 1-3：先以 rules/ 为权威源消除 constraints/file-layout/README/task 四个文件在三处副本间的漂移，然后新建 rules/handoff.md、rules/testing.md 与 agents/README.md，为后续 PR1 的边界收缩提供新的协议真相源和速查页。",
+      "acceptance": [
+        "Given constraints.md / file-layout.md / README.md / task.md 在三处副本间存在差异 When 以 rules/ 为权威源统一 Then diff rules/X.md .claude/rules/X.md 和 diff rules/X.md assets/dinit/assets/rules/X.md 均 exit 0（4 个文件 × 2 处副本 = 8 组 diff）",
+        "Given handoff model 的当前共识 When 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/handoff.md Then 含文件定位/主编排者边界/正向回交/异常回交/跨域回退/Handoff Matrix/Handoff Report 协议/退化路径，并明确 dtask/drun 为主编排者、architect→dtask、debugger→implementer",
+        "Given testing-rule 的当前共识 When 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/testing.md Then 含文件定位/测试分层/补测试触发条件/插件项目特例/测试-证据映射/引用导航，并明确 dtask 主要消费 testing、drun 主要消费 verification、repo-level 基线测试与可复用任务级验证默认进入 tests/",
+        "Given agents 目录需要人类速查页 When 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/agents/README.md Then 含 Agent/所在域/回交给谁/不做什么 四列速查表，且不承载 handoff 协议正文"
+      ],
+      "steps": [
+        "1. [锁定] 以 rules/ 为权威源，将 constraints.md 统一复制到 .claude/rules/constraints.md 和 assets/dinit/assets/rules/constraints.md",
+        "2. [锁定] 以 rules/ 为权威源，将 file-layout.md 统一复制到 .claude/rules/file-layout.md 和 assets/dinit/assets/rules/file-layout.md",
+        "3. [锁定] 以 rules/ 为权威源，将 README.md 统一复制到 .claude/rules/README.md 和 assets/dinit/assets/rules/README.md",
+        "4. [锁定] 以 rules/ 为权威源，将 task.md 统一复制到 .claude/rules/task.md 和 assets/dinit/assets/rules/task.md",
+        "5. [锁定] 验证 4×2=8 组 diff 均 exit 0",
+        "6. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/handoff.md：含文件定位、dtask/drun 主编排者边界、正向回交/异常回交/跨域回退、Explorer 双域说明、Architect/Debugger 位置、Handoff Matrix、Handoff Report 协议、退化路径",
+        "7. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/testing.md：含文件定位、测试分层模型、补测试触发条件、插件项目特例、测试与证据映射、引用导航，并写明 repo-level 测试默认进入 tests/",
+        "8. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/agents/README.md：按 Agent/所在域/回交给谁/不做什么 四列写速查表"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/handoff.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/testing.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/agents/README.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "Done"
+    },
+    {
+      "id": 97,
+      "title": "收缩 workflow.md + mindset.md + task.md 的边界",
+      "description": "PR #9 Step 4-6：在 Task#96 创建好 handoff.md / testing.md / agents/README.md 后，收缩三个核心文件的边界。workflow.md 收为阶段流转文件，mindset.md 纯化为心智层，task.md 收口为 Persistent Task 真相源，并补入 architect 审稿 gate 与定义回退语义。",
+      "acceptance": [
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md 当前混有 handoff/testing/P-J-A 重复内容 When 收缩为阶段流转文件 Then 保留层级路线图+入口门控+跨阶段回退+引用导航，且 handoff/testing 正文迁出为引用",
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md 当前含 Agent 设计约束/命名规范/Plan→Dtask 门控 When 迁出这些原子 Then 仅保留三唯一框架+P-J-A骨架+不确定性门控，并以引用指向 handoff/workflow/constraints",
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md 当前未显式定义 Persistent Task 与 architect gate When 收口边界 Then 明确 task.md 定义的是 Persistent Task、命中条件时 architect 必须自动审稿、InProgress→InSpec 含定义回退语义，并将 Checkpoint/提交细节收缩为引用"
+      ],
+      "steps": [
+        "1. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md：删除 handoff 正文与 testing 正文，替换为对 rules/handoff.md 与 rules/testing.md 的引用；保留阶段流转本体，补 didea→dpth/dref/dprd→dtask→drun 层级路线与 drun→InSpec 回退路线",
+        "2. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md：删除 Agent 设计约束、命名规范、Plan→Dtask 门控正文，替换为对 rules/handoff.md、rules/constraints.md、rules/workflow.md 的引用；保留三唯一框架、P-J-A 骨架、不确定性门控",
+        "3. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md：在开头明确 Persistent Task 定位；新增 architect 审稿 gate 硬规则；补 InProgress→InSpec 的定义回退语义；将 Checkpoint 详细格式与提交规范长展开收缩为引用或最小语义"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        96
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 98,
+      "title": "重构其余 rules 文件并升级目标项目放置与导航语义",
+      "description": "PR #9 Step 7：在 Task#96-97 完成新文件创建和核心文件收缩后，重构剩余规则文件。重点是校准 verification/testing 边界、将 file-layout 收口为目标项目放置规则、将 rules/README 收口为规则导航页，并补 Handoff Report 模板与 constraints 的真相源/README 边界说明。",
+      "acceptance": [
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/verification.md 当前仍混有测试分层引用 When 调整边界 Then 明确 verification 只回答什么证据算完成，并将测试策略引用切到 testing.md",
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md 当前无 README 真相源边界说明 When 增补 Then 含命名约束与 README 只能解释导航/规则回 rules/设计理由回 .doc 的约束句",
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/templates.md 当前无 Handoff Report 模板 When 增补 Then 含统一骨架与 agent 特化字段占位",
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md 当前对 handoff 的引用仍旧 When 更新 Then 明确引用 rules/handoff.md 的对应章节，并新增 handoff 判断锚点",
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md 当前仍混插件源码仓视角与旧 checks 结构 When 收口 Then 仅回答目标项目里什么东西该放哪里，新增 .diwu/ideas/ 与 tests/ 说明，不再把 .diwu/checks/smoke.sh 和 task_<id>_verify.sh 视为默认结构",
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/README.md 当前更像文件列表说明 When 升级 Then 成为规则导航页：先按问题导向导航，再给出心智层/协议层/系统层全局地图",
+        "Given session.md / pitfalls.md / exceptions.md 在本轮不做结构性改造 When 复核 Then 仅确认是否需最小引用同步，不主动扩大其改动范围"
+      ],
+      "steps": [
+        "1. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/verification.md：明确 testing.md 回答该写什么测试、verification.md 回答什么证据算完成；将测试策略相关引用切到 testing.md",
+        "2. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md：补命名约束与 README/规则/.doc 的边界约束",
+        "3. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/templates.md：新增 Handoff Report 模板骨架",
+        "4. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md：更新对 handoff.md 的引用，并补 handoff 判断锚点",
+        "5. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md：收口为目标项目放置规则，新增 .diwu/ideas/、tests/、handoff.md/testing.md，对 README 和 checks 结构做新口径说明",
+        "6. [锁定] 重构 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/README.md：升级为规则导航页（问题导向导航 + 分层地图 + 一句话定义）",
+        "7. [建议] 复核 session.md / pitfalls.md / exceptions.md，仅在确需引用同步时做最小调整"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/verification.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/templates.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/README.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        96,
+        97
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 99,
+      "title": "三处同步 + manifest 更新 + 全量验证收口",
+      "description": "PR #9 Step 8：Task#96-98 完成 rules/ 正文重组后，将需要同步的 rule 文件统一复制到 .claude/rules/ 与 assets/dinit/assets/rules/ 两处副本，更新 rules-manifest.json，并通过全量测试与 diff 检查完成收口。",
+      "acceptance": [
+        "Given rules/ 下需要同步的 rule 文件全部完成编辑 When 同步到 .claude/rules/ 和 assets/dinit/assets/rules/ Then 对每个受影响文件 diff rules/X.md .claude/rules/X.md 与 diff rules/X.md assets/dinit/assets/rules/X.md 均 exit 0",
+        "Given /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules-manifest.json 当前未含 handoff.md/testing.md When 更新 Then JSON 合法、indent=2、rules[] 含 handoff.md 与 testing.md",
+        "Given 所有同步完成 When 运行 python3 -m pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ -q Then 全量 PASS",
+        "Given 全量测试通过 When grep 检查 rules/ 内新增/更新的章节引用 Then 每个关键章节引用目标文件确实存在对应章节标题"
+      ],
+      "steps": [
+        "1. [锁定] 将本轮受影响的 rules/ 文件同步复制到 .claude/rules/（覆盖已有文件）",
+        "2. [锁定] 将本轮受影响的 rules/ 文件同步复制到 assets/dinit/assets/rules/（覆盖已有文件）",
+        "3. [锁定] 更新 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules-manifest.json：新增 handoff.md 与 testing.md（并按需要调整 version）",
+        "4. [锁定] 运行 python3 -m pytest /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/ -q 全量回归",
+        "5. [锁定] 逐文件执行 diff，验证 rules/、.claude/rules/、assets/dinit/assets/rules/ 三处一致",
+        "6. [锁定] grep 全局检查 rules/ 内新增/更新的章节引用，确认被引用章节真实存在"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/handoff.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/testing.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/verification.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/templates.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/handoff.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/testing.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/verification.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/templates.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules-manifest.json"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        96,
+        97,
+        98
+      ],
+      "status": "Done"
     }
   ]
 }

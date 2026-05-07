@@ -47,8 +47,8 @@ def test_rule_templates_with_runtime_paths_contain_diwu():
 
 def test_rules_readme_describes_split_layout():
     text = _read(RULES / "README.md")
-    # rules README 描述 .claude/ 下的目录结构（配置层）
-    assert ".claude/" in text and "目录结构" in text
+    # rules README 是导航页：包含全局地图、场景导航表、完整文件列表
+    assert "导航" in text and ("场景" in text or "文件列表" in text)
 
 
 def test_no_lessons_template_exists():
