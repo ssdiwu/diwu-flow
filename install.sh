@@ -16,7 +16,7 @@ usage() {
 
 install_cc() {
     echo "✓ Claude Code: plugin.json 已就绪"
-    echo "  skills/  → 12 个 Skill（可直接调用或通过 /command 触发，plugin.json 注册 11 个，dvfy 为纯索引）"
+    echo "  skills/  → 11 个 Skill（可直接调用或通过 /command 触发）"
     echo "  agents/  → 5 个核心执行 Agent（默认路径自动发现）"
     echo "  commands/ → 12 个薄壳命令"
 }
@@ -90,7 +90,7 @@ export default config;
 PLUGIN_EOF
 
     echo "✓ OpenCode: plugin + skills/agents symlink 已创建到 .opencode/"
-    echo "  skills/  → 12 个 Skill（SKILL.md 自动发现，plugin.json 注册 11 个，dvfy 为纯索引）"
+    echo "  skills/  → 11 个 Skill（SKILL.md 自动发现）"
     echo "  agents/  → 5 个核心执行 Agent（.md 自动发现）"
     echo "  commands/ → 12 个 command（.md 自动发现）"
     echo "  plugins/diwu-flow.ts → 插件声明 + Command 索引（12 个 command 映射）"

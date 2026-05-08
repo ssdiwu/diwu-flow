@@ -127,7 +127,7 @@ def main():
     reminder_parts.append(
         "请确认：1) 本次 session 记录已写入 .diwu/recording/（→ drec skill）  "
         "2) 如有设计决策已追加到 .diwu/decisions.md  "
-        "3) 验收证据等级是否达标（→ dvfy 验证体系）"
+        "3) 验收证据等级是否达标（→ rules/verification.md L1-L5 证据体系）"
     )
 
     message = " ".join(reminder_parts)
