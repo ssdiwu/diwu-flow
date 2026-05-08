@@ -53,13 +53,15 @@ class TestArchiveTasks:
         assert data["ok"] is True
         assert data["tasks_archived"] == 25
 
-        # 验证 archive 文件存在且包含 25 个任务
+        # 验证 archive 文件存在且包含 25 个任务（标准 dict 格式）
         archive_dir = tmp_project_dir / ".diwu" / "archive"
         archive_files = list(archive_dir.glob("task_archive_*.json"))
         assert len(archive_files) >= 1
-        archived = json.loads(archive_files[0].read_text())
-        assert len(archived) == 25
-        archived_ids = {t["id"] for t in archived}
+        archived_raw = json.loads(archive_files[0].read_text())
+        # 兼容 dict（标准格式）和 list（旧格式）
+        archived_tasks = archived_raw.get("tasks", []) if isinstance(archived_raw, dict) else archived_raw
+        assert len(archived_tasks) == 25
+        archived_ids = {t["id"] for t in archived_tasks}
         assert archived_ids == set(range(1, 26))
 
         # 验证 dtask.json 已移除已归档任务
@@ -97,10 +99,11 @@ class TestArchiveTasks:
         # 只有 id=4,5 是新的，id=1 应被去重
         assert data2["tasks_archived"] == 2
 
-        # 验证 archive 文件无重复 id
+        # 验证 archive 文件无重复 id（兼容 dict/list 格式）
         archive_file = list((tmp_project_dir / ".diwu" / "archive").glob("task_archive_*.json"))[0]
-        archived = json.loads(archive_file.read_text())
-        archived_ids = [t["id"] for t in archived]
+        archived_raw = json.loads(archive_file.read_text())
+        archived_tasks = archived_raw.get("tasks", []) if isinstance(archived_raw, dict) else archived_raw
+        archived_ids = [t["id"] for t in archived_tasks]
         assert len(archived_ids) == len(set(archived_ids))  # 无重复
 
     def test_archive_tasks_below_threshold(self, tmp_project_dir):

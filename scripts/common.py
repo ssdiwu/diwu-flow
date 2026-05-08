@@ -163,13 +163,15 @@ def max_task_id(cwd: Path) -> dict:
                 atasks = adata.get("tasks", [])
             elif adata and isinstance(adata, list):
                 atasks = adata
-                if atasks:
-                    aids = [t.get("id", 0) for t in atasks if isinstance(t, dict)]
-                    if aids:
-                        archive_max = max(aids)
-                        if archive_max > max_id:
-                            max_id = archive_max
-                            source = f.name
+            else:
+                atasks = []
+            if atasks:
+                aids = [t.get("id", 0) for t in atasks if isinstance(t, dict)]
+                if aids:
+                    archive_max = max(aids)
+                    if archive_max > max_id:
+                        max_id = archive_max
+                        source = f.name
 
     return {"ok": True, "max_id": max_id, "source": source}
 

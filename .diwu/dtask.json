@@ -56,7 +56,7 @@
       ],
       "category": "functional",
       "blocked_by": [],
-      "status": "InSpec",
+      "status": "Done",
       "_note": "软依赖 #106：#106 SKILL.md 已勾画 references 框架设计后，#107 可并行启动"
     },
     {

@@ -13,9 +13,9 @@
     "stop_reason": null
   },
   "pending_recording": {
-    "task_id": 106,
+    "task_id": 107,
     "target_status": "Done",
-    "released_at": "2026-05-08T04:48:45.706226+00:00",
+    "released_at": "2026-05-08T04:53:04.901042+00:00",
     "session_id": "a9ad5477-d3df-4cc5-aa6f-9acc47b19476"
   }
 }
