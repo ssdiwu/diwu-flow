@@ -1,83 +1,95 @@
-# Continue Here — PR2 定义已就位
+# Continue Here — PR4 定义已就位
 
 ## 当前分支
-- `feature/pr2-architect-debugger`
-
-## 对应 PR
-- Draft PR: `https://github.com/ssdiwu/diwu-flow-dev/pull/10`
+- `feature/pr4-didea-container`
 
 ## 当前唯一目标
-- 让下一位 AI 直接在这个分支上落地 **PR2：architect/debugger 接入执行链**。
+- 让下一位 AI 直接在这个分支上落地 **PR4：didea 本体与容器层实现**。
 
 ## 本次已完成
-- 已基于最新 `main`（PR1 已合并）重新校准 PR2 边界。
-- 已确认：PR2 不再做 rules 真相源重构；PR1 已把 `architect` / `debugger` 的规则边界写进 `rules/`，PR2 只负责把它们接入真实执行链。
-- 已创建 Draft PR #10，PR body 与本文件口径一致。
-- 用户明确要求：**不要新增或改写 `.diwu/dtask.json`**，本轮只提供接手说明。
+- 已基于最新 `main`（PR2 已合并）冻结 PR4 的边界。
+- 已确认：PR4 只做 `didea` 本体、`.diwu/ideas/` 容器层、软入口/硬入口与动作门控，不混入 README / `.doc/` / rules 真相源重写。
+- 用户当前要求：先把 PR4 Draft PR 建出来，并把定义附到 PR body，供后续 AI 直接在这条主线上继续实现。
 
-## PR2 一句话定义
-- **PR2：将 `architect` 作为 `dtask` 的技术审稿 gate，将 `debugger` 作为 `drun` 的异常调查第一责任 Agent，并补齐 agent 行为测试；不改 rules 真相源，不引入新 command/skill，不触碰说明层重写。**
+## PR4 一句话定义
+- **PR4：落地 `didea` 本体（soft entry + hard entry + idea 容器），把“想法挂住”这件事变成稳定入口；不混入 README/.doc 重写，也不承载 drun 双入口、Persistence Policy 或 rules 重组。**
 
 ## 先读这些文件
-1. `rules/task.md`
-2. `rules/handoff.md`
-3. `agents/README.md`
-4. `skills/dtask/SKILL.md`
-5. `skills/drun/SKILL.md`
-6. `rules/judgments.md`
+1. `commands/didea.md`（若不存在则准备新建）
+2. `skills/didea/SKILL.md`（若不存在则准备新建）
+3. `rules/file-layout.md`
+4. `.doc/架构规范.md`
+5. `skills/dpth/SKILL.md`、`skills/dref/SKILL.md`、`skills/dprd/SKILL.md`（用于定义下游接口）
 
 ## In Scope
-- 新建 `agents/architect.md`
-- 新建 `agents/debugger.md`
-- 修改 `skills/dtask/SKILL.md`：接入 architect gate 的触发条件、输入/输出、消费方式
-- 修改 `skills/drun/SKILL.md`：接入 debugger 异常优先路由、回交 `implementer`、再进 `verifier`
-- 最小修改 `agents/README.md`：补 architect/debugger 速查项
-- 最小修改 `rules/judgments.md`：补 architect/debugger 的 dispatch 判断锚点
-- 新增测试，覆盖 agent 配置、路由和协作行为
+- 新建 `skills/didea/SKILL.md`
+- 新建 `commands/didea.md`
+- 明确 `.diwu/ideas/` 的目录结构与 frontmatter 最小字段
+- 定义本地优先 + 可选 GitHub issue 同步的容器语义
+- 定义自增 ID + 用户语言文件名策略
+- 定义软入口：自然识别 + 主动提议
+- 定义硬入口：`create/list/show/archive/push/refine`
+- 定义动作门控：本地写入确认 + 外部同步二次确认
+- 冻结到 `dpth` / `dref` / `dprd` / `dtask` 的下游接口
 
 ## Out of Scope
-- 不改 `rules/handoff.md` / `rules/task.md` / `rules/workflow.md` 的真相源边界
-- 不新增 `darch` / `ddebug` skill 或 command
-- 不改 `commands/` 薄壳入口
-- 不做 `.doc/架构规范.md`、根 `README.md`、`skills/README.md` 的说明层重写（留给 PR5）
-- 不把 `testing-rule`、`didea`、`ddoc`、`dprd` 混进 PR2
-- **不改 `.diwu/dtask.json`**
+- 不重写 `.doc/架构规范.md`
+- 不重写根 `README.md`
+- 不做 `skills/README.md` / `commands/README.md`
+- 不做 `architect` / `debugger`
+- 不做 rules 真相源本体
+- 不做 `drun dual-entry`
+- 不改 hooks 链路
+- 不碰说明层结论性文档（留给 PR5）
 
 ## 关键边界
-- `architect` 属于 **`dtask` 定义域**，不是 `drun` 执行域。
-- `debugger` 属于 **`drun` 执行域**，不是 `dcorr` 的替代品。
-- `debugger` 负责诊断，不直接修代码；标准链路应为：`debugger` → `implementer` → `verifier`
-- `architect` 负责实施前技术审稿，不替代 `dprd` 的产品判断，也不替代 `ddoc` 的完整设计文档输出。
+- `didea` 是**入口容器层**，不是产品判断层，也不是执行层。
+- `didea` 可以挂住想法，但不替代 `dpth` / `dref` / `dprd` 的判断与收束。
+- 自然识别只能**建议进入 didea**，不能自动落盘。
+- 任何外部同步（如 GitHub issue）都必须二次确认。
+- `commands/didea.md` 必须保持薄壳；方法论在 `skills/didea/SKILL.md`。
 
 ## 推荐实施顺序
-1. 先补 `agents/architect.md` / `agents/debugger.md`
-2. 再改 `skills/dtask/SKILL.md` 接 architect gate
-3. 再改 `skills/drun/SKILL.md` 接 debugger path
-4. 再最小同步 `agents/README.md` / `rules/judgments.md`
+1. 先定 `.diwu/ideas/` 的最小文件结构和 frontmatter
+2. 再写 `skills/didea/SKILL.md` 的能力边界和动作门控
+3. 再写 `commands/didea.md` 薄壳入口
+4. 再冻结到 `dpth/dref/dprd/dtask` 的下游接口
 5. 最后补测试并跑全量 `pytest tests/ -q`
 
-## 建议修改文件
-- `agents/architect.md`
-- `agents/debugger.md`
-- `agents/README.md`
-- `skills/dtask/SKILL.md`
-- `skills/drun/SKILL.md`
-- `rules/judgments.md`
-- `tests/level1/test_agents_config.py` 或拆成更细的 agent 配置测试
-- `tests/level2/` 下新增 architect/debugger 路由测试
-- `tests/level3/` 下新增 agent 协作一致性测试
+## 最小结构建议
+- 目录：`.diwu/ideas/`
+- 文件命名：`{id}-{user-language-title}.md`
+- frontmatter 最小字段建议：
+  - `id`
+  - `title`
+  - `status`（如 `active|archived`）
+  - `source`（如 `manual|suggested|synced`）
+  - `created_at`
+  - `updated_at`
+- 正文最小区块建议：
+  - `## Idea`
+  - `## Why now`
+  - `## Next candidate action`
+
+## 下游接口先冻结到这个粒度
+- `push -> dpth`：把模糊想法送去产品诊断
+- `push -> dref`：把想法送去收敛成可执行检查清单
+- `push -> dprd`：把想法送去扩成 PRD
+- `push -> dtask`：仅在已经足够具体时进入任务化
 
 ## 落地时优先验证
-- `architect` 是否只在 `dtask` 侧触发，且不会越界到 `drun`
-- `debugger` 是否在“异常排查”场景下直接优先于 `explorer`
-- `debugger` 输出是否为短诊断报告，而不是直接修复代码
-- `implementer` / `verifier` 现有链路是否仍保持稳定
+- 自然识别不会自动写 `.diwu/ideas/`
+- `create/list/show/archive/push/refine` 六类硬入口边界清楚
+- 外部同步必须二次确认
+- `commands/didea.md` 没有承载方法论正文
+- 与 `dpth/dref/dprd/dtask` 的出口动作不会混淆
 
 ## 已确认的判断
-- 旧讨论里提到改 `rules/workflow.md`，现在应降级为**尽量不改**；PR2 真实主战场是 `skills/` + `agents/` + 测试。
-- `testing-rule` 已拆到独立 issue，不要重新并回 PR2。
+- PR4 可以独立于 PR2 开始，但语义上建议参考 PR3 的下游接口。
+- PR4 不要提前写 README / `.doc/` 说明层；那是 PR5 的职责。
+- PR4 不要回头改 `rules/file-layout.md` 的规则正文，除非实现确实暴露出新的容器层真相源缺口。
 
 ## 给下一位 AI 的注意事项
-- 不要回头重写 PR1 已稳定的 rules 边界。
-- 不要擅自补 `.doc/` 或 `README` 说明层内容。
-- 这一轮用户只要 PR2 的接手上下文和 Draft PR 对齐，后续实现交给下一位 AI。
+- 先收口动作模型，再写文件，不要一开始就扩成“大而全想法系统”。
+- 先定义本地容器，再讨论 GitHub issue 同步，不要把外部同步当主路径。
+- 用户这轮要的是一条可持续推进的 PR4 主线，后续实现会继续堆在这个分支和 PR 上。
