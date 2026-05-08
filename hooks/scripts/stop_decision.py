@@ -558,12 +558,16 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
         print(report, file=sys.stderr)
         return False, {}
 
-    # Layer 1: pending_recording 提示注入（dloop 模式不独立 block，只注入提示）
+    # Layer 1: pending_recording 门控（镜像 decide_default_mode 的 pr_level 区分）
     # 必须在 save_runtime_state 之前检查：save 会覆写 dtask-state.json，
     # 若 runtime_state dict 不含 pending_recording 字段则标记会被擦除。
+    # 只拦截 own session 的 block；其他 session 的 pending_rec 降级为 stderr hint，
+    # 避免当前会话被迫处理不属于自己的未记录任务。
     pr_level, pr_hint = _check_pending_recording_gate(cwd, resolved_sid)
-    if pr_hint:
+    if pr_level == "block":
         extra += f"\n\n{pr_hint}"
+    elif pr_level == "warn":
+        print(pr_hint, file=sys.stderr)
 
     # 未命中停止条件 → 迭代计数 + 委托 /drun 执行下一轮
     next_iteration = iteration + 1
