@@ -1,7 +1,7 @@
 """Layer 1: Agents 配置完整性测试 — 防止 regression 导致 agents 不加载
 
 覆盖范围：
-1. 统一 Agent（agents/）：仅保留 3 个核心 Agent（explorer / implementer / verifier）
+1. 统一 Agent（agents/）：5 个 Agent（explorer / implementer / verifier / architect / debugger）
 2. Verifier 专项：frontmatter 完整性（tools/memory/maxTurns）
 3. Model 合理性：每个核心 Agent 的 model 字段是否匹配其职责
 4. Description 触发词：每个 description 是否包含触发词
@@ -14,18 +14,22 @@ from pathlib import Path
 
 
 AGENTS_DIR = "agents"
-ALL_AGENTS = ["explorer", "implementer", "verifier"]
+ALL_AGENTS = ["explorer", "implementer", "verifier", "architect", "debugger"]
 
 CORE_AGENT_MODEL_EXPECTATIONS = {
     "explorer": {"required_model": "haiku", "reason": "只读探索，必须用快速廉价模型"},
     "implementer": {"required_model": "sonnet", "reason": "代码实施，必须用质量保证模型"},
     "verifier": {"allowed_models": [None, "haiku", "sonnet", "inherit"], "reason": "独立验收需推理与验证能力（继承父会话）"},
+    "architect": {"required_model": "sonnet", "reason": "技术审稿需要推理与分析能力"},
+    "debugger": {"required_model": "sonnet", "reason": "异常诊断需要推理与运行诊断命令能力"},
 }
 
 AGENT_REQUIRED_FIELDS = {
     "explorer": ["tools"],
     "implementer": ["tools"],
     "verifier": ["tools"],
+    "architect": ["tools"],
+    "debugger": ["tools"],
 }
 
 VERIFIER_REQUIRED_TOOLS = {"Read", "Grep", "Glob", "Bash"}
@@ -44,7 +48,7 @@ def _load_agent_frontmatter(agent_path: Path) -> dict:
 
 
 class TestAgentsDirExists:
-    """agents 目录必须存在且仅包含全部 3 个核心 agent"""
+    """agents 目录必须存在且包含全部 5 个 agent"""
 
     def test_agents_dir_exists(self, project_root):
         assert (project_root / AGENTS_DIR).is_dir()
@@ -57,7 +61,7 @@ class TestAgentsDirExists:
     def test_agents_dir_contains_only_core_agents(self, project_root):
         actual = sorted(p.stem for p in (project_root / AGENTS_DIR).glob("*.md")
                         if p.stem != "README")
-        assert actual == sorted(ALL_AGENTS), f"agents/ 目录应只包含核心三件套，实际: {actual}"
+        assert actual == sorted(ALL_AGENTS), f"agents/ 目录应只包含 5 个 agent，实际: {actual}"
 
 
 class TestAgentFrontmatterCompleteness:
@@ -190,6 +194,108 @@ class TestVerifierAgentCompleteness:
         assert "permissionMode" not in fm, "verifier 不应包含不支持的 permissionMode 字段"
 
 
+
+
+class TestArchitectAgentCompleteness:
+    """architect agent 的 frontmatter 完整性专项验证"""
+
+    def test_architect_has_required_fields(self, project_root):
+        path = project_root / AGENTS_DIR / "architect.md"
+        fm = _load_agent_frontmatter(path)
+        required = AGENT_REQUIRED_FIELDS.get("architect", [])
+        for field in required:
+            assert field in fm, f"architect.md 缺少必填字段 '{field}'"
+
+    def test_architect_model_suitable(self, project_root):
+        path = project_root / AGENTS_DIR / "architect.md"
+        fm = _load_agent_frontmatter(path)
+        expectation = CORE_AGENT_MODEL_EXPECTATIONS["architect"]
+        actual_model = fm.get("model")
+        if "required_model" in expectation:
+            assert actual_model == expectation["required_model"], (
+                f"architect.md 的 model 必须为 '{expectation['required_model']}'"
+                f"（实际='{actual_model}'）。{expectation['reason']}"
+            )
+
+    def test_architect_tools_are_readonly(self, project_root):
+        """architect 作为技术审稿代理，不应有 Edit/Write/Bash 工具"""
+        path = project_root / AGENTS_DIR / "architect.md"
+        fm = _load_agent_frontmatter(path)
+        tools = fm.get("tools", [])
+        forbidden = {"Edit", "Write", "Bash"}
+        actual_set = set(tools) if tools else set()
+        overlap = actual_set & forbidden
+        assert not overlap, f"architect 不应有写操作/运行命令工具，发现: {overlap}"
+
+    def test_architect_has_memory_and_maxturns(self, project_root):
+        path = project_root / AGENTS_DIR / "architect.md"
+        fm = _load_agent_frontmatter(path)
+        assert "memory" in fm, "architect 应包含 memory 字段"
+        assert isinstance(fm["memory"], bool), f"memory 应为 bool, 实际: {type(fm['memory'])}"
+        assert "maxTurns" in fm, "architect 应包含 maxTurns 字段"
+        assert isinstance(fm["maxTurns"], int) and fm["maxTurns"] > 0
+
+    def test_architect_description_has_trigger(self, project_root):
+        path = project_root / AGENTS_DIR / "architect.md"
+        fm = _load_agent_frontmatter(path)
+        desc = fm.get("description", "")
+        has_trigger = any(p in desc.lower() for p in ["use proactively", "当需要", "触发", "自动触发"])
+        assert has_trigger, (
+            f"agent architect.md 的 description 缺少触发词。\n当前 description: {desc[:120]}..."
+        )
+
+
+class TestDebuggerAgentCompleteness:
+    """debugger agent 的 frontmatter 完整性专项验证"""
+
+    def test_debugger_has_required_fields(self, project_root):
+        path = project_root / AGENTS_DIR / "debugger.md"
+        fm = _load_agent_frontmatter(path)
+        required = AGENT_REQUIRED_FIELDS.get("debugger", [])
+        for field in required:
+            assert field in fm, f"debugger.md 缺少必填字段 '{field}'"
+
+    def test_debugger_model_suitable(self, project_root):
+        path = project_root / AGENTS_DIR / "debugger.md"
+        fm = _load_agent_frontmatter(path)
+        expectation = CORE_AGENT_MODEL_EXPECTATIONS["debugger"]
+        actual_model = fm.get("model")
+        if "required_model" in expectation:
+            assert actual_model == expectation["required_model"], (
+                f"debugger.md 的 model 必须为 '{expectation['required_model']}'"
+                f"（实际='{actual_model}'）。{expectation['reason']}"
+            )
+
+    def test_debugger_has_bash_for_diagnostics(self, project_root):
+        """debugger 作为异常调查代理，需要 Bash 运行诊断命令"""
+        path = project_root / AGENTS_DIR / "debugger.md"
+        fm = _load_agent_frontmatter(path)
+        tools = set(fm.get("tools", []))
+        assert "Bash" in tools, "debugger 必须包含 Bash 工具用于运行诊断命令"
+
+    def test_debugger_no_edit_write_tools(self, project_root):
+        """debugger 不直接修代码，不应有 Edit/Write 工具"""
+        path = project_root / AGENTS_DIR / "debugger.md"
+        fm = _load_agent_frontmatter(path)
+        tools = set(fm.get("tools", []))
+        forbidden = {"Edit", "Write"}
+        found = tools & forbidden
+        assert not found, f"debugger 不应有代码编辑工具，发现: {found}"
+
+    def test_debugger_has_memory_and_maxturns(self, project_root):
+        path = project_root / AGENTS_DIR / "debugger.md"
+        fm = _load_agent_frontmatter(path)
+        assert "memory" in fm, "debugger 应包含 memory 字段"
+        assert isinstance(fm["maxTurns"], int) and fm["maxTurns"] > 0
+
+    def test_debugger_description_has_trigger(self, project_root):
+        path = project_root / AGENTS_DIR / "debugger.md"
+        fm = _load_agent_frontmatter(path)
+        desc = fm.get("description", "")
+        has_trigger = any(p in desc.lower() for p in ["use proactively", "当需要", "触发", "异常"])
+        assert has_trigger, (
+            f"agent debugger.md 的 description 缺少触发词。\n当前 description: {desc[:120]}..."
+        )
 class TestPluginJsonAgentsDeclaration:
     """plugin.json 的 agents 策略：使用默认路径，不声明 agents 字段"""
 

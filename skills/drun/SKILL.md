@@ -16,6 +16,7 @@ keywords:
   - "Preflight"
   - "单任务执行"
   - "执行验证"
+  - "debugger"
 depends:
   - dtask
   - dcorr
@@ -200,6 +201,7 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 | **S2: 探索+实施** | 不确定 B 或 C | `explorer` → `implementer` | 先调研再写代码 |
 | **S3: 实施+验证** | 幅度 C 或 验证 C | `implementer` → `verifier` | 写完独立验收 |
 | **S4: 完整流水线** | 不确定 C + 验证 C 或幅度 C + 不确定 B/C | `explorer` → `implementer` → `verifier` | 三阶段全走 |
+| **S5: 异常诊断修复** | 工具失败/结果不符/运行时报错（异常排查场景） | `debugger` → `implementer` → `verifier` | debugger 优先于 explorer，诊断后回交修复 |
 
 > **默认 S1**：只有命中 B/C 维度时才升级策略。宁可直做不要过度拆分。
 
@@ -263,6 +265,7 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 - explorer 失败 → 主代理自行探索（Read/Grep）→ implementer
 - implementer 失败 → dcorr 纠偏协议 → 重试
 - verifier 失败 → 主代理自审（L3+ 证据）→ 标记 InReview 或请求人工
+- debugger 失败 → 退化回 explorer 重分析或升级人工
 
 ### 并行规则
 
@@ -270,6 +273,30 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 - 文件路径无重叠（files_modified 交集为空）
 - 无数据依赖（步骤 B 不需要步骤 A 的产出作为输入）
 - 每个并行分支独立委托一个 implementer（或完整流水线）
+
+### Debugger 异常路由
+
+> 详见 `agents/debugger.md`。debugger 属于 **drun 执行域**，异常场景时直接优先于 explorer。
+
+**触发条件**（满足任一即走 debugger 路由，跳过 explorer）：
+
+| # | 条件 | 说明 |
+|---|------|------|
+| 1 | 实施结果与 acceptance 预期不符 | 运行时报错/输出格式错误/行为偏差 |
+| 2 | 工具失败达 3-Strike 阈值 | 同一错误模式出现 3 次 |
+| 3 | 明确 bug 排查场景 | 用户报告缺陷/回归问题/偶发复现 |
+| 4 | 环境异常 | 依赖不可用/配置漂移/状态不一致 |
+
+**标准链路**：`debugger` → `implementer` → `verifier`
+
+**与 3-Strike 协议的衔接**：第 3 次工具失败后，drun 不再继续重试，而是派发 debugger 诊断根因。
+
+**回交模型**：debugger 输出 `Debugger Report`（根因假设 + 证据需求 + 修复方向）→ implementer 按 report 修复 → verifier 验收。
+
+**不触发 debugger 的场景**：
+- 首次接触代码库（仍走 explorer）
+- 工具偶发失败 1-2 次（正常重试范围内）
+- 纯探索性任务无异常信号
 
 ---
 
