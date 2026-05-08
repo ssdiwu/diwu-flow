@@ -1,12 +1,8 @@
 {
-  "archived_at": "2026-05-08T04:11:51.997037+00:00",
-  "tasks_archived": 21,
-  "recordings_moved": 4,
+  "archived_at": "2026-05-08T04:49:33.045713+00:00",
+  "tasks_archived": 0,
+  "recordings_moved": 1,
   "files": [
-    ".diwu/.diwu/archive/task_archive_2026-05.json",
-    "/Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/archive/recording/2026-05/session-2026-05-03-162925.md",
-    "/Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/archive/recording/2026-05/session-2026-05-03-170432.md",
-    "/Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/archive/recording/2026-05/session-2026-05-03-173333.md",
-    "/Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/archive/recording/2026-05/session-2026-05-03-172515.md"
+    "/Users/diwu/Documents/codes/Githubs/diwu-flow/.diwu/archive/recording/2026-05/session-2026-05-03-180459.md"
   ]
 }
