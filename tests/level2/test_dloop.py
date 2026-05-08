@@ -131,7 +131,8 @@ def test_stop_decision_default_mode_allows_stop(tmp_path):
         cwd=str(tmp_path),
     )
 
-    assert result.returncode == 1  # stop
+    assert result.returncode == 0
+    assert result.stdout.strip() == ""
 
 
 def test_stop_decision_inprogress_always_blocks(tmp_path):
@@ -175,7 +176,8 @@ def test_stop_decision_session_isolation(tmp_path):
     )
 
     # Falls through to default mode -> allow stop
-    assert result.returncode == 1
+    assert result.returncode == 0
+    assert result.stdout.strip() == ""
 
 
 def test_stop_decision_session_isolation_accepts_sessionId(tmp_path):
@@ -193,7 +195,8 @@ def test_stop_decision_session_isolation_accepts_sessionId(tmp_path):
         cwd=str(tmp_path),
     )
 
-    assert result.returncode == 1
+    assert result.returncode == 0
+    assert result.stdout.strip() == ""
 
 
 def test_stop_decision_max_tasks_stops_with_report(tmp_path):
@@ -217,8 +220,8 @@ def test_stop_decision_max_tasks_stops_with_report(tmp_path):
         cwd=str(tmp_path),
     )
 
-    # Should stop (exit code 1)
-    assert result.returncode == 1
+    # Should stop and emit phase report without blocking the stop hook process
+    assert result.returncode == 0
     runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
     assert runtime_state["dloop"] is None
     # Phase report should be in stderr
@@ -266,7 +269,7 @@ def test_stop_decision_no_tasks_stops_with_report(tmp_path):
         cwd=str(tmp_path),
     )
 
-    assert result.returncode == 1
+    assert result.returncode == 0
     runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
     assert runtime_state["dloop"] is None
     assert "DLOOP 阶段报告" in result.stderr
@@ -293,7 +296,7 @@ def test_stop_decision_loop_mode_only_inreview_stops(tmp_path):
         cwd=str(tmp_path),
     )
 
-    assert result.returncode == 1  # allow stop
+    assert result.returncode == 0
     runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
     assert runtime_state["dloop"] is None
     assert "DLOOP 阶段报告" in result.stderr
@@ -322,7 +325,7 @@ def test_loop_completion_reports_completed_tasks(tmp_path):
         cwd=str(tmp_path),
     )
 
-    assert result.returncode == 1
+    assert result.returncode == 0
     # Report should mention completed tasks by name
     assert "Fix bug A" in result.stderr
     assert "Refactor B" in result.stderr
@@ -352,7 +355,7 @@ def test_stop_decision_pending_review_stops_with_report(tmp_path):
         cwd=str(tmp_path),
     )
 
-    assert result.returncode == 1
+    assert result.returncode == 0
     runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
     assert runtime_state["dloop"] is None
     assert "PENDING REVIEW" in result.stderr
@@ -380,7 +383,8 @@ def test_stop_decision_first_bind_replaces_dummy_id(tmp_path):
 
     # 第三步：不同 SID → 退出 loop mode (allow stop)
     result3 = _run_stop_decision(tmp_path, session_id="other-session", cwd=str(tmp_path))
-    assert result3.returncode == 1  # allow stop
+    assert result3.returncode == 0
+    assert result3.stdout.strip() == ""
 
 
 def test_stop_decision_missing_session_id_exits_loop_mode(tmp_path):
@@ -391,9 +395,10 @@ def test_stop_decision_missing_session_id_exits_loop_mode(tmp_path):
 
     # 不传 session_id
     result = _run_stop_decision(tmp_path, cwd=str(tmp_path))  # 无 session_id 字段
-    assert result.returncode == 1  # 必须退出 loop mode
+    assert result.returncode == 1
     # stderr 应含 STOP_HINT 提示（不再输出非法 decision JSON 到 stdout）
     assert "STOP_HINT" in result.stderr
+    assert result.stdout.strip() == ""
 
 
 def test_stop_decision_missing_session_with_inprogress_allows_stop(tmp_path):
@@ -411,6 +416,7 @@ def test_stop_decision_missing_session_with_inprogress_allows_stop(tmp_path):
     # 必须 allow stop（不能落入 default mode 的 resolve_session_inprogress_task）
     assert result.returncode == 1
     assert "STOP_HINT" in result.stderr
+    assert result.stdout.strip() == ""
 
 
 def test_stop_decision_missing_event_session_uses_env_for_dloop(tmp_path):
