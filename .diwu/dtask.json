@@ -117,7 +117,7 @@
       "blocked_by": [
         106
       ],
-      "status": "InProgress"
+      "status": "Done"
     },
     {
       "id": 110,
@@ -143,7 +143,7 @@
         108,
         109
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 111,

@@ -233,3 +233,5 @@
 - [其他] claim 用 --task-id（单数），mark-inspec 用 --task-ids（复数），release 用 --task-id + --to；三个子命令参数命名不统一需注意; context 截断后 session ID 变化导致 owner 不匹配；需先 adopt 再 release （来源: session-2026-05-04-012526.md）
 ## Source: archive-aggregate-2026-05-08
 - [数据缺口] dtask.json 中 Task#72-74 在上一 session 已标记 Done 但状态仍为 InDraft → release 脚本只更新 pending_recording 标记未同步 dtask.json.status → 误判为已正确更新 → 应在 release 后立即校验 dtask.json.status 与目标一致 （来源: session-2026-05-04-020408.md）
+## Source: archive-aggregate-2026-05-08
+- [读层现象] Read 工具和 Bash cat 输出在读取 session 记录文件时被异常截断（仅显示 ## Session 标题行）→ 根因不明（疑似工具输出过滤器误匹配）→ 改用 Python 脚本提取关键字段成功绕过 → 大量文本文件读取异常时应切换工具而非反复重试同一方式 （来源: session-2026-05-04-021105.md）

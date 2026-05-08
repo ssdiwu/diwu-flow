@@ -12,6 +12,7 @@
     "./skills/dtask",
     "./skills/dcorr",
     "./skills/dprd",
+    "./skills/dpth",
     "./skills/drec",
     "./skills/ddoc",
     "./skills/dstat",

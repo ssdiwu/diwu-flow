@@ -26,7 +26,7 @@
 | 名称 | 类型 | 触发场景 |
 |------|------|---------|
 | `dtask` `drun` `dcorr` `drec` | rule | 任务/执行/纠偏/记录 |
-| `dprd` `ddoc` `dref` `dstat` | product/tool | PRD/文档/细化/状态 |
+| `dprd` `dpth` `ddoc` `dref` `dstat` | product/tool | 产品论证/产品思维/文档/需求细化/状态 |
 | `dloop` `dstop` | command | 连续循环/停止循环 |
 | `rules/*` | 参考 | exceptions/templates/file-layout/constraints |
 
