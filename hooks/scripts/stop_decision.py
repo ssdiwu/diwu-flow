@@ -658,8 +658,16 @@ if __name__ == "__main__":
             loop_state["session_id"] = session_id
             save_runtime_state(cwd, runtime_state, remove_legacy=True)
 
-        # 分支3: 已绑定但不匹配 → 退出 loop mode
+        # 分支3: 已绑定但不匹配 → 清理 dloop 状态，避免孤儿锁
         elif loop_sid != session_id:
+            print(
+                f"[STOP_HINT] dloop session 不匹配 "
+                f"(owner={loop_sid[:8]}..., current={session_id[:8]}...)，"
+                f"清理 dloop 运行态",
+                file=sys.stderr,
+            )
+            clear_loop_state(runtime_state)
+            save_runtime_state(cwd, runtime_state, remove_legacy=True)
             loop_state = None
         # else: 匹配 → 进入 loop mode（原有正常路径）
 
