@@ -231,3 +231,5 @@
 - [其他] dtask.json 在上次 context 截断后损坏（Task#71 后出现重复数据）→ 用 head -512 截断修复 → JSON 验证 17 tasks (#58-#74) 完整; 清理 TaskList 时误删了 dtask.json 中 Task#72-#74 → 用户明确指出「只是多了 tasklist」→ 应只清理内置 TaskCreate 追踪器，不动 dtask.json; Edit 工具对重命名后的新路径文件需要重新 Read 才能 Edit（mv 后旧 path 缓存失效） （来源: session-2026-05-04-012047.md）
 ## Source: archive-aggregate-2026-05-08
 - [其他] claim 用 --task-id（单数），mark-inspec 用 --task-ids（复数），release 用 --task-id + --to；三个子命令参数命名不统一需注意; context 截断后 session ID 变化导致 owner 不匹配；需先 adopt 再 release （来源: session-2026-05-04-012526.md）
+## Source: archive-aggregate-2026-05-08
+- [数据缺口] dtask.json 中 Task#72-74 在上一 session 已标记 Done 但状态仍为 InDraft → release 脚本只更新 pending_recording 标记未同步 dtask.json.status → 误判为已正确更新 → 应在 release 后立即校验 dtask.json.status 与目标一致 （来源: session-2026-05-04-020408.md）

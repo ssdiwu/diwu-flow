@@ -152,6 +152,54 @@ def test_claim_rejects_second_inprogress_for_same_session(tmp_project_dir):
     assert _read_dtask(tmp_project_dir)["tasks"][1]["status"] == "InSpec"
 
 
+def test_claim_rejects_stale_owner_from_other_session(tmp_project_dir):
+    """claim 应拒绝 task_sessions 中属于其他 session 的任务（即使 status=InSpec）。
+
+    防止跨会话抢任务：前序 dloop 会话遗留的 task_sessions owner
+    不应被当前会话的 claim 静默覆盖。
+    """
+    _write_dtask(tmp_project_dir, [
+        {"id": 7, "title": "stale-owned", "status": "InSpec"},
+        {"id": 8, "title": "clean", "status": "InSpec"},
+    ])
+    runtime = {
+        "version": 1,
+        "task_sessions": {
+            "7": {"session_id": "other-session-abc", "started_at": "2026-05-08T04:00:00Z"}
+        },
+        "dloop": None,
+    }
+    (tmp_project_dir / ".diwu" / "dtask-state.json").write_text(json.dumps(runtime, ensure_ascii=False, indent=2))
+
+    # Task#7 有其他 session 的 stale owner → claim 应拒绝
+    rc, out, _ = run_script(
+        "dtask_transition.py",
+        "claim",
+        "--task-id", "7",
+        "--session-id", "current-session",
+        "--cwd", str(tmp_project_dir),
+    )
+    assert rc == 1
+    payload = json.loads(out)
+    assert payload["status"] == "owner_mismatch"
+    assert "other-session" in payload.get("message", "") or "持有" in payload.get("message", "")
+    # Task 状态不变
+    assert _read_dtask(tmp_project_dir)["tasks"][0]["status"] == "InSpec"
+
+    # Task#8 无 owner → claim 应正常通过
+    rc2, out2, _ = run_script(
+        "dtask_transition.py",
+        "claim",
+        "--task-id", "8",
+        "--session-id", "current-session",
+        "--cwd", str(tmp_project_dir),
+    )
+    assert rc2 == 0
+    payload2 = json.loads(out2)
+    assert payload2["status"] == "claimed"
+    assert _read_dtask(tmp_project_dir)["tasks"][1]["status"] == "InProgress"
+
+
 def test_release_rejects_direct_inspec_to_done(tmp_project_dir):
     _write_dtask(tmp_project_dir, [
         {"id": 1, "title": "a", "status": "InSpec"},
