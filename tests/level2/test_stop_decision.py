@@ -523,6 +523,67 @@ class TestPendingRecordingIntegration(_PendingRecordingTestBase):
         reason = output.get("reason", "")
         self.assertIn("PENDING_REC", reason)
 
+    def test_dloop_mode_other_session_pending_rec_not_in_block_reason(self):
+        """dloop 模式：其他 session 的 PENDING_REC 不注入 block reason，只打 stderr hint。
+
+        验证修复：decide_loop_mode 镜像 decide_default_mode 的 pr_level 区分，
+        非 own session 的 pending_recording 降级为 warn（stderr），不升级为 block。
+        """
+        from datetime import datetime, timezone as _tz
+        now_iso = datetime.now(_tz.utc).isoformat()
+        # 标记属于另一个 session
+        self._write_state(
+            version=1,
+            task_sessions={},
+            dloop=None,
+            pending_recording={
+                "task_id": 99,
+                "target_status": "Done",
+                "session_id": "other-session-id",
+                "released_at": now_iso,
+            },
+        )
+        self._touch_file(".diwu/dtask.json")
+
+        loop_state = {
+            "active": True,
+            "session_id": "current-dloop-sess",
+            "started_at": "2026-05-01T00:00:00Z",
+            "completed_task_ids": [],
+            "current_iteration": 0,
+            "max_tasks": 0,
+        }
+        # 用 io.StringIO 捕获 stderr
+        import io
+        old_stderr = sys.stderr
+        try:
+            stderr_capture = io.StringIO()
+            sys.stderr = stderr_capture
+            should_continue, output = decide_loop_mode(
+                tasks=[{"id": 1, "status": "InSpec", "title": "Next", "description": "",
+                      "acceptance": [], "steps": [], "blocked_by": []}],
+                settings={"continuous_mode": True, "review_limit": 5},
+                data={},
+                task_json_path=os.path.join(self.cwd, ".diwu", "dtask.json"),
+                loop_state=loop_state,
+                cwd=self.cwd,
+                additional_prompts=[],
+                runtime_state={"version": 1, "task_sessions": {}, "dloop": loop_state},
+                session_id="current-dloop-sess",
+            )
+        finally:
+            sys.stderr = old_stderr
+
+        # dloop 应继续驱动循环
+        self.assertTrue(should_continue)
+        self.assertEqual(output.get("decision"), "block")
+        # 关键：block reason 中不应包含 PENDING_REC（那是别人的任务）
+        reason = output.get("reason", "")
+        self.assertNotIn("PENDING_REC", reason)
+        # 但 stderr 应包含 warn 提示
+        stderr_output = stderr_capture.getvalue()
+        self.assertIn("其他 session", stderr_output)
+
 
 if __name__ == '__main__':
     unittest.main()

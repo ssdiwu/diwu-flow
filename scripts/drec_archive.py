@@ -117,7 +117,14 @@ def archive_tasks(cwd: Path, tasks: list, settings: dict) -> int:
         return 0
 
     merged = existing + new_tasks
-    save_json(merged, archive_file)
+    # 始终写标准 dict 格式，保持与四月归档一致
+    archive_payload = {
+        "archived_at": _now_iso(),
+        "source": str(DTASK_JSON),
+        "tasks": merged,
+        "count": len(merged),
+    }
+    save_json(archive_payload, archive_file)
 
     # 从 dtask.json 移除已归档任务
     task_path = _p(cwd, DTASK_JSON)

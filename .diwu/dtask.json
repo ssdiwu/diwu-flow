@@ -1,3 +1,197 @@
 {
-  "tasks": []
+  "tasks": [
+    {
+      "id": 106,
+      "title": "创建 dpth skill 主文件 SKILL.md",
+      "description": "将 product-thinking 核心方法论内聚为 diwu-flow 的 dpth skill。SKILL.md 是技能的唯一入口，需适配 diwu-flow frontmatter 规范、融入 P-J-A 骨架、保留三种思考模式（诊断/创始人/构建器）、引用 references/ 下的框架文件。这不是简单复制粘贴，而是将产品思维方法论翻译为 diwu-flow 插件的原生 Skill 格式。",
+      "acceptance": [
+        "Given skills/dpth/SKILL.md 存在 When 解析 YAML frontmatter Then name=dpth, type=product, 包含 triggers/keywords/effort/argument-hint 字段且格式合法",
+        "Given SKILL.md 正文 When 读取内容 Then 包含完整的「先选模式→不确定性门控→模式内提问→有立场判断→行动作业与验证」五步工作顺序",
+        "Given SKILL.md 正文 When 检查模式定义 Then 三种模式（诊断/创始人/构建器）均有明确的适用场景、优先问题清单（各≥4个）、红旗信号（各≥3个）、适合调用的框架映射表",
+        "Given SKILL.md 中框架引用 When 检查路径 Then 所有 references 路径指向 skills/dpth/references/framework/ 下的对应文件（jtbd/soul-questions/mvp/story-thinking/reverse-thinking/problem-discovery/scenarios）",
+        "Given SKILL.md When 检查反谄媚规则 Then 包含明确的「不做」列表（≥5条）和默认要求（≥3条），与原 product-thinking 反谄媚规则语义一致"
+      ],
+      "steps": [
+        "1. [锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/ 目录创建 SKILL.md，frontmatter 遵循 diwu-flow 规范：name=dpth, version=\"1.0\", type=product, description 覆盖产品思维协作核心能力",
+        "2. [锁定] 正文核心结构：先选模式（三模式路由）→ 不确定性门控 → 模式内提问规则（诊断/创始人/构建器各独立章节）→ 反谄媚规则 → 默认输出格式（现象/判断/红旗/动作/行动作业与验证）→ 框架调用规则表 → 高频请求示例（≥3个）→ 长任务与文档化指引",
+        "3. [建议] 将原 product-thinking/SKILL.md 的 Mermaid 流程图保留在合适位置（模式路由图 + 默认输出格式图），但标注为按需生成非必选",
+        "4. [建议] triggers 设计：覆盖「产品方向判断/需求真假/MVP收敛/已有产品诊断/方案评审/用户理解」六类场景关键词，keywords 包含 dpth/产品思维/灵魂三问/JTBD/MVP/逆向思维/诊断模式/创始人模式",
+        "5. [建议] 融入 P-J-A 骨架暗示：在不确定性门控和输出格式中体现 现象→判断→动作 链式思维"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/SKILL.md"
+      ],
+      "category": "functional",
+      "status": "Done"
+    },
+    {
+      "id": 107,
+      "title": "创建 dpth references 框架文件体系",
+      "description": "将 product-thinking 的 7 个框架文件 + 辅助 references 文件适配到 skills/dpth/references/ 目录。框架文件是 dpth 的思考镜头库，每个框架独立完整（何时用/何时别用/高判别问题/常见红旗/什么时候该停/最小验证动作/输出模板/短例子）。辅助文件（examples/faq/long-task）提供使用指南。",
+      "acceptance": [
+        "Given skills/dpth/references/framework/ 目录 When 列出文件 Then 包含 7 个框架文件：jtbd.md, soul-questions.md, mvp.md, story-thinking.md, reverse-thinking.md, problem-discovery.md, scenarios.md",
+        "Given 每个 framework/*.md 文件 When 检查内容 Then 均包含完整结构：何时用/何时别用/高判别问题(≥4个)/常见红旗(≥3个)/什么时候该停/最小验证动作/输出时怎么写(含模板)/一个短例子",
+        "Given skills/dpth/references/ 目录 When 列出文件 Then 包含 examples.md（短例子，覆盖三种模式）、faq.md（≥8 个 Q&A）、long-task.md（轻状态层规范）",
+        "Given 所有 references 文件 When 检查内部引用 Then 无外部绝对路径，框架间交叉引用使用相对路径 references/framework/{name}.md",
+        "Given 框架文件内容 When 与原 product-thinking 对比 Then 语义完整保留，仅做格式适配（去除安装说明等插件无关内容），不丢失任何判断锚点或红旗信号"
+      ],
+      "steps": [
+        "1. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/framework/ 目录，写入 7 个框架文件（jtbd/soul-questions/mvp/story-thinking/reverse-thinking/problem-discovery/scenarios），每个文件从原 product-thinking/references/framework/ 对应文件适配而来",
+        "2. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/examples.md，包含三种模式的好输入/收束/短输出示例（从原 examples.md 适配）",
+        "3. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/faq.md，包含 ≥8 个 Q&A（从原 faq.md 适配，去除安装相关内容）",
+        "4. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/long-task.md，包含轻状态层 5 字段规范和使用示例（从原 long-task.md 适配）",
+        "[建议] 如原 mermaid-best-practices.md 对 diwu-flow 有价值则一并适配引入，否则不在本次范围"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/framework/jtbd.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/framework/soul-questions.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/framework/mvp.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/framework/story-thinking.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/framework/reverse-thinking.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/framework/problem-discovery.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/framework/scenarios.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/examples.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/faq.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/references/long-task.md"
+      ],
+      "category": "functional",
+      "blocked_by": [],
+      "status": "Done",
+      "_note": "软依赖 #106：#106 SKILL.md 已勾画 references 框架设计后，#107 可并行启动"
+    },
+    {
+      "id": 108,
+      "title": "重写 dref SKILL.md（SOP→增强式产品思维）",
+      "description": "将 dref 从 SOP 式需求细化清单工具升级为增强式产品思维技能。核心变化：(1) triggers 改造——从被动细化变为主动问题发现+场景收敛；(2) 内化问题发现框架——将 problem-discovery 的真伪需求判断能力嵌入工作流；(3) 内化场景收敛——将 scenarios 的场景应用能力嵌入收尾阶段；(4) 模板剥离——去掉重型 checklist 模板，改为轻量可执行条目；(5) 与 dpth 形成配合关系——dref 聚焦「模糊想法→可执行检查清单」，dpth 聚焦「产品判断→有立场结论」。",
+      "acceptance": [
+        "Given 重写后的 skills/dref/SKILL.md When 解析 frontmatter Then type=tool, description 体现增强式定位（问题发现+场景收敛+可执行清单），triggers 覆盖细化/梳理/拆解/需求不清晰/问题真假/场景收敛",
+        "Given SKILL.md 正文 When 检查工作流 Then 包含四个阶段：吸收与分析（领域感知+隐含假设识别）→ 问题发现内化（真伪需求判断锚点，来自 problem-discovery 核心能力）→ 洞察性提问（高判别问题规则，≤3个/轮）→ 场景收敛与输出（场景应用内化+轻量清单模板）",
+        "Given 问题发现内化部分 When 检查内容 Then 包含：问题真实性判断维度（谁/多痛/频率/切换意愿）、红旗信号（≥4个）、证据来源权重分级（高/中/低价值来源）、停步条件（≥3个）",
+        "Given 场景收敛部分 When 检查内容 Then 包含：场景具体度判断、触发清晰度检查、验证容易度排序、收窄到 1-2 个优先场景的规则",
+        "Given 输出清单部分 When 检查模板 Then 单条需求模板保留但简化（标题/优先级/背景/具体内容-做什么为什么怎么做验收/备注），去掉旧版过度结构化的字段",
+        "Given 反模式部分 When 检查内容 Then 保留原有反模式（≥6条）并新增产品思维反模式（如「把泛泛建议当执行方案」「缺少真伪需求判断直接细化」）"
+      ],
+      "steps": [
+        "1. [锁定] 重写 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dref/SKILL.md，frontmatter 更新 description 和 triggers 以反映增强式定位",
+        "2. [锁定] 核心理念段落重写：强调「先判断问题真假，再细化执行项」，而非原版的纯细化导向",
+        "3. [锁定] 工作流第二阶段注入问题发现内化模块：真伪需求四维判断（谁/多痛/频率/切换意愿）+ 证据权重分级 + 红旗信号 + 停步条件",
+        "4. [锁定] 工作流第四阶段（收尾/输出）注入场景收敛模块：从 problem-discovery 的停步动作和 scenarios 的场景选择逻辑中提取适用 dref 场景的收敛规则",
+        "5. [建议] 清单模板简化：保留可执行性核心字段，去掉冗余元数据字段；自适应行为规则保留并增强（增加产品思维风格适配）",
+        "6. [建议] depends 字段考虑是否需要更新为 dpth（如果 dref 应在 dpth 之后使用或与之配合）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dref/SKILL.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        106
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 109,
+      "title": "重写 dprd SKILL.md（SOP→增强式产品思维）",
+      "description": "将 dprd 从 SOP 式 PRD 写作知识库升级为增强式产品思维技能。核心变化：(1) triggers 改造——从被动 PRD 写作变为主动产品论证+方向判断；(2) 内化灵魂三问——将 soul-questions 的用户/痛点/优势三问作为入口门控；(3) 内化 JTBD+故事思维——用户任务理解和故事化表达能力；(4) 内化 MVP/逆向思维——收敛能力和风险识别能力；(5) 模板剥离——PRD 写作原则保留但降级为参考，不再作为主流程；(6) 与 dpth 形成配合——dprd 聚焦「产品论证→PRD 产出」，dpth 聚焦「产品判断→有立场结论」。",
+      "acceptance": [
+        "Given 重写后的 skills/dprd/SKILL.md When 解析 frontmatter Then type=product, description 体现增强式定位（产品论证+方向判断+PRD 产出），triggers 覆盖产品规划/需求分析/竞品调研/方向判断/MVP收敛/方案评审",
+        "Given SKILL.md 正文 When 检查入口 Then 以灵魂三问（谁是用户/痛点是什么/为什么由你来做）作为产品论证的门控，在进入竞品分析/迭代层次之前先过三问",
+        "Given 灵魂三问内化部分 When 检查内容 Then 包含：三问各自的高判别问题（各≥3个）、用户侧/痛点侧/优势侧红旗信号（各≥3个）、停步条件（≥3个）、最小验证动作",
+        "Given JTBD 内化部分 When 检查内容 Then 包含：功能层/情感层/社会层三层任务拆解、当前替代方案追问、任务强度判断",
+        "Given MVP 内化部分 When 检查内容 Then 包含：核心假设验证优先级、功能砍杀规则（直接对应假设者留否则砍）、成功/失败信号定义要求",
+        "Given 逆向思维内化部分 When 检查内容 Then 包含：失败路径预演（6个月后最可能死在哪）、前提致命性排序、早期失败信号监控",
+        "Given PRD 写作原则部分 When 检查位置和比重 Then 保留为参考章节（非主流程），原有反模式速查表（≥12条）保留完整",
+        "Given 竞品分析+迭代层次部分 When 检查内容 Then 保留核心方法论（对比表规范/层次定义/不确定性评估/Demo 命名）但调整其在文档中的顺序——放在灵魂三问门控之后"
+      ],
+      "steps": [
+        "1. [锁定] 重写 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dprd/SKILL.md，frontmatter 更新 description 和 triggers 以反映增强式定位",
+        "2. [锁定] 新增入口门控章节：灵魂三问（user/pain-point/advantage），含高判别问题、红旗信号、停步条件和最小验证——在进入任何分析方法之前先过此门控",
+        "3. [锁定] 新增/强化框架内化章节：JTBD（三层任务拆解）、MVP（减法思维+假设验证）、逆向思维（失败预演+前提排序）、故事思维（用户旅程+关键卡点）——每个框架以「何时用/核心问题/红旗/停步/验证」紧凑呈现",
+        "4. [锁定] 调整章节顺序：灵魂三问门控 → 竞品分析 → 用户画像与场景（融合 JTBD+故事思维）→ 迭代层次（融合 MVP 收敛）→ 业务指标 → 技术方案深度设计（指向 ddoc）→ PRD 写作原则（降级为参考）→ 反模式速查",
+        "5. [建议] 保留原有竞品分析对比表写作规范、Demo 命名规范、业务指标口径定义等已验证的方法论细节不变",
+        "6. [建议] depends 字段考虑是否需要更新为 dpth（如果 dprd 应在 dpth 方向判断之后进入产品论证）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dprd/SKILL.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        106
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 110,
+      "title": "注册 dpth 到 plugin.json 并更新 CLAUDE.md 索引",
+      "description": "将新创建的 dpth skill 注册到 plugin.json 的 skills 数组，同时更新 .claude/CLAUDE.md 中的 Skill 索引表。确保插件系统能发现和加载 dpth，且文档索引与实际能力一致。",
+      "acceptance": [
+        "Given .claude-plugin/plugin.json When 解析 JSON Then skills 数组包含 \"./skills/dpth\" 条目，且总 skills 数量为 10（原 9 + dpth）",
+        "Given .claude/CLAUDE.md When 搜索 Skill 索引表 Then 表格中存在 dpth 行，type 为 product，触发场景描述准确（产品思维协作/方向判断/需求诊断/MVP收敛）",
+        "Given plugin.json When 校验 JSON 合法性 Then indent=2 格式正确，无语法错误，version 字段仍为 0.0.12（本次不改版本号）",
+        "Given CLAUDE.md Skill 索引表 When 检查 dref 和 dprd 行 Then description 已更新反映增强式定位（与 Task#35/36 的改动一致）"
+      ],
+      "steps": [
+        "1. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json，在 skills 数组中添加 \"./skills/dpth\" 条目（放在 dprd 之后）",
+        "2. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md，更新 Skill 索引表：添加 dpth 行（type: product, 触发场景: 产品思维协作/方向判断/需求诊断/MVP收敛/方案评审），更新 dref 行描述为增强式需求细化（问题发现+场景收敛），更新 dprd 行描述为增强式产品论证（灵魂三问门控+框架内化）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        106,
+        108,
+        109
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 111,
+      "title": "测试补齐与全量回归",
+      "description": "为 PR3 产品思维层的所有变更编写测试并确保全量回归通过。包括：frontmatter YAML 合法性验证、trigger 词覆盖验证、dpth/dref/dprd 三 skill 内容完整性验证、references 框架文件存在性与交叉引用验证、plugin.json 注册验证、现有测试不受破坏的全量回归。",
+      "acceptance": [
+        "Given pytest tests/ 全量运行 When 执行 Then 所有用例 PASS，无新增 FAILURE",
+        "Given skills/dpth/SKILL.md When 用 yaml.safe_load 解析 frontmatter Then 不抛异常，且 name/type/description/triggers/keywords/effort/argument-hint 字段齐全",
+        "Given skills/dref/SKILL.md 和 skills/dprd/SKILL.md When 用 yaml.safe_load 解析 frontmatter Then 不抛异常，且 triggers 数组非空（≥4 个触发词）",
+        "Given skills/dpth/references/framework/ 目录 When 检查 Then 7 个框架文件均存在且非空（>50 行 each）",
+        "Given skills/dpth/references/ 下 When 检查 examples.md/faq.md/long-task.md Then 均存在且非空",
+        "Given plugin.json When 解析 skills 数组 Then 包含 ./skills/dpth 且无重复条目"
+      ],
+      "steps": [
+        "1. [锁定] 运行 python3 -m pytest tests/ -q 确认基线通过（PR3 变更前的现有测试应全部 PASS）",
+        "2. [建议] 如需新增 PR3 专项测试（dpth frontmatter 验证/references 完整性/plugin.json 注册验证），在 tests/level1/ 或 tests/level3/ 下添加",
+        "3. [建议] 全量回归确认：python3 -m pytest tests/ -q 最终全部 PASS 后方可标记 Done"
+      ],
+      "files_modified": [],
+      "category": "infra",
+      "blocked_by": [
+        110
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 112,
+      "title": "全局审视其他 skills 范式一致性（可选）",
+      "description": "对照 dprd/dref 已完成的 SOP→增强式重写经验，以四个明确维度审视 dpth 与兄弟 skills 的一致性。本任务是审视性质，可能产出「无需变更」的结论。",
+      "acceptance": [
+        "Given trigger 密度维度 When 对比 dpth triggers(≥6条)与各 skill triggers Then 每个 skill 的触发词覆盖面不低于其核心场景集合，无遗漏主要使用入口",
+        "Given 渐进式收束维度 When 对比 dpth 的不确定性门控+模式路由 Then 各 skill 在用户输入模糊时均有收束路径（非直接跳到输出），且收束轮次有上限（≤3轮）",
+        "Given 模板剥离维度 When 对比 dref/dprd 的模板降级经验 Then 各 skill 无重型输出模板作为主流程必经步骤，模板仅作参考按需读取",
+        "Given 正文无硬编码维度 When 检查各 SKILL.md 正文 Then 无外部绝对路径硬编码（除 steps 中必要的 [锁定] 路径），框架间引用用相对路径，无插件无关内容残留",
+        "Given 审查报告 When 完成 Then 四个维度逐项给出 PASS/FAIL/GAP 结论，FAIL 和 GAP 附具体文件位置和修改建议",
+        "This task may conclude with 'no changes needed' as a valid outcome — the review itself is the deliverable"
+      ],
+      "steps": [
+        "[建议] 以四个维度逐一审查：trigger 密度 / 渐进式收束 / 模板剥离 / 正文无硬编码，每个维度对照 dpth+dpr+dref 重写后的标准",
+        "[建议] 审查范围：skills/dtask, skills/drun, skills/dcorr, skills/drec, skills/ddoc, skills/dstat, skills/dloop 共 7 个兄弟 skill",
+        "[建议] 输出四维审查矩阵表（skill × 维度 = PASS/FAIL/GAP + 证据位置），附 depends 字段调整建议"
+      ],
+      "files_modified": [],
+      "category": "refactor",
+      "blocked_by": [
+        111
+      ],
+      "status": "Done"
+    }
+  ]
 }

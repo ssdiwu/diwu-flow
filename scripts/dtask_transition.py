@@ -172,6 +172,22 @@ def cmd_claim(cwd: Path, task_id: int, session_id: str) -> dict:
     if task.get("status") != "InSpec":
         return _result(False, "invalid_transition", message=f"Task#{task_id} 当前为 {task.get('status')}，不能 claim")
 
+    # 检查 task_sessions 是否已有其他 owner（防止跨会话抢任务）
+    state_path = cwd / ".diwu" / "dtask-state.json"
+    _existing_state = json.loads(state_path.read_text()) if state_path.exists() else {}
+    existing_owner = get_task_owner(_existing_state, task_id)
+    if existing_owner is not None:
+        existing_sid = existing_owner.get("session_id", "")
+        if existing_sid and existing_sid != session_id:
+            return _result(
+                False,
+                "owner_mismatch",
+                message=(
+                    f"Task#{task_id} 已被 session {existing_sid[:8]}... 持有。"
+                    f"如需接手请用: dtask_transition.py adopt --task-id {task_id} --session-id {session_id}"
+                ),
+            )
+
     sync_result = sync_runtime_state(cwd, task_payload, persist=True, ensure_exists=True)
     if sync_result.is_invalid:
         return _result(False, "invalid_runtime_state", message=sync_result.reason)
