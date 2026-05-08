@@ -1,6 +1,11 @@
 {
   "version": 1,
-  "task_sessions": {},
+  "task_sessions": {
+    "109": {
+      "session_id": "39b094bb-c9d6-40b3-be37-8da9ccaab9a2",
+      "started_at": "2026-05-08T04:56:47.112602+00:00"
+    }
+  },
   "dloop": {
     "active": true,
     "session_id": "a9ad5477-d3df-4cc5-aa6f-9acc47b19476",
@@ -12,10 +17,5 @@
     "stopped_at": null,
     "stop_reason": null
   },
-  "pending_recording": {
-    "task_id": 108,
-    "target_status": "Done",
-    "released_at": "2026-05-08T04:56:17.851252+00:00",
-    "session_id": "39b094bb-c9d6-40b3-be37-8da9ccaab9a2"
-  }
+  "pending_recording": null
 }
