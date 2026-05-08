@@ -14,7 +14,7 @@
 ├── recording/                     # Session 进度记录目录
 │   └── session-YYYY-MM-DD-HHMMSS.md
 ├── decisions.md                   # 设计决策记录（可选）
-├── ideas/                        # 灵感/待整理想法（可选）
+├── ideas/                        # 想法容器（每个 idea 一个 .md 文件，YAML frontmatter + markdown 正文）
 ├── archive/                       # 归档目录
 │   ├── task_archive_YYYY-MM.json
 │   ├── recording_YYYY-MM-DD.md

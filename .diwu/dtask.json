@@ -192,6 +192,148 @@
         111
       ],
       "status": "Done"
+    },
+    {
+      "id": 113,
+      "title": "didea SKILL.md 本体 + ideas/ 容器结构定义",
+      "description": "落地 didea 的方法论本体与存储容器定义。新建 skills/didea/SKILL.md 定义完整的能力边界、双入口模型（软入口自然识别+硬入口显式操作）、动作门控（本地确认+外部二次确认）、下游接口契约（push→dpth/dref/dprd/dtask 链式或回交）。同时定义 .diwu/ideas/ 的目录结构、frontmatter 最小字段集、文件命名策略（用户语言标题作文件名，自增 ID 在 frontmatter 中）。本任务只产出定义层文件（SKILL.md），不含脚本实现。",
+      "acceptance": [
+        "Given skills/didea/SKILL.md 存在 When 解析 YAML frontmatter Then name=didea, type=tool, 包含 triggers/keywords/effort/argument-hint 字段且格式合法",
+        "Given SKILL.md 正文 When 检查核心结构 Then 包含：定位声明（入口容器层非判断层非执行层）→ 双入口模型（软入口+硬入口）→ 动作门控三条硬规则 → 六个硬入口动作定义（create/list/show/archive/push/refine）→ 下游接口契约表 → 反模式清单（≥5条）",
+        "Given 软入口章节 When 检查内容 Then 明确写明「自然识别只能建议进入 didea，不能自动落盘」，且包含识别信号列表（≥4种对话模式）和提议话术模板",
+        "Given 硬入口章节 When 检查六个动作 Then 每个动作有明确的输入参数、执行行为、输出格式、前置条件描述；create 动作明确 frontmatter 必填字段（id/status/created_at/updated_at/source_session/tags）",
+        "Given 动作门控章节 When 检查三条硬规则 Then 规则1「识别可自然发生」、规则2「本地写入必须用户确认」、规则3「外部同步必须二次确认」均以判定锚点表格呈现（正例/反例/边界例）",
+        "Given 下游接口契约表 When 检查 push 动作 Then 对 dpth/dref/dprd/dtask 四个下游分别定义：触发条件、传递数据（idea #N + 正文）、调用方式（链式 --to 或回交建议）、预期产物",
+        "Given .diwu/ideas/ 目录结构定义 When 检查 SKILL.md 或独立段落 Then 明确：目录位置、文件命名规则（{title}.md 无前缀）、frontmatter 完整字段表含类型说明、正文最小区块模板（## 描述 / ## Why now / ## Next candidate action）",
+        "Given SKILL.md When 检查反模式 Then 包含≥5条（如「替代 dpth 做产品判断」「自动落盘不确认」「把外部同步当主路径」「承载 drun 执行逻辑」「改 rules 真相源」）"
+      ],
+      "steps": [
+        "1. [锁定] 在 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/didea/ 目录创建 SKILL.md，frontmatter：name=didea, version=\"1.0\", type=tool, description 覆盖「想法捕获容器——挂住想法并连接下游判断/收束/执行链」",
+        "2. [锁定] 正文 §定位声明：明确 didea 是第 0 层入口容器层，不是诊断器(dpth)、不是清单生成器(dref)、不是 PRD 生成器(dprd)、不走 drun 执行链；用对比表格呈现 didea vs dref vs dtask vs dprd 的交互/产出/门槛差异",
+        "3. [锁定] 正文 §双入口模型：软入口（SKILL.md 自然识别+主动提议，不自动落盘）+ 硬入口（commands/didea.md 显式操作）；软入口识别信号≥4种（如「突然冒出新方向」「这个先记下来」「以后可能要做」等对话模式）",
+        "4. [锁定] 正文 §动作门控三条硬规则：每条规则用 P-J-A 判定锚点表格展开（正例/反例/边界例），覆盖 Issue#3 D3 决策的完整门控链路",
+        "5. [锁定] 正文 §六个硬入口动作：create/list/show/archive/push/refine 每个动作定义输入/行为/输出/前置条件；create 明确 frontmatter 完整字段表（id自增/status:idea|refined|archived/created_at/updated_at/source_session/github_issue_url/linked_task_ids/tags）；push 定义到四下游的接口契约",
+        "6. [锁定] 正文 §下游接口契约表：dpth(--from-idea N 做判断)/dref(--from-idea N 细化)/dprd(--from-idea N 写PRD)/dtask(--from-idea N 拆任务)，每个下游注明触发条件、传递数据、调用方式（支持链式 --to 和回交两种）、预期产物",
+        "7. [锁定] 正文 §容器结构定义：.diwu/ideas/ 目录规范、文件命名（用户语言标题.md 无前缀）、frontmatter 完整字段含类型和默认值、正文三区块模板（## 描述 / ## Why now / ## Next candidate action）、ID 自增策略（读现有 max id +1）",
+        "8. [锁定] 正文 §反模式清单：≥5 条（替代 dpth 判断/自动落盘/外部同步主路径/drun 执行混入/rules 真相源修改），每条附正确做法",
+        "9. [建议] triggers 设计：覆盖「记下来/先挂着/以后做/新方向/灵感/想法」六类场景关键词，keywords 含 didea/想法/idea/挂起/灵感/记住"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/didea/SKILL.md"
+      ],
+      "category": "functional",
+      "blocked_by": [],
+      "status": "Done"
+    },
+    {
+      "id": 114,
+      "title": "didea 核心脚本实现（CRUD + GitHub 同步）",
+      "description": "实现 didea 的两个核心 Python 脚本：scripts/didea_core.py 负责 ideas/ 目录的 CRUD 操作（create/refine/list/show/status-change/archive），scripts/didea_github.py 负责 GitHub issue 双向同步（创建 issue 推送、回写 github_issue_url、可选的 issue 状态拉取）。两个脚本遵循项目既有脚本风格（common.py 工具函数、JSON indent=2、错误码语义）。依赖 Task#113 定义的 SKILL.md 接口契约。",
+      "acceptance": [
+        "Given scripts/didea_core.py 存在 When 执行 python3 didea_core.py --help Then 输出用法信息且 exit 0，支持的子命令包含 create/list/show/refine/archive",
+        "Given 空的 .diwu/ideas/ 目录 When 执行 python3 didea_core.py create --title '测试想法' --cwd <proj> Then 在 .diwu/ideas/ 下生成 测试想法.md，frontmatter id=1(或当前max+1), status=idea, created_at 为 ISO 格式时间戳, source_session 为空或默认值",
+        "Given .diwu/ideas/ 下已有 2 个 idea 文件 When 执行 didea_core.py list --cwd <proj> Then 输出包含 2 个 idea 的摘要（id/title/status），按 id 升序排列",
+        "Given idea #N 存在 When 执行 didea_core.py show --id N --cwd <proj> Then 输出该 idea 的完整内容（frontmatter + 正文）",
+        "Given idea #N 状态为 idea When 执行 didea_core.py refine --id N --content '补充内容' --cwd <proj> Then 该 idea 的正文追加内容且 updated_at 更新为当前时间",
+        "Given idea #N 状态为 idea When 执行 didea_core.py archive --id N --cwd <proj> Then 该 idea frontmatter status 变更为 archived",
+        "Given scripts/didea_github.py 存在 When 执行 python3 didea_github.py --help Then 输出用法信息且 exit 0，支持 push/pull 子命令",
+        "Given idea #N 无 github_issue_url When 执行 didea_github.py push --id N --cwd <proj> 且 gh CLI 可用 Then 创建 GitHub issue 并回写 url 到该 idea 的 frontmatter github_issue_url 字段",
+        "Given didea_core.py When 检查代码 Then 复用 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/common.py 的 load_json/save_json/plugin_root 等工具函数，不重复实现 JSON 读写",
+        "Given 两个脚本 When 执行 python3 -m py_compile 则无语法错误"
+      ],
+      "steps": [
+        "1. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/didea_core.py，实现 CRUD 核心逻辑：create（生成 .md 文件+frontmatter 自增 ID）/ list（扫描目录输出摘要）/ show（读取单个 idea 完整内容）/ refine（追加正文+更新 updated_at）/ change-status（status 迁移）/ archive（标记 archived）",
+        "2. [锁定] didea_core.py 的 create 实现：从 .diwu/ideas/ 扫描现有文件获取 max id（解析 frontmatter id 字段），新 id = max + 1；frontmatter 字段对齐 Task#113 SKILL.md 定义的完整字段表；文件名 = 用户输入标题（去除非法字符）",
+        "3. [锁定] didea_core.py 的 list 实现：扫描 .diwu/ideas/*.md，解析每个文件的 frontmatter 输出 id/title/status 摘要表；支持 --status 过滤；目录不存在时输出空表而非报错",
+        "4. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/didea_github.py，实现 GitHub 同步：push（gh issue create --title / --body 从 idea 正文提取 / 回写 github_issue_url 到 frontmatter）/ pull（可选：gh issue view 检查状态变化回写）",
+        "5. [锁定] didea_github.py 的 push 实现：依赖 gh CLI（检查 gh auth status）；创建 issue 后用 yaml 解析原 frontmatter → 合并 github_issue_url → 写回文件；推送失败时明确报错不静默降级",
+        "6. [建议] 两个脚本均通过 common.py 的 plugin_root() 定位项目根目录，使用 --cwd 参数覆盖（与 dloop/dstat 等脚本保持一致的模式）",
+        "7. [建议] didea_core.py 增加 --validate 子命令：检查所有 ideas/ 下 .md 文件的 frontmatter 合法性和必填字段完整性"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/didea_core.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/didea_github.py"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        113
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 115,
+      "title": "didea Command 薄壳 + Plugin 注册 + Rules 同步",
+      "description": "创建 commands/didea.md 薄壳入口，将 didea 注册到插件系统（plugin.json + marketplace.json + install.sh + CLAUDE.md 索引），同步更新 rules/file-layout.md 三副本（添加 ideas/ 目录定义）。本任务是集成层，衔接 Task#113（SKILL 定义）和 Task#114（脚本实现）使其成为完整的可用能力。",
+      "acceptance": [
+        "Given commands/didea.md 存在 When 解析 frontmatter Then description 覆盖想法捕获容器、argument-hint 支持动作参数、allowed-tools 包含 Read/Bash/Edit/Write",
+        "Given commands/didea.md 正文 When 检查内容 Then 为薄壳结构：简短执行步骤（≤8行）+ 「完整规范详见 skills/didea/SKILL.md」引用，不承载方法论正文",
+        "Given .claude-plugin/plugin.json When 解析 JSON Then skills 数组包含 \"./skills/didea\" 条目，commands 数组包含 \"./commands/didea\" 条目，总数量正确递增",
+        "Given .claude-plugin/marketplace.json When 解析 JSON Then version 与 plugin.json 一致，description 已更新反映 didea 能力",
+        "Given install.sh When 搜索 didea Then OpenCode stub 段已添加 /didea 命令注册",
+        "Given .claude/CLAUDE.md When 搜索 Skill 索引表 Then 表格中存在 didea 行，type 为 tool，触发场景描述准确（想法捕获/灵感挂起/容器管理/下游衔接）",
+        "Given rules/file-layout.md（rules/ 副本）When 搜索 .diwu/ 结构 Then ideas/ 目录已添加到目录树中，含说明（想法容器，每个 idea 一个 .md 文件）",
+        "Given assets/dinit/assets/rules/file-layout.md（资产副本）When 搜索 ideas/ Then 内容与 rules/ 副本一致（三副本同步）",
+        "Given .claude/rules/file-layout.md（注入副本）When 搜索 ideas/ Then 内容与 rules/ 副本一致（三副本同步）"
+      ],
+      "steps": [
+        "1. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/commands/didea.md，frontmatter：description='想法捕获容器——挂住灵感并连接下游判断/收束/执行链', argument-hint='[动作参数: create/list/show/refine/archive/push]', allowed-tools=[Read,Bash,Edit,Write], effort=normal",
+        "2. [锁定] commands/didea.md 正文：薄壳结构——执行步骤引用 SKILL.md 六个硬入口动作，每个动作一行调用说明；底部固定指向 skills/didea/SKILL.md 的完整规范链接；总行数 ≤40 行",
+        "3. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json：skills 数组添加 ./skills/didea（放在 dstop 之后），commands 数组添加 ./commands/didea；version 保持 0.0.12 不变",
+        "4. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json：同步 version 和 description 更新",
+        "5. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh：OpenCode stub 段添加 /didea 注册",
+        "6. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md：Skill 索引表添加 didea 行（type: tool, 触发场景: 想法捕获/灵感挂起/idea容器管理/下游衔接 dpth-dref-dprd-dtask）",
+        "7. [锁定] 编辑 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md：在 .diwu/ 目录结构表中添加 ideas/ 行（位置在 recording/ 之后），说明列写「想法容器，每个 idea 一个 .md 文件（YAML frontmatter + markdown 正文）」",
+        "8. [锁定] 同步步骤 7 的变更到 /Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md 和 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md（三副本同步，内容一致）",
+        "9. [建议] 如 assets/dinit/assets/diwu/ 目录存在则在其中添加 ideas/.gitkeep 占位文件（供 /dinit 初始化时复制到目标项目）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/commands/didea.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/plugin.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude-plugin/marketplace.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/install.sh",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        113,
+        114
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 116,
+      "title": "didea 测试编写 + 全量回归验证",
+      "description": "为 didea 全套能力编写测试并确保全量回归通过。包括：didea_core.py CRUD 单元测试（level2_scripts）、didea_github.py 同步测试（level2_scripts，mock gh CLI）、ideas/ 布局一致性测试（level3）、SKILL.md frontmatter 合法性测试（level1 或 level3）、以及全量 pytest 回归验证现有 366+ 用例不被破坏。",
+      "acceptance": [
+        "Given pytest tests/level2_scripts/test_didea_core.py 全量运行 When 执行 Then 所有用例 PASS，覆盖 create/list/show/refine/archive/change-status 至少各 2 个正向用例 + 边界用例（空目录/非法ID/重复标题/frontmatter 缺失字段）",
+        "Given pytest tests/level2_scripts/test_didea_github.py 全量运行 When 执行 Then 所有用例 PASS，push 用例 mock gh CLI（不依赖真实 GitHub token），覆盖推送成功/推送失败(无token)/回写 url 验证",
+        "Given pytest tests/level3/test_didea_layout_consistency.py 全量运行 When 执行 Then 验证 rules/file-layout.md 三副本均含 ideas/ 定义且内容一致；验证 .diwu/ideas/ 目录结构与 SKILL.md 定义的结构规范一致",
+        "Given skills/didea/SKILL.md When 用 yaml.safe_load 解析 frontmatter Then 不抛异常，且 name/type/description/triggers/keywords/effort/argument-hint 字段齐全（可作为 level3 测试的一个断言）",
+        "Given commands/didea.md When 用 yaml.safe_load 解析 frontmatter Then 不抛异常，且 description/argument-hint/allowed-tools 字段齐全",
+        "Given pytest tests/ 全量回归 When 执行 Then 总用例数 ≥ 当前基线（366+ 新增），无新增 FAILURE，exit code 0",
+        "Given plugin.json When 解析 Then 包含 ./skills/didea 且无重复条目（集成验证）"
+      ],
+      "steps": [
+        "1. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_didea_core.py：CRUD 单元测试，使用 tmpdir fixture 创建临时 .diwu/ideas/ 目录；覆盖 create（正常创建/自增 ID 正确/frontmatter 字段完整/文件名清理非法字符）/ list（空目录/多文件/--status 过滤）/ show（存在/不存在）/ refine（内容追加/updated_at 更新）/ archive（状态变更）/ 边界（重复 ID 防护/并发安全提示）",
+        "2. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_didea_github.py：GitHub 同步测试，mock subprocess.call 模拟 gh CLI；覆盖 push 成功（mock gh issue create 返回 URL）/ push 失败（gh 未登录/网络超时）/ url 回写验证（frontmatter github_issue_url 字段存在且合法）/ pull（如实现）",
+        "3. [锁定] 创建 /Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_didea_layout_consistency.py：三副本一致性验证（rules/ vs .claude/rules/ vs assets/ 的 file-layout.md 中 ideas/ 定义一致）；SKILL.md frontmatter 合法性；command frontmatter 合法性；ideas/ 目录结构符合 SKILL.md 定义",
+        "4. [锁定] 运行 python3 -m pytest tests/ -q 全量回归，确认基线通过后开始新增测试（避免在坏基线上写测试掩盖问题）",
+        "5. [锁定] 新增测试写入后再次运行 python3 -m pytest tests/ -q 全量回归，确认总用例数增加、全部 PASS、无回归失败",
+        "6. [建议] 如发现现有测试因 plugin.json/CLAUDE.md 变更而失败（如 skill 数量断言），优先修复现有测试的硬编码数值而非跳过"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_didea_core.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_didea_github.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_didea_layout_consistency.py"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        115
+      ],
+      "status": "InSpec"
     }
   ]
 }

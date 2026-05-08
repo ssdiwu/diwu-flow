@@ -237,3 +237,5 @@
 - [读层现象] Read 工具和 Bash cat 输出在读取 session 记录文件时被异常截断（仅显示 ## Session 标题行）→ 根因不明（疑似工具输出过滤器误匹配）→ 改用 Python 脚本提取关键字段成功绕过 → 大量文本文件读取异常时应切换工具而非反复重试同一方式 （来源: session-2026-05-04-021105.md）
 ## Source: archive-aggregate-2026-05-08
 - [其他] `re.match` 从字符串开头匹配，`ADR-001` 中数字不在开头 → 用 `re.search` 替代; status 变更必须与代码变更同一 commit；仅修改 dtask.json 不算完成 closeout; 允许范围检查 vs 精确值断言：前者防回退但不防误标，后者锁住关键约束 （来源: session-2026-05-04-021452.md）
+## Source: archive-aggregate-2026-05-08
+- [环境漂移] 版本号从 plugin.json 改到 0.0.12 被用户制止 → 应追加到 CHANGELOG v0.0.11 条目中而非升版本号 → 误判为需要版本号升级 → 正确做法是用户明确要追加而非新版本 （来源: session-2026-05-04-031218.md）- [路由护栏契约] Plan→Dtask 门控因 dtask.json 任务状态为 InDraft 而阻止 Edit → 根因是写入任务后未先 mark-inspec + claim 就尝试编辑 → 误判为计划未落地 → 正确做法是先 mark-inspec → claim 后再编辑 （来源: session-2026-05-04-031218.md）

@@ -68,9 +68,16 @@ def _task_index(tasks: list[dict]) -> dict[int, dict]:
     return index
 
 
-def _parse_task_ids(raw: str) -> list[int]:
+def _parse_task_ids(raw: str | list[str]) -> list[int]:
+    if isinstance(raw, list):
+        # nargs='+': 每个元素可能含逗号（兼容旧格式 --task-ids 1,2,3）
+        pieces = []
+        for item in raw:
+            pieces.extend(str(item).split(","))
+    else:
+        pieces = raw.split(",")
     task_ids = []
-    for piece in raw.split(","):
+    for piece in pieces:
         piece = piece.strip()
         if not piece:
             continue
@@ -309,7 +316,7 @@ def main() -> None:
         subparser.add_argument("--cwd", default=".", help="项目根目录")
 
     p_mark = sub.add_parser("mark-inspec", help="批量 InDraft -> InSpec")
-    p_mark.add_argument("--task-ids", required=True, help="逗号分隔 task ids")
+    p_mark.add_argument("--task-ids", required=True, nargs="+", help="空格或逗号分隔的 task ids")
     add_cwd_arg(p_mark)
 
     p_claim = sub.add_parser("claim", help="InSpec -> InProgress 并写 owner")
