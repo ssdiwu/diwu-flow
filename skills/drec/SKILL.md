@@ -6,7 +6,9 @@ description: "Session 记录写入操作手册——原子 commit、Amend 模式
 triggers:
   - "写 session 记录"
   - "Session 结束前整理"
-  - "用户说 记录、recording"
+  - "Amend 上一个 recording"
+  - "归档阈值触发（任务数/Session 数超限）"
+  - "用户说 记录、recording、rec、/drec"
 keywords:
   - "recording"
   - "commit"
