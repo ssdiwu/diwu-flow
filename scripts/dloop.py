@@ -43,6 +43,11 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
     tasks = [task for task in dtask_payload.get("tasks", []) if isinstance(task, dict)]
     settings = load_json_or_empty(cwd / DSETTINGS_JSON)
 
+    # 优先使用真实 session ID（消除 dummy 窗口）
+    if not session_id:
+        from session_scope import read_scoped_session_id
+        session_id = read_scoped_session_id(str(cwd))
+
     # Stale-state 兜底（#23）：检查已有 state 文件是否为 terminal_stale
     stale_cleanup_reason = None
     classification = classify(cwd, dtask_data=dtask_payload, settings=settings)
