@@ -301,7 +301,7 @@
         113,
         114
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 116,
@@ -333,7 +333,7 @@
       "blocked_by": [
         115
       ],
-      "status": "InSpec"
+      "status": "Done"
     }
   ]
 }

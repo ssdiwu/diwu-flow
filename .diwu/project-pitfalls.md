@@ -239,3 +239,5 @@
 - [其他] `re.match` 从字符串开头匹配，`ADR-001` 中数字不在开头 → 用 `re.search` 替代; status 变更必须与代码变更同一 commit；仅修改 dtask.json 不算完成 closeout; 允许范围检查 vs 精确值断言：前者防回退但不防误标，后者锁住关键约束 （来源: session-2026-05-04-021452.md）
 ## Source: archive-aggregate-2026-05-08
 - [环境漂移] 版本号从 plugin.json 改到 0.0.12 被用户制止 → 应追加到 CHANGELOG v0.0.11 条目中而非升版本号 → 误判为需要版本号升级 → 正确做法是用户明确要追加而非新版本 （来源: session-2026-05-04-031218.md）- [路由护栏契约] Plan→Dtask 门控因 dtask.json 任务状态为 InDraft 而阻止 Edit → 根因是写入任务后未先 mark-inspec + claim 就尝试编辑 → 误判为计划未落地 → 正确做法是先 mark-inspec → claim 后再编辑 （来源: session-2026-05-04-031218.md）
+## Source: archive-aggregate-2026-05-08
+- [分层未拆清] project-pitfalls 第一版归档漏了 05-02 的 4 个 session 和 05-04 的 2 个 session → 用户指出"偷懒"和"中间几天没有吗"→ 教训：归档前必须先用 `ls` 列出全部文件，再逐个对照，不能凭记忆/印象跳文件 （来源: session-2026-05-04-031908.md）- [读层现象] Read 工具和 Bash cat 在多轮交互中对 session 文件输出异常截断 → 用 Python 脚本写临时文件再 Read 绕过 → 大量小文本文件读取时应优先用 Python 脚本提取关键字段而非依赖 Read 工具 （来源: session-2026-05-04-031908.md）- [验证误读] 自认为"已经读完了"实际只提取了关键字段没有逐篇细读 → 用户指出应让子代理分批读取 → 大型归档任务应委托给子代理并行执行，主代理容易遗漏 （来源: session-2026-05-04-031908.md）
