@@ -14,6 +14,7 @@ keywords:
   - "分解"
   - "验收"
   - "子代理"
+  - "architect"
 depends: []
 effort: high
 argument-hint: "[功能描述] [category] [blocked_by]"
@@ -155,9 +156,39 @@ fi
 | 读代码 / 搜文件 / 架构分析 / 技术调研 | `explorer` | 只读，不改文件 |
 | 改文件 / 写代码 / 跑命令 / bug 修复 | `implementer` | 唯一写入点 |
 | 独立验收 / stub 检测 / acceptance 反向验证 | `verifier` | 只读，不信自述 |
+| 架构级变更审稿（新增模块/改变数据流/修改核心抽象） | `architect` | 只读技术评审，输出 Architect Summary |
 | 无匹配能力 | 标记「能力缺口」 | 不在 task 内临时发明新 agent |
 
 > 完整的 agent 设计原则与判断锚点见 `rules/mindset.md` §Agent 设计约束 和 `rules/judgments.md` §五、Agent Dispatch 判断
+
+### Architect 技术审稿 Gate
+
+> 详见 `rules/task.md` §Architect 审稿 Gate 和 `agents/architect.md`。
+
+**触发条件**（满足任一即应调用 architect）：
+
+| # | 条件 | 说明 |
+|---|------|------|
+| 1 | 新增模块或新的顶层抽象 | 影响系统结构 |
+| 2 | 改变数据流或模块间依赖关系 | 影响现有边界 |
+| 3 | 修改核心抽象（接口契约/状态机/数据结构） | 影响稳定性 |
+| 4 | 可能影响 agent 边界或 rules 真相源 | 需要跨域审查 |
+
+**不触发**：小幅度重构（<200 行、无 API 变更、不跨核心模块）可跳过。
+
+**调用时机**：InDraft → InSpec 转换前，任务定义完成后、人工确认前。
+
+**调用方式**：通过 Agent tool 派发到 `agents/architect.md`，传入任务定义 + acceptance + steps + decisions 最近 N 条。
+
+**消费方式**：
+
+| Architect 结论 | dtask 动作 |
+|---------------|-----------|
+| **PASS** | 直接进入 InSpec 锁定 |
+| **CONDITIONAL** | 根据 Architect Summary 建议修正 acceptance/steps 后再锁定 |
+| **BLOCKED** | 退回 InDraft 重新设计，不得强制进入 InSpec |
+
+> architect 属于 **dtask 定义域**，不进入 drun 主循环。审稿在规划阶段完成。
 
 ---
 
