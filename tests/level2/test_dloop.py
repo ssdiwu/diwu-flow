@@ -175,9 +175,11 @@ def test_stop_decision_session_isolation(tmp_path):
         cwd=str(tmp_path),
     )
 
-    # Falls through to default mode -> allow stop
+    # Falls through to default mode -> allow stop, and stale loop state is cleared.
     assert result.returncode == 0
     assert result.stdout.strip() == ""
+    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert runtime_state["dloop"] is None
 
 
 def test_stop_decision_session_isolation_accepts_sessionId(tmp_path):
@@ -197,6 +199,8 @@ def test_stop_decision_session_isolation_accepts_sessionId(tmp_path):
 
     assert result.returncode == 0
     assert result.stdout.strip() == ""
+    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert runtime_state["dloop"] is None
 
 
 def test_stop_decision_max_tasks_stops_with_report(tmp_path):

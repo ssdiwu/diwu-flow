@@ -26,7 +26,7 @@
 | 名称 | 类型 | 触发场景 |
 |------|------|---------|
 | `dtask` `drun` `dcorr` `drec` | rule | 任务/执行/纠偏/记录 |
-| `dprd` `dpth` `ddoc` `dref` `dstat` | product/tool | 产品论证/产品思维/文档/需求细化/状态 |
+| `dprd` `dpth` `ddoc` `dref` `dstat` `didea` | product/tool | 产品论证/产品思维/文档/需求细化/状态/想法捕获 |
 | `dloop` `dstop` | command | 连续循环/停止循环 |
 | `rules/*` | 参考 | exceptions/templates/file-layout/constraints |
 
@@ -78,8 +78,8 @@ git remote add public git@github.com:ssdiwu/diwu-flow.git
 
 ## 项目结构
 
-- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, ddoc, drec, dref, dcorr, dstat, dloop, dstop）
-- `skills/` — 技能文件（dtask, drun, dcorr, drec, dprd, ddoc, dref, dstat, dloop）
+- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, ddoc, drec, dref, dcorr, dstat, dloop, dstop, didea）
+- `skills/` — 技能文件（dtask, drun, dcorr, drec, dprd, ddoc, dref, dstat, dloop, didea）
 - `scripts/` — 共享脚本工具库（common.py 含 plugin_root/load_json/save_json/max_task_id 等函数），新增 script-backed 执行通道
 - `rules/` — 方法论规则文件
 - `agents/` — 核心执行 Agent（explorer/implementer/verifier，默认路径自动发现）

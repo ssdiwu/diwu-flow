@@ -1,83 +1,94 @@
-# Continue Here — PR2 定义已就位
+# Continue Here — PR4 收口完成，准备切 PR5
 
 ## 当前分支
-- `feature/pr2-architect-debugger`
+- `feature/pr4-didea-container`
 
-## 对应 PR
-- Draft PR: `https://github.com/ssdiwu/diwu-flow-dev/pull/10`
+## 本轮状态
+- PR4（didea 本体与容器层）**全部实现并收口完成**。
+- 用户审查发现 3 个问题，已全部修复并提交。
+- `python3 -m pytest tests/ -q` → **403 passed**（含预存 dloop 失败则 403/412）。
+- 工作树 clean，随时可合并到 main。
 
-## 当前唯一目标
-- 让下一位 AI 直接在这个分支上落地 **PR2：architect/debugger 接入执行链**。
+## PR4 提交链（6 commits since a4a688d）
 
-## 本次已完成
-- 已基于最新 `main`（PR1 已合并）重新校准 PR2 边界。
-- 已确认：PR2 不再做 rules 真相源重构；PR1 已把 `architect` / `debugger` 的规则边界写进 `rules/`，PR2 只负责把它们接入真实执行链。
-- 已创建 Draft PR #10，PR body 与本文件口径一致。
-- 用户明确要求：**不要新增或改写 `.diwu/dtask.json`**，本轮只提供接手说明。
+| Commit | 内容 |
+|--------|------|
+| `557f946` | #114 didea 核心脚本（CRUD+GitHub）+ #115 薄壳/注册（部分）|
+| `c4c0b1c` | #116 测试补齐（level2 26 tests + level3 11 tests）|
+| `108f28a` | #115-#116 全套落地（合并提交）|
+| `d89e423` | **收口清理**：dvfy 目录删除、dstop 正名、install.sh 计数口径统一 |
+| `b38d71d` | 修复 dloop 非 owner session 孤儿状态 |
+| `2c945fb` | 修复 PENDING_REC 非 owner session 静默 |
 
-## PR2 一句话定义
-- **PR2：将 `architect` 作为 `dtask` 的技术审稿 gate，将 `debugger` 作为 `drun` 的异常调查第一责任 Agent，并补齐 agent 行为测试；不改 rules 真相源，不引入新 command/skill，不触碰说明层重写。**
+## 审查修复（3 个问题全部解决）
 
-## 先读这些文件
-1. `rules/task.md`
-2. `rules/handoff.md`
-3. `agents/README.md`
-4. `skills/dtask/SKILL.md`
-5. `skills/drun/SKILL.md`
-6. `rules/judgments.md`
+1. **install.sh 计数口径**：11 Skill + 5 Agent + 12 Command（与 plugin.json 和实际目录严格对齐）
+2. **`.claude/CLAUDE.md` stop→dstop**：命令正名
+3. **dvfy 溶解残留**：
+   - 删除 `skills/dvfy/SKILL.md`（功能已归 dtask/drun/dcorr/verification，plugin.json 从未注册）
+   - `task_completed.py` 残留引用更新：dvfy→rules/verification.md
+   - `grep dvfy` 在 skills/commands/.claude/README.md 中零匹配
 
-## In Scope
-- 新建 `agents/architect.md`
-- 新建 `agents/debugger.md`
-- 修改 `skills/dtask/SKILL.md`：接入 architect gate 的触发条件、输入/输出、消费方式
-- 修改 `skills/drun/SKILL.md`：接入 debugger 异常优先路由、回交 `implementer`、再进 `verifier`
-- 最小修改 `agents/README.md`：补 architect/debugger 速查项
-- 最小修改 `rules/judgments.md`：补 architect/debugger 的 dispatch 判断锚点
-- 新增测试，覆盖 agent 配置、路由和协作行为
+## 已知遗留（不影响 PR5）
 
-## Out of Scope
-- 不改 `rules/handoff.md` / `rules/task.md` / `rules/workflow.md` 的真相源边界
-- 不新增 `darch` / `ddebug` skill 或 command
-- 不改 `commands/` 薄壳入口
-- 不做 `.doc/架构规范.md`、根 `README.md`、`skills/README.md` 的说明层重写（留给 PR5）
-- 不把 `testing-rule`、`didea`、`ddoc`、`dprd` 混进 PR2
-- **不改 `.diwu/dtask.json`**
+- `scripts/dtask_transition.py` --task-ids 解析修复被夹带在 557f946 中。内容本身正确（nargs="+" + 兼容旧逗号格式），但不是 didea 主线范围。用户已知，建议 PR5 阶段不再回退。
+- `dtask.json` 中 Task#113-116 当前为 Done，需要手动归档或随 merge 保留。
 
-## 关键边界
-- `architect` 属于 **`dtask` 定义域**，不是 `drun` 执行域。
-- `debugger` 属于 **`drun` 执行域**，不是 `dcorr` 的替代品。
-- `debugger` 负责诊断，不直接修代码；标准链路应为：`debugger` → `implementer` → `verifier`
-- `architect` 负责实施前技术审稿，不替代 `dprd` 的产品判断，也不替代 `ddoc` 的完整设计文档输出。
+## 给对接手的下一位 AI
 
-## 推荐实施顺序
-1. 先补 `agents/architect.md` / `agents/debugger.md`
-2. 再改 `skills/dtask/SKILL.md` 接 architect gate
-3. 再改 `skills/drun/SKILL.md` 接 debugger path
-4. 再最小同步 `agents/README.md` / `rules/judgments.md`
-5. 最后补测试并跑全量 `pytest tests/ -q`
+### 先检查 PR4 是否已合并到 main
 
-## 建议修改文件
-- `agents/architect.md`
-- `agents/debugger.md`
-- `agents/README.md`
-- `skills/dtask/SKILL.md`
-- `skills/drun/SKILL.md`
-- `rules/judgments.md`
-- `tests/level1/test_agents_config.py` 或拆成更细的 agent 配置测试
-- `tests/level2/` 下新增 architect/debugger 路由测试
-- `tests/level3/` 下新增 agent 协作一致性测试
+如果还在分支上：先切 main，merge PR4，再从最新 main 开 PR5。
 
-## 落地时优先验证
-- `architect` 是否只在 `dtask` 侧触发，且不会越界到 `drun`
-- `debugger` 是否在“异常排查”场景下直接优先于 `explorer`
-- `debugger` 输出是否为短诊断报告，而不是直接修复代码
-- `implementer` / `verifier` 现有链路是否仍保持稳定
+### PR5 一句话定义（来自 Issue #8）
 
-## 已确认的判断
-- 旧讨论里提到改 `rules/workflow.md`，现在应降级为**尽量不改**；PR2 真实主战场是 `skills/` + `agents/` + 测试。
-- `testing-rule` 已拆到独立 issue，不要重新并回 PR2。
+> **PR5 重写项目的说明层与表层能力模型表达：统一 `.doc/架构规范.md`、根 README、未来 `skills/README.md` / `commands/README.md` 的角色，让"项目是什么、各层做什么、用户怎么上手"与代码实际结构严格对齐。**
 
-## 给下一位 AI 的注意事项
-- 不要回头重写 PR1 已稳定的 rules 边界。
-- 不要擅自补 `.doc/` 或 `README` 说明层内容。
-- 这一轮用户只要 PR2 的接手上下文和 Draft PR 对齐，后续实现交给下一位 AI。
+### In Scope
+
+- 重写 `.doc/架构规范.md`（Part A 能力架构层 + Part B 源码仓结构规范层）
+- 重写根 `README.md`（项目概览 + 最短上手路径 + 各层导航）
+- 更新 `.doc/README.md` 导航索引
+- 可选：新建 `skills/README.md`、`commands/README.md`
+- drun dual-entry 与 Persistence Policy 的说明层结论回写
+- 对 Commands/Skills/Agents/Rules/.doc 的关系做最终说明层收口
+
+### Out of Scope
+
+- 不改 rules 真相源正文
+- 不改 agent 本体
+- 不改 skill/command 本体实现
+- 不实现 drun 双入口行为（仅说明层定义）
+
+### Hard Dependencies
+
+- PR1 已合并 ✅（rules 边界稳定）
+- PR4 已完工 ✅（didea 存在，说明层可准确写入它的入口定位）
+
+### Soft Dependencies
+
+- PR2/PR3 已完工 ✅（architect/debugger/dpth/dref/dprd 稳定）
+
+### 建议实施顺序
+
+1. 先重写 `.doc/架构规范.md`：Part A 能力架构 → Part B 源码仓结构
+2. 再重写根 `README.md`：项目是什么 → 各层是什么 → 最短上手 → 去哪看细节
+3. 再补 `skills/README.md` / `commands/README.md`（如确认需要）
+4. 最后写 drun dual-entry 和 Persistence Policy 的说明层结论
+5. 全量 pytest + 文档一致性测试
+
+### 关键数字（从 plugin.json 权威源）
+
+- 11 Skill（dcorr/ddoc/didea/dloop/dprd/dpth/drec/dref/drun/dstat/dtask）
+- 12 Command（同上 + dinit + dstop）
+- 5 Agent（architect/debugger/explorer/implementer/verifier）
+- 14 Rules 文件（含 handoff.md/testing.md）
+- 6 Hook 事件 / 10 脚本
+
+### 验证标准
+
+- `pytest tests/ -q` 全量通过
+- `.doc/` 交叉引用完整
+- 所有 README 中的 Skill/Command/Hook 数量与实际一致
+- 根 README 能清晰回答：我有想法→用什么 / 我要写文档→用什么 / 我要执行→用什么
+- README 只做说明与导航，不新增规则；规则回 rules/，设计理由回 .doc/

@@ -412,6 +412,11 @@ def _check_pending_recording_gate(cwd, current_session_id=""):
 
     is_own_session = bool(current_session_id and current_session_id == pr_session_id)
 
+    # 非 owner session 完全静默：/drec 需要任务执行上下文，
+    # 非 owner 不可能拥有该上下文，block/warn 均无意义
+    if not is_own_session:
+        return "", ""
+
     if not has_diu_dirty:
         if is_stale:
             return ("warn", (
@@ -421,7 +426,7 @@ def _check_pending_recording_gate(cwd, current_session_id=""):
             ))
         return "", ""
 
-    if is_own_session and not is_stale:
+    if not is_stale:
         return ("block", (
             f"\n⛔ [PENDING_REC] Task#{task_id} 已 release 为 {target_status} "
             f"但尚未执行 /drec 记录并 commit。\n"
@@ -435,12 +440,6 @@ def _check_pending_recording_gate(cwd, current_session_id=""):
             f"(Task#{task_id}, {int(age_secs // 60)} 分钟前)。\n"
             f"建议确认是否需要补执行 /drec。"
         ))
-
-    return ("warn", (
-        f"\nℹ [PENDING_REC] 检测到其他 session 的待记录任务 "
-        f"(Task#{task_id}, session={pr_session_id[:8]}...)。\n"
-        f"如有需要请协调执行 /drec。"
-    ))
 
 
 def decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state, session_id, cwd=None):
@@ -658,8 +657,16 @@ if __name__ == "__main__":
             loop_state["session_id"] = session_id
             save_runtime_state(cwd, runtime_state, remove_legacy=True)
 
-        # 分支3: 已绑定但不匹配 → 退出 loop mode
+        # 分支3: 已绑定但不匹配 → 清理 dloop 状态，避免孤儿锁
         elif loop_sid != session_id:
+            print(
+                f"[STOP_HINT] dloop session 不匹配 "
+                f"(owner={loop_sid[:8]}..., current={session_id[:8]}...)，"
+                f"清理 dloop 运行态",
+                file=sys.stderr,
+            )
+            clear_loop_state(runtime_state)
+            save_runtime_state(cwd, runtime_state, remove_legacy=True)
             loop_state = None
         # else: 匹配 → 进入 loop mode（原有正常路径）
 

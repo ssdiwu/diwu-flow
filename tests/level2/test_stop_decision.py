@@ -313,8 +313,8 @@ class TestPendingRecordingGate(_PendingRecordingTestBase):
         self.assertEqual(level, "warn")
         self.assertIn("过期", hint)
 
-    def test_other_session_soft_reminder(self):
-        """其他 session_id → warn，hint 含"其他 session"。"""
+    def test_other_session_silent(self):
+        """非 owner session → 完全静默（/drec 需要任务上下文，非 owner 不可能拥有）。"""
         from datetime import datetime, timezone as _tz
         now_iso = datetime.now(_tz.utc).isoformat()
         self._write_state(pending_recording={
@@ -326,8 +326,8 @@ class TestPendingRecordingGate(_PendingRecordingTestBase):
         self._touch_file(".diwu/dtask.json")
 
         level, hint = _check_pending_recording_gate(self.cwd, "sess-mine")
-        self.assertEqual(level, "warn")
-        self.assertIn("其他 session", hint)
+        self.assertEqual(level, "")
+        self.assertEqual(hint, "")
 
     def test_corrupted_state_file_safe(self):
         """损坏的 JSON → ("", "") 安全降级。"""
@@ -523,11 +523,11 @@ class TestPendingRecordingIntegration(_PendingRecordingTestBase):
         reason = output.get("reason", "")
         self.assertIn("PENDING_REC", reason)
 
-    def test_dloop_mode_other_session_pending_rec_not_in_block_reason(self):
-        """dloop 模式：其他 session 的 PENDING_REC 不注入 block reason，只打 stderr hint。
+    def test_dloop_mode_other_session_pending_rec_silent(self):
+        """dloop 模式：非 owner 的 PENDING_REC 完全静默。
 
-        验证修复：decide_loop_mode 镜像 decide_default_mode 的 pr_level 区分，
-        非 own session 的 pending_recording 降级为 warn（stderr），不升级为 block。
+        /drec 需要任务执行上下文，非 owner 不可能拥有该上下文，
+        因此对非 owner 既不 block 也不 warn。
         """
         from datetime import datetime, timezone as _tz
         now_iso = datetime.now(_tz.utc).isoformat()
@@ -553,26 +553,18 @@ class TestPendingRecordingIntegration(_PendingRecordingTestBase):
             "current_iteration": 0,
             "max_tasks": 0,
         }
-        # 用 io.StringIO 捕获 stderr
-        import io
-        old_stderr = sys.stderr
-        try:
-            stderr_capture = io.StringIO()
-            sys.stderr = stderr_capture
-            should_continue, output = decide_loop_mode(
-                tasks=[{"id": 1, "status": "InSpec", "title": "Next", "description": "",
-                      "acceptance": [], "steps": [], "blocked_by": []}],
-                settings={"continuous_mode": True, "review_limit": 5},
-                data={},
-                task_json_path=os.path.join(self.cwd, ".diwu", "dtask.json"),
-                loop_state=loop_state,
-                cwd=self.cwd,
-                additional_prompts=[],
-                runtime_state={"version": 1, "task_sessions": {}, "dloop": loop_state},
-                session_id="current-dloop-sess",
-            )
-        finally:
-            sys.stderr = old_stderr
+        should_continue, output = decide_loop_mode(
+            tasks=[{"id": 1, "status": "InSpec", "title": "Next", "description": "",
+                  "acceptance": [], "steps": [], "blocked_by": []}],
+            settings={"continuous_mode": True, "review_limit": 5},
+            data={},
+            task_json_path=os.path.join(self.cwd, ".diwu", "dtask.json"),
+            loop_state=loop_state,
+            cwd=self.cwd,
+            additional_prompts=[],
+            runtime_state={"version": 1, "task_sessions": {}, "dloop": loop_state},
+            session_id="current-dloop-sess",
+        )
 
         # dloop 应继续驱动循环
         self.assertTrue(should_continue)
@@ -580,9 +572,6 @@ class TestPendingRecordingIntegration(_PendingRecordingTestBase):
         # 关键：block reason 中不应包含 PENDING_REC（那是别人的任务）
         reason = output.get("reason", "")
         self.assertNotIn("PENDING_REC", reason)
-        # 但 stderr 应包含 warn 提示
-        stderr_output = stderr_capture.getvalue()
-        self.assertIn("其他 session", stderr_output)
 
 
 if __name__ == '__main__':
