@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/ssdiwu/diwu-flow)
 
-多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合、想法捕获等 **11 个核心 Skill** + **5 个执行 Agent**。（v0.0.12）
+多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合、想法捕获、产品思维等 **11 个核心 Skill** + **5 个执行 Agent**。（v0.0.12）
 
 ---
 
@@ -12,14 +12,14 @@
 
 六层架构：**入口容器(L0) → 判断收束(L1) → 下游扩展(L2) → 协议(L3) → 规则真相源(L4) → 表层能力模型(L5)**
 
-### Layer 1 — Commands 薄壳层（12）
+### Layer 1 — Commands 薄壳层（13）
 
 用户直接调用的命令入口，每个 Command 是对应 Skill 的薄封装。
 
 | 分组 | Commands | 定位 |
 |------|----------|------|
 | **入口/持久化** | `/didea` `/drec` | 想法捕获 / Session 归档 |
-| **思考/收束** | `/dpth` `/dref` `/dprd` `/ddoc` | 产品判断 / 需求细化 / PRD / 文档 |
+| **思考/收束** | `/dpth` `/dref` `/dprd` `/ddoc` | 产品思维 / 需求细化 / PRD / 文档 |
 | **执行/控制** | `/drun` `/dloop` `/dstop` | 单任务 / 连续循环 / 停止循环 |
 | **规划/辅助** | `/dtask` `/dinit` `/dcorr` `/dstat` | 任务管理 / 初始化 / 纠偏 / 状态快照 |
 
@@ -121,7 +121,7 @@ claude plugin add /path/to/diwu-flow
 
 | 平台 | 命令 | 产物 |
 |------|------|------|
-| Claude Code | `claude plugin add <path>` | 11 Skill + 5 Agent + 12 Command + 6 Hook 事件 / 10 业务脚本 + 1 wrapper |
+| Claude Code | `claude plugin add <path>` | 11 Skill + 5 Agent + 13 Command + 6 Hook 事件 / 10 业务脚本 + 1 wrapper |
 | Codex CLI | `./install.sh --platform codex` | Skills + Agents symlink 到 `~/.codex/` |
 | OpenCode | `./install.sh --platform opencode` | Plugin + symlink to `.opencode/` |
 | 卸载 | `./install.sh --uninstall [--dry-run]` | 清理 symlink（dry-run 仅预览不删除） |
@@ -147,7 +147,7 @@ claude plugin add /path/to/diwu-flow
 | **dstat** | tool | 项目状态只读聚合 | 任务进度 / Session / 决策 / Git 状态 |
 | **dloop** | rule | drun 薄壳循环包装 | `while(未停止){ /drun }` |
 
-### Commands（12 个）
+### Commands（13 个）
 
 | Command | 对应 Skill | 一句话 |
 |---------|-----------|--------|
@@ -348,11 +348,11 @@ InDraft → InSpec → InProgress → InReview → Done
 ```
 diwu-flow/
 ├── .claude-plugin/
-│   ├── plugin.json              # 插件声明（11 Skill + 12 Command）
+│   ├── plugin.json              # 插件声明（11 Skill + 13 Command）
 │   └── marketplace.json         # 发布市场元数据
 ├── skills/                      # 11 个方法论 Skill（唯一真相源）
 │   └── {name}/SKILL.md
-├── commands/                    # 12 个薄壳 Command（CC Slash Command）
+├── commands/                    # 13 个薄壳 Command（CC Slash Command）
 │   └── {name}.md
 ├── agents/                      # 5 个执行 Agent（默认路径自动发现）
 │   ├── README.md                #   Agent 速查表
@@ -382,7 +382,7 @@ diwu-flow/
 |------|------------|-----------|----------|
 | 11 Skills | plugin.json 声明 | symlink SKILL.md | symlink SKILL.md |
 | 5 Agents | 默认路径自动发现 | symlink .md | symlink .md |
-| 12 Commands | Slash Commands | 不支持 | 声明式索引(.md) |
+| 13 Commands | Slash Commands | 不支持 | 声明式索引(.md) |
 | 6 Hook 事件 / 10 业务脚本 + 1 wrapper | hooks.json | 不支持 | v1 不移植 |
 | Python 脚本 | CLAUDE_PLUGIN_ROOT | 不支持 | 不支持 |
 

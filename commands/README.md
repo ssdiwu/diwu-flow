@@ -1,9 +1,9 @@
 # Commands 导航
 
-> diwu-flow 的 12 个用户命令入口，每个 Command 是对应 Skill 的**薄壳封装**。
+> diwu-flow 的 13 个用户命令入口，每个 Command 是对应 Skill 的**薄壳封装**。
 > 完整列表以 `.claude-plugin/plugin.json` 为真值来源。
 
-## Command 总览（12）
+## Command 总览（13）
 
 | Command | 对应 Skill | 一句话定位 | 无独立 Skill？ |
 |---------|-----------|-----------|---------------|

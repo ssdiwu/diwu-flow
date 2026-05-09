@@ -2,10 +2,5 @@
   "version": 1,
   "task_sessions": {},
   "dloop": null,
-  "pending_recording": {
-    "task_id": 118,
-    "target_status": "Done",
-    "released_at": "2026-05-09T07:44:20.951776+00:00",
-    "session_id": "083bcd89-cf05-4c2a-881b-1dbd6887db7d"
-  }
+  "pending_recording": null
 }
