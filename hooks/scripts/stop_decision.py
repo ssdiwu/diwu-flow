@@ -1,10 +1,9 @@
-"""Stop hook: default single-task mode + dloop mode.
+"""Stop hook: default single-task mode + dloop cron mode.
 
 执行顺序依赖（dloop 模式）：
   task_completed.py (TaskCompleted 事件) → 写 dloop.completed_task_ids
   stop_decision.py   (Stop 事件)            → 读 completed_task_ids + iteration 递增
 两个 hook 由 CC 框架在不同事件上触发，执行顺序不确定。
-decide_loop_mode() 中已增加 fallback：扫描 dtask.json Done 任务补充 completed_task_ids。
 """
 
 from __future__ import annotations
@@ -23,7 +22,6 @@ setup_sys_path()
 from dloop_state import get_terminal_stop_reason  # noqa: E402
 from session_scope import read_scoped_session_id  # noqa: E402
 
-_DUMMY_PREFIX = "dloop-"  # dloop.py start 生成的 dummy session_id 前缀
 from dtask_state import (  # noqa: E402
     clear_loop_state,
     is_cron_mode,
@@ -508,100 +506,25 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
     return False, {}
 
 
-def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, additional_prompts, runtime_state, session_id):
-    max_tasks = loop_state.get("max_tasks", 0)
-    iteration = loop_state.get("current_iteration", 0)
-    extra = _prompt_suffix(additional_prompts)
-    resolved_sid = _resolve_stop_session_id(session_id or "", cwd)
-
-    resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, resolved_sid)
-    if resolution.is_match and resolution.task.get("status") == "InProgress":
-        return True, {
-            "decision": "block",
-            "reason": format_task(f"🔄 dloop iteration {iteration + 1} | 继续当前任务（断点恢复）：", resolution.task) + extra,
-        }
-    # is_match 但 status 非 InProgress → stale task_sessions entry，降级为 hint
-    if resolution.is_match:
-        task_id = resolution.task.get("id") if resolution.task else "?"
-        print(
-            f"[STOP_HINT] [dloop] Task#{task_id} task_sessions 有 stale owner 但当前状态为 "
-            f"{resolution.task.get('status')}（非 InProgress），已跳过断点恢复。",
-            file=sys.stderr,
-        )
-        return False, {}
-    if resolution.status in ("missing_owner", "owner_mismatch", "invalid_runtime_state"):
-        task_id = resolution.task.get("id") if resolution.task else "?"
-        action = _repair_action(resolution.status)
-        plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "<plugin-root>")
-        hint = (
-            f"[STOP_HINT] {resolution.reason}。"
-            f" 请先执行 {action} 补全 owner 记录后再继续："
-            f" python3 {plugin_root}/scripts/dtask_transition.py "
-            f"{action} --task-id {task_id} --session-id \"$SESSION_ID\" --cwd <proj>"
-        )
-        print(hint, file=sys.stderr)
-        return False, {}
-
-    in_review = [task for task in tasks if task.get("status") == "InReview"]
-
-    stop_reason = get_terminal_stop_reason(tasks, settings=settings, data=data, loop_state_data=loop_state)
-    if stop_reason is not None:
-        notify(f"dloop 循环结束：{stop_reason}")
-        loop_state["active"] = False
-        loop_state["stopped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        loop_state["stop_reason"] = stop_reason
-        report = _generate_phase_report(loop_state, stop_reason, tasks)
-        clear_loop_state(runtime_state)
-        save_runtime_state(cwd, runtime_state, remove_legacy=True)
-        # 安全网：确认落盘文件中 dloop 已被清空（防止 active=true 被 commit）
-        _verify_dloop_cleared(cwd)
-        print(report, file=sys.stderr)
-        return False, {}
-
-    # Layer 1: pending_recording 门控（镜像 decide_default_mode 的 pr_level 区分）
-    # 必须在 save_runtime_state 之前检查：save 会覆写 dtask-state.json，
-    # 若 runtime_state dict 不含 pending_recording 字段则标记会被擦除。
-    # 只拦截 own session 的 block；其他 session 的 pending_rec 降级为 stderr hint，
-    # 避免当前会话被迫处理不属于自己的未记录任务。
-    pr_level, pr_hint = _check_pending_recording_gate(cwd, resolved_sid)
-    if pr_level == "block":
-        extra += f"\n\n{pr_hint}"
-    elif pr_level == "warn":
-        print(pr_hint, file=sys.stderr)
-
-    # 未命中停止条件 → 迭代计数 + 委托 /drun 执行下一轮
-    next_iteration = iteration + 1
-    loop_state["current_iteration"] = next_iteration
-    save_runtime_state(cwd, runtime_state, remove_legacy=True)
-
-    # InReview 计数更新（停止条件输入数据，保留原有语义）
-    if in_review:
-        data["review_used"] = data.get("review_used", 0) + 1
-        _save_task_data(task_json_path, data)
-
-    # completed_task_ids 由 task_completed.py 在 Done 事件时精确追加
-    # 此处只读不写，用于 max_tasks 判断和阶段报告
-
-    return True, {
-        "decision": "block",
-        "reason": (
-            f"dloop iteration {next_iteration}/{f'∞' if max_tasks == 0 else max_tasks} | "
-            f"请继续执行 /drun 完成下一轮任务"
-        ) + extra,
-    }
-
-
 def decide_cron_mode(tasks, settings, data, task_json_path, loop_state, cwd,
-                     additional_prompts, runtime_state):
+                     additional_prompts, runtime_state, session_id=""):
     """Cron 模式停止判定：只判断是否终止，不驱动循环续跑。
 
     cron 模式的每次 iteration 是独立 session，Stop hook 触发时：
+    - InProgress 任务且 owner 匹配 → block（与 default_mode 行为一致）
     - 终止条件命中 → 生成报告 + 清理 dloop + 提示执行 /dstop
     - 未终止 → 返回 (False, {}) 允许 session 自然结束（等下次 Cron 触发）
     """
+    extra = _prompt_suffix(additional_prompts)
+
+    # InProgress 任务阻断：与 decide_default_mode 行为一致
+    resolved_sid = _resolve_stop_session_id(session_id or "", cwd or "")
+    resolution = resolve_session_inprogress_task(tasks, runtime_state or {}, resolved_sid)
+    if resolution.is_match and resolution.task.get("status") == "InProgress":
+        return True, {"decision": "block", "reason": format_task("继续完成当前任务（断点恢复）：", resolution.task) + extra}
+
     max_tasks = loop_state.get("max_tasks", 0)
     iteration = loop_state.get("current_iteration", 0)
-    extra = _prompt_suffix(additional_prompts)
 
     stop_reason = get_terminal_stop_reason(
         tasks, settings=settings, data=data, loop_state_data=loop_state
@@ -642,13 +565,9 @@ def decide_cron_mode(tasks, settings, data, task_json_path, loop_state, cwd,
 
 def decide(tasks, settings, data, task_json_path, cwd, additional_prompts, loop_state, runtime_state=None, session_id=""):
     if loop_state is not None:
-        if is_cron_mode(loop_state):
-            return decide_cron_mode(
-                tasks, settings, data, task_json_path, loop_state, cwd,
-                additional_prompts, runtime_state or {},
-            )
-        return decide_loop_mode(
-            tasks, settings, data, task_json_path, loop_state, cwd, additional_prompts, runtime_state or {}, session_id
+        return decide_cron_mode(
+            tasks, settings, data, task_json_path, loop_state, cwd,
+            additional_prompts, runtime_state or {}, session_id,
         )
     return decide_default_mode(tasks, settings, data, task_json_path, additional_prompts, runtime_state or {}, session_id, cwd)
 
@@ -699,35 +618,6 @@ if __name__ == "__main__":
     event_session_id = hook_session_id(stdin_data)
     session_id = _resolve_stop_session_id(event_session_id, cwd)
 
-    if loop_state is not None:
-        loop_sid = loop_state.get("session_id", "")
-        loop_mode_is_cron = is_cron_mode(loop_state)
-
-        # cron 模式：跳过 session_id 绑定逻辑（每次是新 session）
-        if not loop_mode_is_cron:
-            # 分支1: Stop event 缺失 session_id → 阻止驱动循环（exit 1）
-            if not session_id:
-                print("[STOP_HINT] Stop 事件缺少 session_id，跳过 dloop 驱动", file=sys.stderr)
-                sys.exit(1)
-
-            # 分支2: 首次绑定 — dummy ID 替换为真实 session_id（一次性）
-            elif loop_sid.startswith(_DUMMY_PREFIX):
-                loop_state["session_id"] = session_id
-                save_runtime_state(cwd, runtime_state, remove_legacy=True)
-
-            # 分支3: 已绑定但不匹配 → 清理 dloop 状态，避免孤儿锁
-            elif loop_sid != session_id:
-                print(
-                    f"[STOP_HINT] dloop session 不匹配 "
-                    f"(owner={loop_sid[:8]}..., current={session_id[:8]}...)，"
-                    f"清理 dloop 运行态",
-                    file=sys.stderr,
-                )
-                clear_loop_state(runtime_state)
-                save_runtime_state(cwd, runtime_state, remove_legacy=True)
-                loop_state = None
-            # else: 匹配 → 进入 loop mode（原有正常路径）
-
     additional_prompts = []
     try:
         import stop_archive
@@ -736,7 +626,7 @@ if __name__ == "__main__":
     except (ImportError, AttributeError, OSError):
         pass
 
-    # 将 effective completed_task_ids 传入 decide/decide_loop_mode，
+    # 将 effective completed_task_ids 传入 decide，
     # 使 get_terminal_stop_reason() 的 max_tasks 判断基于完整数据。
     # 使用副本避免污染运行态 loop_state（不写回 dtask-state.json）。
     decide_loop_state = loop_state

@@ -38,7 +38,7 @@ class TestDloopStart:
             {"id": 1, "title": "t1", "status": "InSpec"},
             {"id": 2, "title": "t2", "status": "InProgress"},
         ])
-        rc, out, err = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir))
+        rc, out, err = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir), "--interval", "3m")
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is True
@@ -79,7 +79,7 @@ class TestDloopStart:
             {"id": 1, "title": "done", "status": "Done"},
             {"id": 2, "title": "cancelled", "status": "Cancelled"},
         ])
-        rc, out, err = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir))
+        rc, out, err = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir), "--interval", "3m")
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is False
@@ -91,7 +91,7 @@ class TestDloopStart:
             {"id": 2, "title": "t2", "status": "InSpec"},
             {"id": 3, "title": "t3", "status": "InProgress"},
         ])
-        rc, out, err = run_script("dloop.py", "start", "--max-tasks", "2", "--cwd", str(tmp_project_dir))
+        rc, out, err = run_script("dloop.py", "start", "--max-tasks", "2", "--cwd", str(tmp_project_dir), "--interval", "3m")
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is True
@@ -103,7 +103,7 @@ class TestDloopStart:
             {"id": 1, "title": "t1", "status": "InSpec"},
             {"id": 2, "title": "t2", "status": "InProgress"},
         ])
-        rc, out, _ = run_script("dloop.py", "start", "--max-tasks", "0", "--cwd", str(tmp_project_dir))
+        rc, out, _ = run_script("dloop.py", "start", "--max-tasks", "0", "--cwd", str(tmp_project_dir), "--interval", "3m")
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is True
@@ -116,7 +116,7 @@ class TestDloopStart:
             {"id": 2, "title": "t2", "status": "InProgress"},
             {"id": 3, "title": "t3 (blocked by t1)", "status": "InSpec", "blocked_by": [1]},
         ])
-        rc, out, _ = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir))
+        rc, out, _ = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir), "--interval", "3m")
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is True
@@ -236,7 +236,7 @@ class TestDloopStaleState:
             "stopped_at": None,
             "stop_reason": None,
         })
-        rc, out, _ = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir))
+        rc, out, _ = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir), "--interval", "3m")
         assert rc == 0
         data = json.loads(out)
         assert data["ok"] is True
@@ -453,7 +453,7 @@ class TestDloopPathIntegrity:
         ]}, ensure_ascii=False, indent=2))
 
         # 先 start
-        rc_start, out_start, _ = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir))
+        rc_start, out_start, _ = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir), "--interval", "3m")
         assert rc_start == 0
         data_start = json.loads(out_start)
         assert data_start["status"] == "started"

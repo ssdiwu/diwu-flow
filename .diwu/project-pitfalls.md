@@ -255,3 +255,5 @@
 - [验证误读] drec SKILL.md 归档章节从中间删除后在末尾重新写入，审查时差点误判为"无意重复"→ 实际是瘦身重构中有意保留的操作手册级摘要（比 rules/ 层更简），正确做法：区分"规则定义"与"操作指引"两个信息层次，后者允许适度冗余以提升可操作性 （来源: session-2026-05-06-154924.md）
 ## Source: archive-aggregate-2026-05-09
 - [分层未拆清] 方案初版和修正版均混用 `end.py`/`end.md` 文件名（实际仓库为 `dend.py`/`dend.md`）→ 根因是未先读真实现状就写方案 → 正确做法：方案编写前必须先 explorer 确认每个引用文件的真实路径和内容，禁止凭记忆或旧文档假设文件名 （来源: session-2026-05-06-154940.md）- [验证误读] 口头宣称"活跃代码零 /dend 残留"但 grep 结果包含 CHANGELOG.md 迁移说明 → 验收口径必须明确定义"哪些文件算活跃实现、哪些允许保留迁移痕迹"，否则零残留结论不可复现 （来源: session-2026-05-06-154940.md）
+## Source: archive-aggregate-2026-05-09
+- [分层未拆清] common.py 路径常量设计含 `.diwu/` 前缀（如 `DTASK_JSON = ".diwu/dtask.json"`），但消费者脚本仍沿用旧 `diwu_dir / CONSTANT` 模式导致双重嵌套 → 正确做法是常量含前缀时直接用 `cwd / CONSTANT`，不含前缀时才用 `diwu_dir / CONSTANT`，需统一约定并在迁移时逐文件检查 （来源: session-2026-05-06-170145.md）- [读层现象] replace_all 替换 TASK_JSON 时误改 import 行中的 DTASK_JSON 为 DDTASK_JSON → 根因是 import 行也包含被替换子串且 replace_all 不区分上下文 → 正确做法是精确匹配或先修 import 行再批量替换单独使用处 （来源: session-2026-05-06-170145.md）

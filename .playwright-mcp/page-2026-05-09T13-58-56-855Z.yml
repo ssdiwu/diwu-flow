@@ -1,0 +1,1175 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - link "Skip to content" [ref=e4] [cursor=pointer]:
+        - /url: "#start-of-content"
+      - banner [ref=e6]:
+        - heading "Navigation Menu" [level=2] [ref=e7]
+        - generic [ref=e8]:
+          - link "Homepage" [ref=e10] [cursor=pointer]:
+            - /url: /
+            - img [ref=e11]
+          - generic [ref=e13]:
+            - navigation "Global" [ref=e16]:
+              - list [ref=e17]:
+                - listitem [ref=e18]:
+                  - button "Platform" [ref=e20] [cursor=pointer]:
+                    - text: Platform
+                    - img [ref=e21]
+                - listitem [ref=e23]:
+                  - button "Solutions" [ref=e25] [cursor=pointer]:
+                    - text: Solutions
+                    - img [ref=e26]
+                - listitem [ref=e28]:
+                  - button "Resources" [ref=e30] [cursor=pointer]:
+                    - text: Resources
+                    - img [ref=e31]
+                - listitem [ref=e33]:
+                  - button "Open Source" [ref=e35] [cursor=pointer]:
+                    - text: Open Source
+                    - img [ref=e36]
+                - listitem [ref=e38]:
+                  - button "Enterprise" [ref=e40] [cursor=pointer]:
+                    - text: Enterprise
+                    - img [ref=e41]
+                - listitem [ref=e43]:
+                  - link "Pricing" [ref=e44] [cursor=pointer]:
+                    - /url: https://github.com/pricing
+                    - generic [ref=e45]: Pricing
+            - generic [ref=e46]:
+              - button "Search or jump to…" [ref=e49] [cursor=pointer]:
+                - img [ref=e51]
+              - link "Sign in" [ref=e54] [cursor=pointer]:
+                - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Fmanaflow-ai%2Fcmux%2Fblob%2Fmain%2FREADME.zh-CN.md
+              - link "Sign up" [ref=e55] [cursor=pointer]:
+                - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E%2Fblob%2Fshow&source=header-repo&source_repo=manaflow-ai%2Fcmux
+              - button "Appearance settings" [ref=e58] [cursor=pointer]:
+                - img
+    - main [ref=e62]:
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - generic [ref=e66]:
+            - img [ref=e67]
+            - link "manaflow-ai" [ref=e70] [cursor=pointer]:
+              - /url: /manaflow-ai
+            - generic [ref=e71]: /
+            - strong [ref=e72]:
+              - link "cmux" [ref=e73] [cursor=pointer]:
+                - /url: /manaflow-ai/cmux
+            - generic [ref=e74]: Public
+          - generic [ref=e75]:
+            - list:
+              - listitem [ref=e76]:
+                - button "Sponsor manaflow-ai/cmux" [ref=e78] [cursor=pointer]:
+                  - generic [ref=e80]:
+                    - img [ref=e81]
+                    - text: Sponsor
+              - listitem [ref=e83]:
+                - link "You must be signed in to change notification settings" [ref=e84] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fmanaflow-ai%2Fcmux
+                  - img [ref=e85]
+                  - text: Notifications
+              - listitem [ref=e87]:
+                - link "Fork 1.3k" [ref=e88] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fmanaflow-ai%2Fcmux
+                  - img [ref=e89]
+                  - text: Fork
+                  - generic "1,269" [ref=e91]: 1.3k
+              - listitem [ref=e92]:
+                - link "You must be signed in to star a repository" [ref=e94] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fmanaflow-ai%2Fcmux
+                  - img [ref=e95]
+                  - text: Star
+                  - generic "16554 users starred this repository" [ref=e97]: 16.6k
+        - navigation "Repository" [ref=e98]:
+          - list [ref=e99]:
+            - listitem [ref=e100]:
+              - link "Code" [ref=e101] [cursor=pointer]:
+                - /url: /manaflow-ai/cmux
+                - img [ref=e102]
+                - generic [ref=e104]: Code
+            - listitem [ref=e105]:
+              - link "Issues 950" [ref=e106] [cursor=pointer]:
+                - /url: /manaflow-ai/cmux/issues
+                - img [ref=e107]
+                - generic [ref=e110]: Issues
+                - generic "950" [ref=e111]
+            - listitem [ref=e112]:
+              - link "Pull requests 716" [ref=e113] [cursor=pointer]:
+                - /url: /manaflow-ai/cmux/pulls
+                - img [ref=e114]
+                - generic [ref=e116]: Pull requests
+                - generic "716" [ref=e117]
+            - listitem [ref=e118]:
+              - link "Discussions" [ref=e119] [cursor=pointer]:
+                - /url: /manaflow-ai/cmux/discussions
+                - img [ref=e120]
+                - generic [ref=e122]: Discussions
+            - listitem [ref=e123]:
+              - link "Actions" [ref=e124] [cursor=pointer]:
+                - /url: /manaflow-ai/cmux/actions
+                - img [ref=e125]
+                - generic [ref=e127]: Actions
+            - listitem [ref=e128]:
+              - link "Projects" [ref=e129] [cursor=pointer]:
+                - /url: /manaflow-ai/cmux/projects
+                - img [ref=e130]
+                - generic [ref=e132]: Projects
+            - listitem [ref=e133]:
+              - link "Security and quality" [ref=e134] [cursor=pointer]:
+                - /url: /manaflow-ai/cmux/security
+                - img [ref=e135]
+                - generic [ref=e137]: Security and quality
+            - listitem [ref=e138]:
+              - link "Insights" [ref=e139] [cursor=pointer]:
+                - /url: /manaflow-ai/cmux/pulse
+                - img [ref=e140]
+                - generic [ref=e142]: Insights
+      - generic [ref=e150]:
+        - generic [ref=e152]:
+          - generic [ref=e155]:
+            - generic [ref=e156]:
+              - generic [ref=e157]:
+                - heading "Collapse file tree" [level=2] [ref=e158]:
+                  - button "Collapse file tree" [expanded] [ref=e159] [cursor=pointer]:
+                    - img [ref=e160]
+                - heading "Files" [level=2] [ref=e163]
+              - generic [ref=e164]:
+                - button "main branch" [ref=e166] [cursor=pointer]:
+                  - generic [ref=e167]:
+                    - generic [ref=e169]:
+                      - img [ref=e171]
+                      - generic [ref=e174]: main
+                    - generic:
+                      - img
+                - button "Search this repository (forward slash)" [ref=e176] [cursor=pointer]:
+                  - img [ref=e177]
+            - generic [ref=e180]:
+              - img [ref=e182]
+              - combobox "Go to file" [ref=e184]
+            - navigation "File Tree Navigation" [ref=e190]:
+              - tree "Files" [ref=e192]:
+                - treeitem ".circleci" [level=1] [ref=e193]:
+                  - generic [ref=e194] [cursor=pointer]:
+                    - img [ref=e196]
+                    - generic [ref=e198]:
+                      - img [ref=e202]
+                      - generic [ref=e204]: .circleci
+                - treeitem ".claude" [level=1] [ref=e205]:
+                  - generic [ref=e206] [cursor=pointer]:
+                    - img [ref=e208]
+                    - generic [ref=e210]:
+                      - img [ref=e214]
+                      - generic [ref=e216]: .claude
+                - treeitem ".github" [level=1] [ref=e217]:
+                  - generic [ref=e218] [cursor=pointer]:
+                    - img [ref=e220]
+                    - generic [ref=e222]:
+                      - img [ref=e226]
+                      - generic [ref=e228]: .github
+                - treeitem ".greptile" [level=1] [ref=e229]:
+                  - generic [ref=e230] [cursor=pointer]:
+                    - img [ref=e232]
+                    - generic [ref=e234]:
+                      - img [ref=e238]
+                      - generic [ref=e240]: .greptile
+                - treeitem "AppIcon.icon" [level=1] [ref=e241]:
+                  - generic [ref=e242] [cursor=pointer]:
+                    - img [ref=e244]
+                    - generic [ref=e246]:
+                      - img [ref=e250]
+                      - generic [ref=e252]: AppIcon.icon
+                - treeitem "Assets.xcassets" [level=1] [ref=e253]:
+                  - generic [ref=e254] [cursor=pointer]:
+                    - img [ref=e256]
+                    - generic [ref=e258]:
+                      - img [ref=e262]
+                      - generic [ref=e264]: Assets.xcassets
+                - treeitem "CLI" [level=1] [ref=e265]:
+                  - generic [ref=e266] [cursor=pointer]:
+                    - img [ref=e268]
+                    - generic [ref=e270]:
+                      - img [ref=e274]
+                      - generic [ref=e276]: CLI
+                - treeitem "GhosttyTabs.xcodeproj" [level=1] [ref=e277]:
+                  - generic [ref=e278] [cursor=pointer]:
+                    - img [ref=e280]
+                    - generic [ref=e282]:
+                      - img [ref=e286]
+                      - generic [ref=e288]: GhosttyTabs.xcodeproj
+                - treeitem "Packages" [level=1] [ref=e289]:
+                  - generic [ref=e290] [cursor=pointer]:
+                    - img [ref=e292]
+                    - generic [ref=e294]:
+                      - img [ref=e298]
+                      - generic [ref=e300]: Packages
+                - treeitem "Prototypes" [level=1] [ref=e301]:
+                  - generic [ref=e302] [cursor=pointer]:
+                    - img [ref=e304]
+                    - generic [ref=e306]:
+                      - img [ref=e310]
+                      - generic [ref=e312]: Prototypes
+                - treeitem "Resources" [level=1] [ref=e313]:
+                  - generic [ref=e314] [cursor=pointer]:
+                    - img [ref=e316]
+                    - generic [ref=e318]:
+                      - img [ref=e322]
+                      - generic [ref=e324]: Resources
+                - treeitem "Sources" [level=1] [ref=e325]:
+                  - generic [ref=e326] [cursor=pointer]:
+                    - img [ref=e328]
+                    - generic [ref=e330]:
+                      - img [ref=e334]
+                      - generic [ref=e336]: Sources
+                - treeitem "cmuxTests" [level=1] [ref=e337]:
+                  - generic [ref=e338] [cursor=pointer]:
+                    - img [ref=e340]
+                    - generic [ref=e342]:
+                      - img [ref=e346]
+                      - generic [ref=e348]: cmuxTests
+                - treeitem "cmuxUITests" [level=1] [ref=e349]:
+                  - generic [ref=e350] [cursor=pointer]:
+                    - img [ref=e352]
+                    - generic [ref=e354]:
+                      - img [ref=e358]
+                      - generic [ref=e360]: cmuxUITests
+                - treeitem "daemon" [level=1] [ref=e361]:
+                  - generic [ref=e362] [cursor=pointer]:
+                    - img [ref=e364]
+                    - generic [ref=e366]:
+                      - img [ref=e370]
+                      - generic [ref=e372]: daemon
+                - treeitem "design" [level=1] [ref=e373]:
+                  - generic [ref=e374] [cursor=pointer]:
+                    - img [ref=e376]
+                    - generic [ref=e378]:
+                      - img [ref=e382]
+                      - generic [ref=e384]: design
+                - treeitem "docs" [level=1] [ref=e385]:
+                  - generic [ref=e386] [cursor=pointer]:
+                    - img [ref=e388]
+                    - generic [ref=e390]:
+                      - img [ref=e394]
+                      - generic [ref=e396]: docs
+                - treeitem "dogfood" [level=1] [ref=e397]:
+                  - generic [ref=e398] [cursor=pointer]:
+                    - img [ref=e400]
+                    - generic [ref=e402]:
+                      - img [ref=e406]
+                      - generic [ref=e408]: dogfood
+                - treeitem "ghostty" [level=1] [ref=e409]:
+                  - generic [ref=e411] [cursor=pointer]:
+                    - img [ref=e414]
+                    - generic [ref=e416]: ghostty
+                - treeitem "homebrew-cmux" [level=1] [ref=e417]:
+                  - generic [ref=e419] [cursor=pointer]:
+                    - img [ref=e422]
+                    - generic [ref=e424]: homebrew-cmux
+                - treeitem "scripts" [level=1] [ref=e425]:
+                  - generic [ref=e426] [cursor=pointer]:
+                    - img [ref=e428]
+                    - generic [ref=e430]:
+                      - img [ref=e434]
+                      - generic [ref=e436]: scripts
+                - treeitem "skills" [level=1] [ref=e437]:
+                  - generic [ref=e438] [cursor=pointer]:
+                    - img [ref=e440]
+                    - generic [ref=e442]:
+                      - img [ref=e446]
+                      - generic [ref=e448]: skills
+                - treeitem "tests" [level=1] [ref=e449]:
+                  - generic [ref=e450] [cursor=pointer]:
+                    - img [ref=e452]
+                    - generic [ref=e454]:
+                      - img [ref=e458]
+                      - generic [ref=e460]: tests
+                - treeitem "tests_v2" [level=1] [ref=e461]:
+                  - generic [ref=e462] [cursor=pointer]:
+                    - img [ref=e464]
+                    - generic [ref=e466]:
+                      - img [ref=e470]
+                      - generic [ref=e472]: tests_v2
+                - treeitem "vendor" [level=1] [ref=e473]:
+                  - generic [ref=e474] [cursor=pointer]:
+                    - img [ref=e476]
+                    - generic [ref=e478]:
+                      - img [ref=e482]
+                      - generic [ref=e484]: vendor
+                - treeitem "web" [level=1] [ref=e485]:
+                  - generic [ref=e486] [cursor=pointer]:
+                    - img [ref=e488]
+                    - generic [ref=e490]:
+                      - img [ref=e494]
+                      - generic [ref=e496]: web
+                - treeitem ".coderabbit.yaml" [level=1] [ref=e497]:
+                  - generic [ref=e499] [cursor=pointer]:
+                    - img [ref=e502]
+                    - generic [ref=e504]: .coderabbit.yaml
+                - treeitem ".gitignore" [level=1] [ref=e505]:
+                  - generic [ref=e507] [cursor=pointer]:
+                    - img [ref=e510]
+                    - generic [ref=e512]: .gitignore
+                - treeitem ".gitkeep" [level=1] [ref=e513]:
+                  - generic [ref=e515] [cursor=pointer]:
+                    - img [ref=e518]
+                    - generic [ref=e520]: .gitkeep
+                - treeitem ".gitmodules" [level=1] [ref=e521]:
+                  - generic [ref=e523] [cursor=pointer]:
+                    - img [ref=e526]
+                    - generic [ref=e528]: .gitmodules
+                - treeitem ".vercelignore" [level=1] [ref=e529]:
+                  - generic [ref=e531] [cursor=pointer]:
+                    - img [ref=e534]
+                    - generic [ref=e536]: .vercelignore
+                - treeitem "AGENTS.md" [level=1] [ref=e537]:
+                  - generic [ref=e539] [cursor=pointer]:
+                    - img [ref=e542]
+                    - generic [ref=e544]: AGENTS.md
+                - treeitem "CHANGELOG.md" [level=1] [ref=e545]:
+                  - generic [ref=e547] [cursor=pointer]:
+                    - img [ref=e550]
+                    - generic [ref=e552]: CHANGELOG.md
+                - treeitem "CLAUDE.md" [level=1] [ref=e553]:
+                  - generic [ref=e555] [cursor=pointer]:
+                    - img [ref=e558]
+                    - generic [ref=e560]: CLAUDE.md
+                - treeitem "CONTRIBUTING.md" [level=1] [ref=e561]:
+                  - generic [ref=e563] [cursor=pointer]:
+                    - img [ref=e566]
+                    - generic [ref=e568]: CONTRIBUTING.md
+                - treeitem "LICENSE" [level=1] [ref=e569]:
+                  - generic [ref=e571] [cursor=pointer]:
+                    - img [ref=e574]
+                    - generic [ref=e576]: LICENSE
+                - treeitem "PROJECTS.md" [level=1] [ref=e577]:
+                  - generic [ref=e579] [cursor=pointer]:
+                    - img [ref=e582]
+                    - generic [ref=e584]: PROJECTS.md
+                - treeitem "README.ar.md" [level=1] [ref=e585]:
+                  - generic [ref=e587] [cursor=pointer]:
+                    - img [ref=e590]
+                    - generic [ref=e592]: README.ar.md
+                - treeitem "README.bs.md" [level=1] [ref=e593]:
+                  - generic [ref=e595] [cursor=pointer]:
+                    - img [ref=e598]
+                    - generic [ref=e600]: README.bs.md
+                - treeitem "README.da.md" [level=1] [ref=e601]:
+                  - generic [ref=e603] [cursor=pointer]:
+                    - img [ref=e606]
+                    - generic [ref=e608]: README.da.md
+                - treeitem "README.de.md" [level=1] [ref=e609]:
+                  - generic [ref=e611] [cursor=pointer]:
+                    - img [ref=e614]
+                    - generic [ref=e616]: README.de.md
+                - treeitem "README.es.md" [level=1] [ref=e617]:
+                  - generic [ref=e619] [cursor=pointer]:
+                    - img [ref=e622]
+                    - generic [ref=e624]: README.es.md
+                - treeitem "README.fr.md" [level=1] [ref=e625]:
+                  - generic [ref=e627] [cursor=pointer]:
+                    - img [ref=e630]
+                    - generic [ref=e632]: README.fr.md
+                - treeitem "README.it.md" [level=1] [ref=e633]:
+                  - generic [ref=e635] [cursor=pointer]:
+                    - img [ref=e638]
+                    - generic [ref=e640]: README.it.md
+                - treeitem "README.ja.md" [level=1] [ref=e641]:
+                  - generic [ref=e643] [cursor=pointer]:
+                    - img [ref=e646]
+                    - generic [ref=e648]: README.ja.md
+                - treeitem "README.km.md" [level=1] [ref=e649]:
+                  - generic [ref=e651] [cursor=pointer]:
+                    - img [ref=e654]
+                    - generic [ref=e656]: README.km.md
+                - treeitem "README.ko.md" [level=1] [ref=e657]:
+                  - generic [ref=e659] [cursor=pointer]:
+                    - img [ref=e662]
+                    - generic [ref=e664]: README.ko.md
+                - treeitem "README.md" [level=1] [ref=e665]:
+                  - generic [ref=e667] [cursor=pointer]:
+                    - img [ref=e670]
+                    - generic [ref=e672]: README.md
+                - treeitem "README.no.md" [level=1] [ref=e673]:
+                  - generic [ref=e675] [cursor=pointer]:
+                    - img [ref=e678]
+                    - generic [ref=e680]: README.no.md
+                - treeitem "README.pl.md" [level=1] [ref=e681]:
+                  - generic [ref=e683] [cursor=pointer]:
+                    - img [ref=e686]
+                    - generic [ref=e688]: README.pl.md
+                - treeitem "README.pt-BR.md" [level=1] [ref=e689]:
+                  - generic [ref=e691] [cursor=pointer]:
+                    - img [ref=e694]
+                    - generic [ref=e696]: README.pt-BR.md
+                - treeitem "README.ru.md" [level=1] [ref=e697]:
+                  - generic [ref=e699] [cursor=pointer]:
+                    - img [ref=e702]
+                    - generic [ref=e704]: README.ru.md
+                - treeitem "README.th.md" [level=1] [ref=e705]:
+                  - generic [ref=e707] [cursor=pointer]:
+                    - img [ref=e710]
+                    - generic [ref=e712]: README.th.md
+                - treeitem "README.tr.md" [level=1] [ref=e713]:
+                  - generic [ref=e715] [cursor=pointer]:
+                    - img [ref=e718]
+                    - generic [ref=e720]: README.tr.md
+                - treeitem "README.uk.md" [level=1] [ref=e721]:
+                  - generic [ref=e723] [cursor=pointer]:
+                    - img [ref=e726]
+                    - generic [ref=e728]: README.uk.md
+                - treeitem "README.vi.md" [level=1] [ref=e729]:
+                  - generic [ref=e731] [cursor=pointer]:
+                    - img [ref=e734]
+                    - generic [ref=e736]: README.vi.md
+                - treeitem "README.zh-CN.md" [level=1] [ref=e737]:
+                  - generic [ref=e739] [cursor=pointer]:
+                    - img [ref=e742]
+                    - generic [ref=e744]: README.zh-CN.md
+                - treeitem "README.zh-TW.md" [level=1] [ref=e745]:
+                  - generic [ref=e747] [cursor=pointer]:
+                    - img [ref=e750]
+                    - generic [ref=e752]: README.zh-TW.md
+                - treeitem "THIRD_PARTY_LICENSES.md" [level=1] [ref=e753]:
+                  - generic [ref=e755] [cursor=pointer]:
+                    - img [ref=e758]
+                    - generic [ref=e760]: THIRD_PARTY_LICENSES.md
+                - treeitem "TODO.md" [level=1] [ref=e761]:
+                  - generic [ref=e763] [cursor=pointer]:
+                    - img [ref=e766]
+                    - generic [ref=e768]: TODO.md
+                - treeitem "bun.lock" [level=1] [ref=e769]:
+                  - generic [ref=e771] [cursor=pointer]:
+                    - img [ref=e774]
+                    - generic [ref=e776]: bun.lock
+                - treeitem "cmux-Bridging-Header.h" [level=1] [ref=e777]:
+                  - generic [ref=e779] [cursor=pointer]:
+                    - img [ref=e782]
+                    - generic [ref=e784]: cmux-Bridging-Header.h
+                - treeitem "cmux-helper.entitlements" [level=1] [ref=e785]:
+                  - generic [ref=e787] [cursor=pointer]:
+                    - img [ref=e790]
+                    - generic [ref=e792]: cmux-helper.entitlements
+                - treeitem "cmux.entitlements" [level=1] [ref=e793]:
+                  - generic [ref=e795] [cursor=pointer]:
+                    - img [ref=e798]
+                    - generic [ref=e800]: cmux.entitlements
+                - treeitem "cmux.nightly.entitlements" [level=1] [ref=e801]:
+                  - generic [ref=e803] [cursor=pointer]:
+                    - img [ref=e806]
+                    - generic [ref=e808]: cmux.nightly.entitlements
+                - treeitem "cmux.release.entitlements" [level=1] [ref=e809]:
+                  - generic [ref=e811] [cursor=pointer]:
+                    - img [ref=e814]
+                    - generic [ref=e816]: cmux.release.entitlements
+                - treeitem "ghostty.h" [level=1] [ref=e817]:
+                  - generic [ref=e819] [cursor=pointer]:
+                    - img [ref=e822]
+                    - generic [ref=e824]: ghostty.h
+                - treeitem "package.json" [level=1] [ref=e825]:
+                  - generic [ref=e827] [cursor=pointer]:
+                    - img [ref=e830]
+                    - generic [ref=e832]: package.json
+                - treeitem "skills.sh" [level=1] [ref=e833]:
+                  - generic [ref=e835] [cursor=pointer]:
+                    - img [ref=e838]
+                    - generic [ref=e840]: skills.sh
+          - slider "Draggable pane splitter" [ref=e842]
+        - generic [ref=e845]:
+          - generic [ref=e849]:
+            - generic [ref=e851]:
+              - navigation "Breadcrumbs" [ref=e852]:
+                - heading "Breadcrumbs" [level=2] [ref=e853]
+                - list [ref=e854]:
+                  - listitem [ref=e855]:
+                    - link "cmux" [ref=e856] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/tree/main
+              - generic [ref=e857]:
+                - text: /
+                - heading "README.zh-CN.md" [level=1] [ref=e858]
+              - button "Copy path" [ref=e859] [cursor=pointer]:
+                - img [ref=e860]
+            - button "More file actions" [ref=e866] [cursor=pointer]:
+              - img [ref=e867]
+          - generic [ref=e869]:
+            - generic [ref=e871]:
+              - heading "Latest commit" [level=2] [ref=e872]
+              - generic [ref=e873]:
+                - generic [ref=e875]:
+                  - link "austinywang" [ref=e876] [cursor=pointer]:
+                    - /url: /austinywang
+                    - img "austinywang" [ref=e877]
+                  - link "commits by austinywang" [ref=e878] [cursor=pointer]:
+                    - /url: /manaflow-ai/cmux/commits?author=austinywang
+                    - text: austinywang
+                - generic [ref=e879]:
+                  - link "Add GitHub stars badge to translated READMEs" [ref=e882] [cursor=pointer]:
+                    - /url: /manaflow-ai/cmux/commit/d4c1ef2501c4bb2dd5102a844a0c0542bf272b31
+                  - button "success" [ref=e883] [cursor=pointer]:
+                    - img [ref=e884]
+              - generic [ref=e886]:
+                - generic [ref=e888]:
+                  - link "Commit d4c1ef2" [ref=e889] [cursor=pointer]:
+                    - /url: /manaflow-ai/cmux/commit/d4c1ef2501c4bb2dd5102a844a0c0542bf272b31
+                    - text: d4c1ef2
+                  - text: ·
+                  - generic "Apr 2, 2026, 4:55 AM GMT+8" [ref=e890]: Apr 2, 2026last month
+                - generic [ref=e891]:
+                  - heading "History" [level=2] [ref=e892]
+                  - link "History" [ref=e893] [cursor=pointer]:
+                    - /url: /manaflow-ai/cmux/commits/main/README.zh-CN.md
+                    - generic [ref=e894]:
+                      - generic:
+                        - img
+                      - generic [ref=e895]: History
+            - generic [ref=e897]:
+              - generic [ref=e899]:
+                - heading "File metadata and controls" [level=2] [ref=e900]
+                - list "File view" [ref=e902]:
+                  - listitem [ref=e903]:
+                    - button "Preview" [ref=e904] [cursor=pointer]:
+                      - generic [ref=e906]: Preview
+                  - listitem [ref=e907]:
+                    - button "Code" [ref=e908] [cursor=pointer]:
+                      - generic [ref=e910]: Code
+                  - listitem [ref=e911]:
+                    - button "Blame" [ref=e912] [cursor=pointer]:
+                      - generic [ref=e914]: Blame
+                - generic [ref=e915]:
+                  - generic [ref=e916]:
+                    - generic [ref=e917]:
+                      - link "Raw" [ref=e919] [cursor=pointer]:
+                        - /url: https://github.com/manaflow-ai/cmux/raw/refs/heads/main/README.zh-CN.md
+                        - generic [ref=e921]: Raw
+                      - button "Copy raw file" [ref=e923] [cursor=pointer]:
+                        - img [ref=e924]
+                      - button "Download raw file" [ref=e928] [cursor=pointer]:
+                        - img [ref=e929]
+                    - generic [ref=e932]:
+                      - button "You must be signed in to make or propose changes" [disabled] [ref=e934]:
+                        - img [ref=e935]
+                      - button "More edit options" [ref=e938] [cursor=pointer]:
+                        - img [ref=e939]
+                  - button "Outline" [ref=e941] [cursor=pointer]:
+                    - img [ref=e942]
+              - region "README.zh-CN.md" [ref=e945]:
+                - article [ref=e947]:
+                  - blockquote [ref=e948]:
+                    - paragraph [ref=e949]: 此翻译由 Claude 生成。如有改进建议，欢迎提交 PR。
+                  - generic [ref=e950]:
+                    - heading "cmux" [level=1] [ref=e951]
+                    - 'link "Permalink: cmux" [ref=e952] [cursor=pointer]':
+                      - /url: "#cmux"
+                      - img [ref=e953]
+                  - paragraph [ref=e955]: 基于 Ghostty 的 macOS 终端，带有垂直标签页和为 AI 编程代理设计的通知系统
+                  - paragraph [ref=e956]:
+                    - link "下载 cmux macOS 版" [ref=e957] [cursor=pointer]:
+                      - /url: https://github.com/manaflow-ai/cmux/releases/latest/download/cmux-macos.dmg
+                      - img "下载 cmux macOS 版" [ref=e958]
+                  - paragraph [ref=e959]:
+                    - link "English" [ref=e960] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.md
+                    - text: "|"
+                    - link "日本語" [ref=e961] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.ja.md
+                    - text: "| 简体中文 |"
+                    - link "繁體中文" [ref=e962] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.zh-TW.md
+                    - text: "|"
+                    - link "한국어" [ref=e963] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.ko.md
+                    - text: "|"
+                    - link "Deutsch" [ref=e964] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.de.md
+                    - text: "|"
+                    - link "Español" [ref=e965] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.es.md
+                    - text: "|"
+                    - link "Français" [ref=e966] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.fr.md
+                    - text: "|"
+                    - link "Italiano" [ref=e967] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.it.md
+                    - text: "|"
+                    - link "Dansk" [ref=e968] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.da.md
+                    - text: "|"
+                    - link "Polski" [ref=e969] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.pl.md
+                    - text: "|"
+                    - link "Русский" [ref=e970] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.ru.md
+                    - text: "|"
+                    - link "Bosanski" [ref=e971] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.bs.md
+                    - text: "|"
+                    - link "العربية" [ref=e972] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.ar.md
+                    - text: "|"
+                    - link "Norsk" [ref=e973] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.no.md
+                    - text: "|"
+                    - link "Português (Brasil)" [ref=e974] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.pt-BR.md
+                    - text: "|"
+                    - link "ไทย" [ref=e975] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.th.md
+                    - text: "|"
+                    - link "Türkçe" [ref=e976] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.tr.md
+                    - text: "|"
+                    - link "ភាសាខ្មែរ" [ref=e977] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.km.md
+                    - text: "|"
+                    - link "Українська" [ref=e978] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/README.uk.md
+                  - paragraph [ref=e979]:
+                    - link "X / Twitter" [ref=e980] [cursor=pointer]:
+                      - /url: https://x.com/manaflowai
+                      - img "X / Twitter" [ref=e981]
+                    - link "Discord" [ref=e982] [cursor=pointer]:
+                      - /url: https://discord.gg/xsgFEVrWCZ
+                      - img "Discord" [ref=e983]
+                    - link "GitHub stars" [ref=e984] [cursor=pointer]:
+                      - /url: https://github.com/manaflow-ai/cmux
+                      - img "GitHub stars" [ref=e985]
+                  - paragraph [ref=e986]:
+                    - link "cmux 截图" [ref=e987] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/docs/assets/main-first-image.png
+                      - img "cmux 截图" [ref=e988]
+                  - paragraph [ref=e989]:
+                    - link "▶ 演示视频" [ref=e990] [cursor=pointer]:
+                      - /url: https://www.youtube.com/watch?v=i-WxO5YUTOs
+                    - text: ·
+                    - link "The Zen of cmux" [ref=e991] [cursor=pointer]:
+                      - /url: https://cmux.com/blog/zen-of-cmux
+                  - generic [ref=e992]:
+                    - heading "功能特性" [level=2] [ref=e993]
+                    - 'link "Permalink: 功能特性" [ref=e994] [cursor=pointer]':
+                      - /url: "#功能特性"
+                      - img [ref=e995]
+                  - table [ref=e998]:
+                    - rowgroup [ref=e999]:
+                      - 'row "通知提示环 Permalink: 通知提示环 当编程代理需要您注意时，窗格会显示蓝色光环，标签页会高亮 通知提示环" [ref=e1000]':
+                        - 'cell "通知提示环 Permalink: 通知提示环 当编程代理需要您注意时，窗格会显示蓝色光环，标签页会高亮" [ref=e1001]':
+                          - generic [ref=e1002]:
+                            - heading "通知提示环" [level=3] [ref=e1003]
+                            - 'link "Permalink: 通知提示环" [ref=e1004] [cursor=pointer]':
+                              - /url: "#通知提示环"
+                              - img [ref=e1005]
+                          - text: 当编程代理需要您注意时，窗格会显示蓝色光环，标签页会高亮
+                        - cell "通知提示环" [ref=e1007]:
+                          - link "通知提示环" [ref=e1008] [cursor=pointer]:
+                            - /url: /manaflow-ai/cmux/blob/main/docs/assets/notification-rings.png
+                            - img "通知提示环" [ref=e1009]
+                      - 'row "通知面板 Permalink: 通知面板 在一处查看所有待处理通知，快速跳转到最新未读通知 侧边栏通知徽章" [ref=e1010]':
+                        - 'cell "通知面板 Permalink: 通知面板 在一处查看所有待处理通知，快速跳转到最新未读通知" [ref=e1011]':
+                          - generic [ref=e1012]:
+                            - heading "通知面板" [level=3] [ref=e1013]
+                            - 'link "Permalink: 通知面板" [ref=e1014] [cursor=pointer]':
+                              - /url: "#通知面板"
+                              - img [ref=e1015]
+                          - text: 在一处查看所有待处理通知，快速跳转到最新未读通知
+                        - cell "侧边栏通知徽章" [ref=e1017]:
+                          - link "侧边栏通知徽章" [ref=e1018] [cursor=pointer]:
+                            - /url: /manaflow-ai/cmux/blob/main/docs/assets/sidebar-notification-badge.png
+                            - img "侧边栏通知徽章" [ref=e1019]
+                      - 'row "内置浏览器 Permalink: 内置浏览器 在终端旁边分割出浏览器窗格，提供从 agent-browser 移植的可脚本化 API 内置浏览器" [ref=e1020]':
+                        - 'cell "内置浏览器 Permalink: 内置浏览器 在终端旁边分割出浏览器窗格，提供从 agent-browser 移植的可脚本化 API" [ref=e1021]':
+                          - generic [ref=e1022]:
+                            - heading "内置浏览器" [level=3] [ref=e1023]
+                            - 'link "Permalink: 内置浏览器" [ref=e1024] [cursor=pointer]':
+                              - /url: "#内置浏览器"
+                              - img [ref=e1025]
+                          - text: 在终端旁边分割出浏览器窗格，提供从
+                          - link "agent-browser" [ref=e1027] [cursor=pointer]:
+                            - /url: https://github.com/vercel-labs/agent-browser
+                          - text: 移植的可脚本化 API
+                        - cell "内置浏览器" [ref=e1028]:
+                          - link "内置浏览器" [ref=e1029] [cursor=pointer]:
+                            - /url: /manaflow-ai/cmux/blob/main/docs/assets/built-in-browser.png
+                            - img "内置浏览器" [ref=e1030]
+                      - 'row "垂直 + 水平标签页 Permalink: 垂直 + 水平标签页 侧边栏显示 git 分支、关联 PR 状态/编号、工作目录、监听端口和最新通知文本。支持水平和垂直分割。 垂直标签页和分割窗格" [ref=e1031]':
+                        - 'cell "垂直 + 水平标签页 Permalink: 垂直 + 水平标签页 侧边栏显示 git 分支、关联 PR 状态/编号、工作目录、监听端口和最新通知文本。支持水平和垂直分割。" [ref=e1032]':
+                          - generic [ref=e1033]:
+                            - heading "垂直 + 水平标签页" [level=3] [ref=e1034]
+                            - 'link "Permalink: 垂直 + 水平标签页" [ref=e1035] [cursor=pointer]':
+                              - /url: "#垂直--水平标签页"
+                              - img [ref=e1036]
+                          - text: 侧边栏显示 git 分支、关联 PR 状态/编号、工作目录、监听端口和最新通知文本。支持水平和垂直分割。
+                        - cell "垂直标签页和分割窗格" [ref=e1038]:
+                          - link "垂直标签页和分割窗格" [ref=e1039] [cursor=pointer]:
+                            - /url: /manaflow-ai/cmux/blob/main/docs/assets/vertical-horizontal-tabs-and-splits.png
+                            - img "垂直标签页和分割窗格" [ref=e1040]
+                      - 'row "SSH Permalink: SSH cmux ssh user@remote 为远程机器创建工作区。浏览器窗格通过远程网络路由，因此 localhost 直接可用。将图片拖入远程会话即可通过 scp 上传。 cmux SSH" [ref=e1041]':
+                        - 'cell "SSH Permalink: SSH cmux ssh user@remote 为远程机器创建工作区。浏览器窗格通过远程网络路由，因此 localhost 直接可用。将图片拖入远程会话即可通过 scp 上传。" [ref=e1042]':
+                          - generic [ref=e1043]:
+                            - heading "SSH" [level=3] [ref=e1044]
+                            - 'link "Permalink: SSH" [ref=e1045] [cursor=pointer]':
+                              - /url: "#ssh"
+                              - img [ref=e1046]
+                          - code [ref=e1048]: cmux ssh user@remote
+                          - text: 为远程机器创建工作区。浏览器窗格通过远程网络路由，因此 localhost 直接可用。将图片拖入远程会话即可通过 scp 上传。
+                        - cell "cmux SSH" [ref=e1049]:
+                          - link "cmux SSH" [ref=e1050] [cursor=pointer]:
+                            - /url: /manaflow-ai/cmux/blob/main/docs/assets/ssh.png
+                            - img "cmux SSH" [ref=e1051]
+                      - 'row "Claude Code Teams Permalink: Claude Code Teams cmux claude-teams 一条命令运行 Claude Code 的队友模式。队友以原生分割的形式生成，侧边栏显示元数据和通知。无需 tmux。 Claude Code Teams" [ref=e1052]':
+                        - 'cell "Claude Code Teams Permalink: Claude Code Teams cmux claude-teams 一条命令运行 Claude Code 的队友模式。队友以原生分割的形式生成，侧边栏显示元数据和通知。无需 tmux。" [ref=e1053]':
+                          - generic [ref=e1054]:
+                            - heading "Claude Code Teams" [level=3] [ref=e1055]
+                            - 'link "Permalink: Claude Code Teams" [ref=e1056] [cursor=pointer]':
+                              - /url: "#claude-code-teams"
+                              - img [ref=e1057]
+                          - code [ref=e1059]: cmux claude-teams
+                          - text: 一条命令运行 Claude Code 的队友模式。队友以原生分割的形式生成，侧边栏显示元数据和通知。无需 tmux。
+                        - cell "Claude Code Teams" [ref=e1060]:
+                          - link "Claude Code Teams" [ref=e1061] [cursor=pointer]:
+                            - /url: /manaflow-ai/cmux/blob/main/docs/assets/claude-code-teams.png
+                            - img "Claude Code Teams" [ref=e1062]
+                  - list [ref=e1063]:
+                    - listitem [ref=e1064]:
+                      - strong [ref=e1065]: 浏览器导入
+                      - text: — 从 Chrome、Firefox、Arc 及 20 多种浏览器导入 Cookie、历史记录和会话，让浏览器窗格启动即已登录
+                    - listitem [ref=e1066]:
+                      - strong [ref=e1067]: 自定义命令
+                      - text: — 在
+                      - link "cmux.json" [ref=e1068] [cursor=pointer]:
+                        - /url: https://cmux.com/docs/custom-commands
+                        - code [ref=e1069]: cmux.json
+                      - text: 中定义项目专属操作，通过命令面板启动
+                    - listitem [ref=e1070]:
+                      - strong [ref=e1071]: 可脚本化
+                      - text: — 通过 CLI 和 socket API 创建工作区、分割窗格、发送按键和自动化浏览器操作
+                    - listitem [ref=e1072]:
+                      - strong [ref=e1073]: 原生 macOS 应用
+                      - text: — 使用 Swift 和 AppKit 构建，非 Electron。启动快速，内存占用低。
+                    - listitem [ref=e1074]:
+                      - strong [ref=e1075]: 兼容 Ghostty
+                      - text: — 读取您现有的
+                      - code [ref=e1076]: ~/.config/ghostty/config
+                      - text: 配置文件中的主题、字体和颜色设置
+                    - listitem [ref=e1077]:
+                      - strong [ref=e1078]: GPU 加速
+                      - text: — 由 libghostty 驱动，渲染流畅
+                  - generic [ref=e1079]:
+                    - heading "安装" [level=2] [ref=e1080]
+                    - 'link "Permalink: 安装" [ref=e1081] [cursor=pointer]':
+                      - /url: "#安装"
+                      - img [ref=e1082]
+                  - generic [ref=e1084]:
+                    - heading "DMG（推荐）" [level=3] [ref=e1085]
+                    - 'link "Permalink: DMG（推荐）" [ref=e1086] [cursor=pointer]':
+                      - /url: "#dmg推荐"
+                      - img [ref=e1087]
+                  - link "下载 cmux macOS 版" [ref=e1089] [cursor=pointer]:
+                    - /url: https://github.com/manaflow-ai/cmux/releases/latest/download/cmux-macos.dmg
+                    - img "下载 cmux macOS 版" [ref=e1090]
+                  - paragraph [ref=e1091]:
+                    - text: 打开
+                    - code [ref=e1092]: .dmg
+                    - text: 文件并将 cmux 拖动到"应用程序"文件夹。cmux 通过 Sparkle 自动更新，您只需下载一次。
+                  - generic [ref=e1093]:
+                    - heading "Homebrew" [level=3] [ref=e1094]
+                    - 'link "Permalink: Homebrew" [ref=e1095] [cursor=pointer]':
+                      - /url: "#homebrew"
+                      - img [ref=e1096]
+                  - generic [ref=e1098]:
+                    - generic [ref=e1099]: brew tap manaflow-ai/cmux brew install --cask cmux
+                    - button "Copy" [ref=e1101] [cursor=pointer]:
+                      - img [ref=e1102]
+                  - paragraph [ref=e1105]: 稍后更新：
+                  - generic [ref=e1106]:
+                    - generic [ref=e1107]: brew upgrade --cask cmux
+                    - button "Copy" [ref=e1109] [cursor=pointer]:
+                      - img [ref=e1110]
+                  - paragraph [ref=e1113]:
+                    - text: 首次启动时，macOS 可能会要求您确认打开来自已验证开发者的应用。点击
+                    - strong [ref=e1114]: 打开
+                    - text: 即可继续。
+                  - generic [ref=e1115]:
+                    - heading "为什么做 cmux？" [level=2] [ref=e1116]
+                    - 'link "Permalink: 为什么做 cmux？" [ref=e1117] [cursor=pointer]':
+                      - /url: "#为什么做-cmux"
+                      - img [ref=e1118]
+                  - paragraph [ref=e1120]: 我同时运行大量 Claude Code 和 Codex 会话。之前我用 Ghostty 开了一堆分割窗格，依靠 macOS 原生通知来了解代理何时需要我。但 Claude Code 的通知内容总是千篇一律的"Claude is waiting for your input"，没有任何上下文信息，而且标签页一多，连标题都看不清了。
+                  - paragraph [ref=e1121]: 我试过几个编程协调工具，但大多数都是 Electron/Tauri 应用，性能让我不满意。我也更喜欢终端，因为 GUI 协调工具会把你锁定在它们的工作流里。所以我用 Swift/AppKit 构建了 cmux，作为一个原生 macOS 应用。它使用 libghostty 进行终端渲染，并读取您现有的 Ghostty 配置中的主题、字体和颜色设置。
+                  - paragraph [ref=e1122]:
+                    - text: 主要新增的是侧边栏和通知系统。侧边栏有垂直标签页，显示每个工作区的 git 分支、关联 PR 状态/编号、工作目录、监听端口和最新通知文本。通知系统能捕获终端序列（OSC 9/99/777），并提供 CLI（
+                    - code [ref=e1123]: cmux notify
+                    - text: ），您可以将其接入 Claude Code、OpenCode 等代理的钩子。当代理等待时，其窗格会显示蓝色光环，标签页会在侧边栏高亮，这样我就能在多个分割窗格和标签页之间一眼看出哪个需要我。⌘⇧U 可以跳转到最新的未读通知。
+                  - paragraph [ref=e1124]:
+                    - text: 内置浏览器拥有从
+                    - link "agent-browser" [ref=e1125] [cursor=pointer]:
+                      - /url: https://github.com/vercel-labs/agent-browser
+                    - text: 移植的可脚本化 API。代理可以抓取无障碍树快照、获取元素引用、执行点击、填写表单和执行 JS。您可以在终端旁边分割出浏览器窗格，让 Claude Code 直接与您的开发服务器交互。
+                  - paragraph [ref=e1126]: 所有操作都可以通过 CLI 和 socket API 进行脚本化 — 创建工作区/标签页、分割窗格、发送按键、在浏览器中打开 URL。
+                  - generic [ref=e1127]:
+                    - heading "The Zen of cmux" [level=2] [ref=e1128]
+                    - 'link "Permalink: The Zen of cmux" [ref=e1129] [cursor=pointer]':
+                      - /url: "#the-zen-of-cmux"
+                      - img [ref=e1130]
+                  - paragraph [ref=e1132]: cmux 不规定开发者应该如何使用工具。它是一个带有 CLI 的终端和浏览器，其余的由你决定。
+                  - paragraph [ref=e1133]: cmux 是原语，而非解决方案。它提供终端、浏览器、通知、工作区、分割、标签页，以及控制这一切的 CLI。cmux 不强迫你以特定方式使用编程代理。你用这些原语构建什么，完全取决于你自己。
+                  - paragraph [ref=e1134]: 最优秀的开发者一直在构建自己的工具。还没有人找到与代理协作的最佳方式，那些构建封闭产品的团队也没有找到。最接近自己代码库的开发者会最先找到答案。
+                  - paragraph [ref=e1135]: 给一百万个开发者可组合的原语，他们会比任何自上而下设计的产品团队更快地找到最高效的工作流。
+                  - generic [ref=e1136]:
+                    - heading "文档" [level=2] [ref=e1137]
+                    - 'link "Permalink: 文档" [ref=e1138] [cursor=pointer]':
+                      - /url: "#文档"
+                      - img [ref=e1139]
+                  - paragraph [ref=e1141]:
+                    - text: 有关 cmux 配置的更多信息，请
+                    - link "查看我们的文档" [ref=e1142] [cursor=pointer]:
+                      - /url: https://cmux.com/docs/getting-started?utm_source=readme
+                    - text: 。
+                  - generic [ref=e1143]:
+                    - heading "键盘快捷键" [level=2] [ref=e1144]
+                    - 'link "Permalink: 键盘快捷键" [ref=e1145] [cursor=pointer]':
+                      - /url: "#键盘快捷键"
+                      - img [ref=e1146]
+                  - generic [ref=e1148]:
+                    - heading "工作区" [level=3] [ref=e1149]
+                    - 'link "Permalink: 工作区" [ref=e1150] [cursor=pointer]':
+                      - /url: "#工作区"
+                      - img [ref=e1151]
+                  - table [ref=e1154]:
+                    - rowgroup [ref=e1155]:
+                      - row "快捷键 操作" [ref=e1156]:
+                        - columnheader "快捷键" [ref=e1157]
+                        - columnheader "操作" [ref=e1158]
+                    - rowgroup [ref=e1159]:
+                      - row "⌘ N 新建工作区" [ref=e1160]:
+                        - cell "⌘ N" [ref=e1161]
+                        - cell "新建工作区" [ref=e1162]
+                      - row "⌘ 1–8 跳转到工作区 1–8" [ref=e1163]:
+                        - cell "⌘ 1–8" [ref=e1164]
+                        - cell "跳转到工作区 1–8" [ref=e1165]
+                      - row "⌘ 9 跳转到最后一个工作区" [ref=e1166]:
+                        - cell "⌘ 9" [ref=e1167]
+                        - cell "跳转到最后一个工作区" [ref=e1168]
+                      - row "⌃ ⌘ ] 下一个工作区" [ref=e1169]:
+                        - cell "⌃ ⌘ ]" [ref=e1170]
+                        - cell "下一个工作区" [ref=e1171]
+                      - row "⌃ ⌘ [ 上一个工作区" [ref=e1172]:
+                        - cell "⌃ ⌘ [" [ref=e1173]
+                        - cell "上一个工作区" [ref=e1174]
+                      - row "⌘ ⇧ W 关闭工作区" [ref=e1175]:
+                        - cell "⌘ ⇧ W" [ref=e1176]
+                        - cell "关闭工作区" [ref=e1177]
+                      - row "⌘ ⇧ R 重命名工作区" [ref=e1178]:
+                        - cell "⌘ ⇧ R" [ref=e1179]
+                        - cell "重命名工作区" [ref=e1180]
+                      - row "⌘ B 切换侧边栏" [ref=e1181]:
+                        - cell "⌘ B" [ref=e1182]
+                        - cell "切换侧边栏" [ref=e1183]
+                  - generic [ref=e1184]:
+                    - heading "界面" [level=3] [ref=e1185]
+                    - 'link "Permalink: 界面" [ref=e1186] [cursor=pointer]':
+                      - /url: "#界面"
+                      - img [ref=e1187]
+                  - table [ref=e1190]:
+                    - rowgroup [ref=e1191]:
+                      - row "快捷键 操作" [ref=e1192]:
+                        - columnheader "快捷键" [ref=e1193]
+                        - columnheader "操作" [ref=e1194]
+                    - rowgroup [ref=e1195]:
+                      - row "⌘ T 新建界面" [ref=e1196]:
+                        - cell "⌘ T" [ref=e1197]
+                        - cell "新建界面" [ref=e1198]
+                      - row "⌘ ⇧ ] 下一个界面" [ref=e1199]:
+                        - cell "⌘ ⇧ ]" [ref=e1200]
+                        - cell "下一个界面" [ref=e1201]
+                      - row "⌘ ⇧ [ 上一个界面" [ref=e1202]:
+                        - cell "⌘ ⇧ [" [ref=e1203]
+                        - cell "上一个界面" [ref=e1204]
+                      - row "⌃ Tab 下一个界面" [ref=e1205]:
+                        - cell "⌃ Tab" [ref=e1206]
+                        - cell "下一个界面" [ref=e1207]
+                      - row "⌃ ⇧ Tab 上一个界面" [ref=e1208]:
+                        - cell "⌃ ⇧ Tab" [ref=e1209]
+                        - cell "上一个界面" [ref=e1210]
+                      - row "⌃ 1–8 跳转到界面 1–8" [ref=e1211]:
+                        - cell "⌃ 1–8" [ref=e1212]
+                        - cell "跳转到界面 1–8" [ref=e1213]
+                      - row "⌃ 9 跳转到最后一个界面" [ref=e1214]:
+                        - cell "⌃ 9" [ref=e1215]
+                        - cell "跳转到最后一个界面" [ref=e1216]
+                      - row "⌘ W 关闭界面" [ref=e1217]:
+                        - cell "⌘ W" [ref=e1218]
+                        - cell "关闭界面" [ref=e1219]
+                  - generic [ref=e1220]:
+                    - heading "分割窗格" [level=3] [ref=e1221]
+                    - 'link "Permalink: 分割窗格" [ref=e1222] [cursor=pointer]':
+                      - /url: "#分割窗格"
+                      - img [ref=e1223]
+                  - table [ref=e1226]:
+                    - rowgroup [ref=e1227]:
+                      - row "快捷键 操作" [ref=e1228]:
+                        - columnheader "快捷键" [ref=e1229]
+                        - columnheader "操作" [ref=e1230]
+                    - rowgroup [ref=e1231]:
+                      - row "⌘ D 向右分割" [ref=e1232]:
+                        - cell "⌘ D" [ref=e1233]
+                        - cell "向右分割" [ref=e1234]
+                      - row "⌘ ⇧ D 向下分割" [ref=e1235]:
+                        - cell "⌘ ⇧ D" [ref=e1236]
+                        - cell "向下分割" [ref=e1237]
+                      - row "⌥ ⌘ ← → ↑ ↓ 按方向切换焦点窗格" [ref=e1238]:
+                        - cell "⌥ ⌘ ← → ↑ ↓" [ref=e1239]
+                        - cell "按方向切换焦点窗格" [ref=e1240]
+                      - row "⌘ ⇧ H 闪烁聚焦面板" [ref=e1241]:
+                        - cell "⌘ ⇧ H" [ref=e1242]
+                        - cell "闪烁聚焦面板" [ref=e1243]
+                  - generic [ref=e1244]:
+                    - heading "浏览器" [level=3] [ref=e1245]
+                    - 'link "Permalink: 浏览器" [ref=e1246] [cursor=pointer]':
+                      - /url: "#浏览器"
+                      - img [ref=e1247]
+                  - paragraph [ref=e1249]:
+                    - text: 浏览器开发者工具快捷键遵循 Safari 默认设置，可在
+                    - code [ref=e1250]: 设置 → 键盘快捷键
+                    - text: 中自定义。
+                  - table [ref=e1252]:
+                    - rowgroup [ref=e1253]:
+                      - row "快捷键 操作" [ref=e1254]:
+                        - columnheader "快捷键" [ref=e1255]
+                        - columnheader "操作" [ref=e1256]
+                    - rowgroup [ref=e1257]:
+                      - row "⌘ ⇧ L 在分割中打开浏览器" [ref=e1258]:
+                        - cell "⌘ ⇧ L" [ref=e1259]
+                        - cell "在分割中打开浏览器" [ref=e1260]
+                      - row "⌘ L 聚焦地址栏" [ref=e1261]:
+                        - cell "⌘ L" [ref=e1262]
+                        - cell "聚焦地址栏" [ref=e1263]
+                      - row "⌘ [ 后退" [ref=e1264]:
+                        - cell "⌘ [" [ref=e1265]
+                        - cell "后退" [ref=e1266]
+                      - row "⌘ ] 前进" [ref=e1267]:
+                        - cell "⌘ ]" [ref=e1268]
+                        - cell "前进" [ref=e1269]
+                      - row "⌘ R 刷新页面" [ref=e1270]:
+                        - cell "⌘ R" [ref=e1271]
+                        - cell "刷新页面" [ref=e1272]
+                      - row "⌥ ⌘ I 切换开发者工具（Safari 默认）" [ref=e1273]:
+                        - cell "⌥ ⌘ I" [ref=e1274]
+                        - cell "切换开发者工具（Safari 默认）" [ref=e1275]
+                      - row "⌥ ⌘ C 显示 JavaScript 控制台（Safari 默认）" [ref=e1276]:
+                        - cell "⌥ ⌘ C" [ref=e1277]
+                        - cell "显示 JavaScript 控制台（Safari 默认）" [ref=e1278]
+                  - generic [ref=e1279]:
+                    - heading "通知" [level=3] [ref=e1280]
+                    - 'link "Permalink: 通知" [ref=e1281] [cursor=pointer]':
+                      - /url: "#通知"
+                      - img [ref=e1282]
+                  - table [ref=e1285]:
+                    - rowgroup [ref=e1286]:
+                      - row "快捷键 操作" [ref=e1287]:
+                        - columnheader "快捷键" [ref=e1288]
+                        - columnheader "操作" [ref=e1289]
+                    - rowgroup [ref=e1290]:
+                      - row "⌘ I 显示通知面板" [ref=e1291]:
+                        - cell "⌘ I" [ref=e1292]
+                        - cell "显示通知面板" [ref=e1293]
+                      - row "⌘ ⇧ U 跳转到最新未读" [ref=e1294]:
+                        - cell "⌘ ⇧ U" [ref=e1295]
+                        - cell "跳转到最新未读" [ref=e1296]
+                  - generic [ref=e1297]:
+                    - heading "查找" [level=3] [ref=e1298]
+                    - 'link "Permalink: 查找" [ref=e1299] [cursor=pointer]':
+                      - /url: "#查找"
+                      - img [ref=e1300]
+                  - table [ref=e1303]:
+                    - rowgroup [ref=e1304]:
+                      - row "快捷键 操作" [ref=e1305]:
+                        - columnheader "快捷键" [ref=e1306]
+                        - columnheader "操作" [ref=e1307]
+                    - rowgroup [ref=e1308]:
+                      - row "⌘ F 查找" [ref=e1309]:
+                        - cell "⌘ F" [ref=e1310]
+                        - cell "查找" [ref=e1311]
+                      - row "⌘ G / ⌘ ⇧ G 查找下一个 / 上一个" [ref=e1312]:
+                        - cell "⌘ G / ⌘ ⇧ G" [ref=e1313]
+                        - cell "查找下一个 / 上一个" [ref=e1314]
+                      - row "⌘ ⇧ F 隐藏查找栏" [ref=e1315]:
+                        - cell "⌘ ⇧ F" [ref=e1316]
+                        - cell "隐藏查找栏" [ref=e1317]
+                      - row "⌘ E 使用选中内容进行查找" [ref=e1318]:
+                        - cell "⌘ E" [ref=e1319]
+                        - cell "使用选中内容进行查找" [ref=e1320]
+                  - generic [ref=e1321]:
+                    - heading "终端" [level=3] [ref=e1322]
+                    - 'link "Permalink: 终端" [ref=e1323] [cursor=pointer]':
+                      - /url: "#终端"
+                      - img [ref=e1324]
+                  - table [ref=e1327]:
+                    - rowgroup [ref=e1328]:
+                      - row "快捷键 操作" [ref=e1329]:
+                        - columnheader "快捷键" [ref=e1330]
+                        - columnheader "操作" [ref=e1331]
+                    - rowgroup [ref=e1332]:
+                      - row "⌘ K 清除回滚缓冲区" [ref=e1333]:
+                        - cell "⌘ K" [ref=e1334]
+                        - cell "清除回滚缓冲区" [ref=e1335]
+                      - row "⌘ C 复制（有选中内容时）" [ref=e1336]:
+                        - cell "⌘ C" [ref=e1337]
+                        - cell "复制（有选中内容时）" [ref=e1338]
+                      - row "⌘ V 粘贴" [ref=e1339]:
+                        - cell "⌘ V" [ref=e1340]
+                        - cell "粘贴" [ref=e1341]
+                      - row "⌘ + / ⌘ - 增大 / 减小字体" [ref=e1342]:
+                        - cell "⌘ + / ⌘ -" [ref=e1343]
+                        - cell "增大 / 减小字体" [ref=e1344]
+                      - row "⌘ 0 重置字体大小" [ref=e1345]:
+                        - cell "⌘ 0" [ref=e1346]
+                        - cell "重置字体大小" [ref=e1347]
+                  - generic [ref=e1348]:
+                    - heading "窗口" [level=3] [ref=e1349]
+                    - 'link "Permalink: 窗口" [ref=e1350] [cursor=pointer]':
+                      - /url: "#窗口"
+                      - img [ref=e1351]
+                  - table [ref=e1354]:
+                    - rowgroup [ref=e1355]:
+                      - row "快捷键 操作" [ref=e1356]:
+                        - columnheader "快捷键" [ref=e1357]
+                        - columnheader "操作" [ref=e1358]
+                    - rowgroup [ref=e1359]:
+                      - row "⌘ ⇧ N 新建窗口" [ref=e1360]:
+                        - cell "⌘ ⇧ N" [ref=e1361]
+                        - cell "新建窗口" [ref=e1362]
+                      - row "⌘ , 设置" [ref=e1363]:
+                        - cell "⌘ ," [ref=e1364]
+                        - cell "设置" [ref=e1365]
+                      - row "⌘ ⇧ , 重新加载配置" [ref=e1366]:
+                        - cell "⌘ ⇧ ," [ref=e1367]
+                        - cell "重新加载配置" [ref=e1368]
+                      - row "⌘ Q 退出" [ref=e1369]:
+                        - cell "⌘ Q" [ref=e1370]
+                        - cell "退出" [ref=e1371]
+                  - generic [ref=e1372]:
+                    - heading "每夜构建" [level=2] [ref=e1373]
+                    - 'link "Permalink: 每夜构建" [ref=e1374] [cursor=pointer]':
+                      - /url: "#每夜构建"
+                      - img [ref=e1375]
+                  - paragraph [ref=e1377]:
+                    - link "下载 cmux NIGHTLY" [ref=e1378] [cursor=pointer]:
+                      - /url: https://github.com/manaflow-ai/cmux/releases/download/nightly/cmux-nightly-macos.dmg
+                  - paragraph [ref=e1379]:
+                    - text: cmux NIGHTLY 是一个拥有独立 Bundle ID 的单独应用，因此可以与稳定版并行运行。它从最新的
+                    - code [ref=e1380]: main
+                    - text: 提交自动构建，并通过独立的 Sparkle 更新源自动更新。
+                  - generic [ref=e1381]:
+                    - heading "会话恢复（当前行为）" [level=2] [ref=e1382]
+                    - 'link "Permalink: 会话恢复（当前行为）" [ref=e1383] [cursor=pointer]':
+                      - /url: "#会话恢复当前行为"
+                      - img [ref=e1384]
+                  - paragraph [ref=e1386]: 重新启动时，cmux 目前仅恢复应用布局和元数据：
+                  - list [ref=e1387]:
+                    - listitem [ref=e1388]: 窗口/工作区/窗格布局
+                    - listitem [ref=e1389]: 工作目录
+                    - listitem [ref=e1390]: 终端回滚缓冲区（尽力恢复）
+                    - listitem [ref=e1391]: 浏览器 URL 和导航历史
+                  - paragraph [ref=e1392]:
+                    - text: cmux
+                    - strong [ref=e1393]: 不会
+                    - text: 恢复终端应用内部的实时进程状态。例如，活动的 Claude Code/tmux/vim 会话在重启后尚无法恢复。
+                  - generic [ref=e1394]:
+                    - heading "Star History" [level=2] [ref=e1395]
+                    - 'link "Permalink: Star History" [ref=e1396] [cursor=pointer]':
+                      - /url: "#star-history"
+                      - img [ref=e1397]
+                  - link "Star History Chart" [ref=e1399] [cursor=pointer]:
+                    - /url: https://star-history.com/#manaflow-ai/cmux&Date
+                    - img "Star History Chart" [ref=e1402]
+                  - generic [ref=e1403]:
+                    - heading "参与贡献" [level=2] [ref=e1404]
+                    - 'link "Permalink: 参与贡献" [ref=e1405] [cursor=pointer]':
+                      - /url: "#参与贡献"
+                      - img [ref=e1406]
+                  - paragraph [ref=e1408]: 参与方式：
+                  - list [ref=e1409]:
+                    - listitem [ref=e1410]:
+                      - text: 在 X 上关注我们：
+                      - link "@manaflowai" [ref=e1411] [cursor=pointer]:
+                        - /url: https://x.com/manaflowai
+                      - text: 、
+                      - link "@lawrencecchen" [ref=e1412] [cursor=pointer]:
+                        - /url: https://x.com/lawrencecchen
+                      - text: 、
+                      - link "@austinywang" [ref=e1413] [cursor=pointer]:
+                        - /url: https://x.com/austinywang
+                    - listitem [ref=e1414]:
+                      - text: 加入
+                      - link "Discord" [ref=e1415] [cursor=pointer]:
+                        - /url: https://discord.gg/xsgFEVrWCZ
+                      - text: 讨论
+                    - listitem [ref=e1416]:
+                      - text: 创建和参与
+                      - link "GitHub Issues" [ref=e1417] [cursor=pointer]:
+                        - /url: https://github.com/manaflow-ai/cmux/issues
+                      - text: 和
+                      - link "讨论" [ref=e1418] [cursor=pointer]:
+                        - /url: https://github.com/manaflow-ai/cmux/discussions
+                    - listitem [ref=e1419]: 告诉我们您在用 cmux 构建什么
+                  - generic [ref=e1420]:
+                    - heading "社区" [level=2] [ref=e1421]
+                    - 'link "Permalink: 社区" [ref=e1422] [cursor=pointer]':
+                      - /url: "#社区"
+                      - img [ref=e1423]
+                  - list [ref=e1425]:
+                    - listitem [ref=e1426]:
+                      - link "Discord" [ref=e1427] [cursor=pointer]:
+                        - /url: https://discord.gg/xsgFEVrWCZ
+                    - listitem [ref=e1428]:
+                      - link "GitHub" [ref=e1429] [cursor=pointer]:
+                        - /url: https://github.com/manaflow-ai/cmux
+                    - listitem [ref=e1430]:
+                      - link "X / Twitter" [ref=e1431] [cursor=pointer]:
+                        - /url: https://twitter.com/manaflowai
+                    - listitem [ref=e1432]:
+                      - link "YouTube" [ref=e1433] [cursor=pointer]:
+                        - /url: https://www.youtube.com/channel/UCAa89_j-TWkrXfk9A3CbASw
+                    - listitem [ref=e1434]:
+                      - link "LinkedIn" [ref=e1435] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/manaflow-ai/
+                    - listitem [ref=e1436]:
+                      - link "Reddit" [ref=e1437] [cursor=pointer]:
+                        - /url: https://www.reddit.com/r/cmux/
+                  - generic [ref=e1438]:
+                    - heading "Founder's Edition" [level=2] [ref=e1439]
+                    - 'link "Permalink: Founder''s Edition" [ref=e1440] [cursor=pointer]':
+                      - /url: "#founders-edition"
+                      - img [ref=e1441]
+                  - paragraph [ref=e1443]: cmux 免费、开源，并将一直如此。如果您想支持开发并提前体验即将推出的功能：
+                  - paragraph [ref=e1444]:
+                    - strong [ref=e1445]:
+                      - link "获取 Founder's Edition" [ref=e1446] [cursor=pointer]:
+                        - /url: https://buy.stripe.com/3cI00j2Ld0it5OU33r5EY0q
+                  - list [ref=e1447]:
+                    - listitem [ref=e1448]:
+                      - strong [ref=e1449]: 功能请求/Bug 修复优先处理
+                    - listitem [ref=e1450]:
+                      - strong [ref=e1451]: 抢先体验：为每个工作区、标签页和面板提供上下文的 cmux AI
+                    - listitem [ref=e1452]:
+                      - strong [ref=e1453]: 抢先体验：桌面与手机间终端同步的 iOS 应用
+                    - listitem [ref=e1454]:
+                      - strong [ref=e1455]: 抢先体验：云端虚拟机
+                    - listitem [ref=e1456]:
+                      - strong [ref=e1457]: 抢先体验：语音模式
+                    - listitem [ref=e1458]:
+                      - strong [ref=e1459]: 我的个人 iMessage/WhatsApp
+                  - generic [ref=e1460]:
+                    - heading "许可证" [level=2] [ref=e1461]
+                    - 'link "Permalink: 许可证" [ref=e1462] [cursor=pointer]':
+                      - /url: "#许可证"
+                      - img [ref=e1463]
+                  - paragraph [ref=e1465]:
+                    - text: cmux 以
+                    - link "GPL-3.0-or-later" [ref=e1466] [cursor=pointer]:
+                      - /url: /manaflow-ai/cmux/blob/main/LICENSE
+                    - text: 开源。
+                  - paragraph [ref=e1467]:
+                    - text: 如果您的组织无法遵守 GPL，可提供商业许可证。详情请联系
+                    - link "founders@manaflow.com" [ref=e1468] [cursor=pointer]:
+                      - /url: mailto:founders@manaflow.com
+                    - text: 。
+  - alert [ref=e1472]

@@ -1,16 +1,11 @@
 {
   "version": 1,
-  "task_sessions": {
-    "122": {
-      "session_id": "cae30e8a-6c64-4648-9ced-1e1fe020bc70",
-      "started_at": "2026-05-09T14:28:23.562862+00:00"
-    }
-  },
+  "task_sessions": {},
   "dloop": null,
   "pending_recording": {
-    "task_id": 121,
+    "task_id": 122,
     "target_status": "Done",
-    "released_at": "2026-05-09T14:10:41.469751+00:00",
-    "session_id": "57b8f7c4-d57b-4c27-9b6a-dfdb52c8ac8f"
+    "released_at": "2026-05-09T14:51:55.711769+00:00",
+    "session_id": "cae30e8a-6c64-4648-9ced-1e1fe020bc70"
   }
 }

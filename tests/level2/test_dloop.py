@@ -14,7 +14,6 @@ SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from session_scope import scoped_session_file  # noqa: E402
 
 
 def _run_stop_decision(tmp_path, env_overrides=None, **kwargs):
@@ -102,24 +101,6 @@ def test_cancel_dloop_removes_state(tmp_path):
     assert not (tmp_path / RUNTIME_STATE_NAME).exists()
 
 
-def test_stop_decision_loop_mode_blocks_with_inSpec(tmp_path):
-    """Loop mode + InSpec task -> block with iteration info."""
-    tasks = [{"id": 1, "title": "Test task", "status": "InSpec"}]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(tmp_path, session_id="test-session-match")
-
-    result = _run_stop_decision(
-        tmp_path,
-        session_id="test-session-match",
-        cwd=str(tmp_path),
-    )
-
-    assert result.returncode == 0  # continue
-    output = json.loads(result.stdout) if result.stdout.strip() else {}
-    assert output.get("decision") == "block"
-    assert "iteration" in output.get("reason", "")
-
-
 def test_stop_decision_default_mode_allows_stop(tmp_path):
     """Default mode (no dloop-state) + InSpec task -> allow stop (no auto-continue!)."""
     tasks = [{"id": 1, "title": "Test task", "status": "InSpec"}]
@@ -145,9 +126,10 @@ def test_stop_decision_inprogress_always_blocks(tmp_path):
     )
 
     result = _run_stop_decision(tmp_path, session_id="session-a", cwd=str(tmp_path))
-    assert result.returncode == 0
-    output = json.loads(result.stdout) if result.stdout.strip() else {}
-    assert output.get("decision") == "block"
+    assert result.returncode == 0, f"rc={result.returncode}"
+    assert len(result.stdout) > 0, f"stdout empty! len={len(result.stdout)}"
+    output = json.loads(result.stdout)
+    assert output.get("decision") == "block", f"parsed={output}"
 
     _make_dloop_state(tmp_path, session_id="session-a")
     result = _run_stop_decision(
@@ -158,49 +140,6 @@ def test_stop_decision_inprogress_always_blocks(tmp_path):
     assert result.returncode == 0
     output = json.loads(result.stdout) if result.stdout.strip() else {}
     assert output.get("decision") == "block"
-
-
-def test_stop_decision_session_isolation(tmp_path):
-    """dtask-state.json.dloop session_id mismatch -> default mode behavior."""
-    tasks = [
-        {"id": 1, "title": "Task A", "status": "InSpec"},
-        {"id": 2, "title": "Task B", "status": "Done"},
-    ]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(tmp_path, session_id="original-session")
-
-    result = _run_stop_decision(
-        tmp_path,
-        session_id="different-session",
-        cwd=str(tmp_path),
-    )
-
-    # Falls through to default mode -> allow stop, and stale loop state is cleared.
-    assert result.returncode == 0
-    assert result.stdout.strip() == ""
-    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    assert runtime_state["dloop"] is None
-
-
-def test_stop_decision_session_isolation_accepts_sessionId(tmp_path):
-    """sessionId 事件字段也必须触发 session isolation。"""
-    tasks = [
-        {"id": 1, "title": "Task A", "status": "InSpec"},
-        {"id": 2, "title": "Task B", "status": "Done"},
-    ]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(tmp_path, session_id="original-session")
-
-    result = _run_stop_decision(
-        tmp_path,
-        sessionId="different-session",
-        cwd=str(tmp_path),
-    )
-
-    assert result.returncode == 0
-    assert result.stdout.strip() == ""
-    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    assert runtime_state["dloop"] is None
 
 
 def test_stop_decision_max_tasks_stops_with_report(tmp_path):
@@ -280,8 +219,8 @@ def test_stop_decision_no_tasks_stops_with_report(tmp_path):
     assert "无可执行任务" in result.stderr
 
 
-def test_stop_decision_loop_mode_only_inreview_stops(tmp_path):
-    """Loop mode + only InReview tasks remaining (no InSpec/InProgress) -> allow stop."""
+def test_stop_decision_only_inreview_stops(tmp_path):
+    """Only InReview tasks remaining (no InSpec/InProgress) -> allow stop."""
     tasks = [
         {"id": 1, "title": "Done task", "status": "Done"},
         {"id": 2, "title": "Review task", "status": "InReview"},
@@ -365,115 +304,6 @@ def test_stop_decision_pending_review_stops_with_report(tmp_path):
     assert "PENDING REVIEW" in result.stderr
 
 
-def test_stop_decision_first_bind_replaces_dummy_id(tmp_path):
-    """T1: 首次带真实 SID 的 Stop event 应将 dummy loop_sid 替换并持久化。"""
-    tasks = [{"id": 1, "title": "T1", "status": "InSpec"}]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(tmp_path, session_id="dloop-20260430-120000")  # dummy
-
-    # 第一次：真实 SID → 应绑定并 block
-    result = _run_stop_decision(tmp_path, session_id="real-session-abc", cwd=str(tmp_path))
-    assert result.returncode == 0
-    output = json.loads(result.stdout)
-    assert output.get("decision") == "block"
-
-    # 验证 state 已被持久化
-    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    assert state["dloop"]["session_id"] == "real-session-abc"
-
-    # 第二次：同一 SID → 继续 block
-    result2 = _run_stop_decision(tmp_path, session_id="real-session-abc", cwd=str(tmp_path))
-    assert result2.returncode == 0
-
-    # 第三步：不同 SID → 退出 loop mode (allow stop)
-    result3 = _run_stop_decision(tmp_path, session_id="other-session", cwd=str(tmp_path))
-    assert result3.returncode == 0
-    assert result3.stdout.strip() == ""
-
-
-def test_stop_decision_missing_session_id_exits_loop_mode(tmp_path):
-    """T2a: Stop event 无 session_id + InSpec 任务 → 必须 allow stop。"""
-    tasks = [{"id": 1, "title": "T1", "status": "InSpec"}]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(tmp_path, session_id="dloop-test")  # dummy 或已绑定
-
-    # 不传 session_id
-    result = _run_stop_decision(tmp_path, cwd=str(tmp_path))  # 无 session_id 字段
-    assert result.returncode == 1
-    # stderr 应含 STOP_HINT 提示（不再输出非法 decision JSON 到 stdout）
-    assert "STOP_HINT" in result.stderr
-    assert result.stdout.strip() == ""
-
-
-def test_stop_decision_missing_session_with_inprogress_allows_stop(tmp_path):
-    """T2b: Stop event 无 session_id + InProgress 任务 → 显式 allow stop。"""
-    tasks = [{"id": 1, "title": "Active", "status": "InProgress"}]
-    _make_dtask(tasks, tmp_path)
-    _make_runtime_state(
-        tmp_path,
-        task_sessions={"1": {"session_id": "session-a", "started_at": "2026-04-30T12:00:00Z"}},
-    )
-    _make_dloop_state(tmp_path, session_id="dloop-test")
-
-    # 不传 session_id
-    result = _run_stop_decision(tmp_path, cwd=str(tmp_path))
-    # 必须 allow stop（不能落入 default mode 的 resolve_session_inprogress_task）
-    assert result.returncode == 1
-    assert "STOP_HINT" in result.stderr
-    assert result.stdout.strip() == ""
-
-
-def test_stop_decision_missing_event_session_uses_env_for_dloop(tmp_path):
-    """Stop event 无 session_id 但 env 有 SID → 用 env 驱动 dloop。"""
-    tasks = [{"id": 1, "title": "T1", "status": "InSpec", "blocked_by": []}]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(tmp_path, session_id="dloop-20260504-120000")
-
-    result = _run_stop_decision(
-        tmp_path,
-        env_overrides={"CLAUDE_SESSION_ID": "env-loop-session"},
-        cwd=str(tmp_path),
-    )
-
-    assert result.returncode == 0
-    assert json.loads(result.stdout)["decision"] == "block"
-    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    assert state["dloop"]["session_id"] == "env-loop-session"
-
-
-def test_stop_decision_missing_event_session_uses_scoped_file_for_dloop(tmp_path):
-    """Stop event/env 无 session_id 但 scoped 文件有 SID → 用 scoped 文件驱动 dloop。"""
-    tasks = [{"id": 1, "title": "T1", "status": "InSpec", "blocked_by": []}]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(tmp_path, session_id="dloop-20260504-120001")
-    session_file = scoped_session_file(tmp_path)
-    try:
-        session_file.write_text("file-loop-session\n", encoding="utf-8")
-        result = _run_stop_decision(tmp_path, cwd=str(tmp_path))
-    finally:
-        session_file.unlink(missing_ok=True)
-
-    assert result.returncode == 0
-    assert json.loads(result.stdout)["decision"] == "block"
-    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    assert state["dloop"]["session_id"] == "file-loop-session"
-
-
-def test_stop_decision_loop_mode_reason_delegates_drun(tmp_path):
-    """Loop mode + InSpec + 未命中停止条件 → reason 含 /drun 委托而非具体任务名。"""
-    tasks = [{"id": 1, "title": "Next task", "status": "InSpec"}]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(tmp_path, session_id="match-sid", max_tasks=5)
-
-    result = _run_stop_decision(tmp_path, session_id="match-sid", cwd=str(tmp_path))
-    assert result.returncode == 0
-    output = json.loads(result.stdout)
-    assert output.get("decision") == "block"
-    assert "请继续执行 /drun" in output.get("reason", "")
-    # 不应包含具体任务名
-    assert "Next task" not in output.get("reason", "")
-
-
 # ── Cron mode tests ──────────────────────────────────────────────
 
 def _make_cron_dloop_state(tmp_path, **overrides):
@@ -496,11 +326,11 @@ def _make_cron_dloop_state(tmp_path, **overrides):
 
 
 def test_dloop_cron_mode_start_requires_interval(tmp_path):
-    """cron 模式缺少 --interval → 返回 error。"""
+    """缺少 --interval → 返回 error。"""
     import subprocess
     result = subprocess.run(
         [sys.executable, str(SCRIPTS_DIR / "dloop.py"), "start",
-         "--cwd", str(tmp_path), "--mode", "cron"],
+         "--cwd", str(tmp_path)],
         capture_output=True, text=True,
     )
     data = json.loads(result.stdout)
@@ -515,8 +345,7 @@ def test_dloop_cron_mode_start_creates_state_with_mode(tmp_path):
 
     from dloop import cmd_start
     result = cmd_start(
-        tmp_path, max_tasks=0, session_id="cron-test-sid",
-        mode="cron", interval="3m",
+        tmp_path, max_tasks=0, interval="3m",
         # 不传 cron_job_id → 应返回 cron_action="create"
     )
     assert result["ok"] is True
@@ -536,7 +365,7 @@ def test_dloop_cron_mode_start_with_job_id(tmp_path):
 
     from dloop import cmd_start
     result = cmd_start(
-        tmp_path, mode="cron", interval="5m", cron_job_id="existing-job-456",
+        tmp_path, interval="5m", cron_job_id="existing-job-456",
     )
     assert result["ok"] is True
     assert result["data"]["cron_job_id"] == "existing-job-456"
@@ -574,16 +403,4 @@ def test_dloop_stop_cron_mode_returns_cleanup_instruction(tmp_path):
     assert result["cron_job_id"] == "test-job-123"
 
 
-def test_dloop_session_mode_backward_compatible(tmp_path):
-    """默认 --mode=session 行为不变（向后兼容）。"""
-    tasks = [{"id": 1, "title": "T", "status": "InSpec"}]
-    _make_dtask(tasks, tmp_path)
 
-    from dloop import cmd_start
-    result = cmd_start(tmp_path, session_id="compat-test")
-    assert result["ok"] is True
-    assert result["data"]["mode"] == "session"
-
-    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    # 默认 mode 不写入（_normalize_loop 默认为 "session"）
-    assert state["dloop"].get("mode", "session") == "session"

@@ -33,13 +33,6 @@ def _setup_dtask(tmp_path, status="InSpec", task_id=1):
     )
 
 
-def _setup_dloop_state(tmp_path, active=True, session_id=""):
-    """创建含 dloop 状态的 dtask-state.json。"""
-    state_path = tmp_path / ".diwu" / "dtask-state.json"
-    state_path.parent.mkdir(exist_ok=True)
-    dloop = {"active": active, "session_id": session_id} if active else {"active": False}
-    state_path.write_text(json.dumps({"dloop": dloop}), encoding="utf-8")
-
 
 def test_plan_exit_hint_emits_additional_context(tmp_path):
     payload = {"hook_event_name": "PreToolUse", "tool_name": "ExitPlanMode", "cwd": str(tmp_path)}
@@ -325,7 +318,7 @@ def test_mark_inspec_cleans_marker(tmp_path):
 
 
 class TestDloopGuard:
-    """task_entry_guard.py dloop fail-fast guard 的 6 分支判定矩阵。
+    """task_entry_guard.py dloop fail-fast guard 基础测试。
 
     PreToolUse 退出码语义：exit(0)=允许 / exit(1)=非阻塞错误 / exit(2)=拒绝工具调用。
     """
@@ -336,64 +329,6 @@ class TestDloopGuard:
         result = _run_guard(tmp_path)
         assert result.returncode == 0
 
-    def test_2_dummy_sid_with_owner_allows(self, tmp_path):
-        """dloop active + dummy SID + owner event SID → 首轮未绑定，放行。"""
-        _setup_dtask(tmp_path)
-        _setup_dloop_state(tmp_path, session_id="dloop-20260501-123456")
-        result = _run_guard(tmp_path, event_overrides={"session_id": "real-owner-sid"})
-        assert result.returncode == 0
-
-    def test_3_dummy_sid_with_foreign_also_allows(self, tmp_path):
-        """[KNOWN TRADEOFF] dloop active + dummy SID + foreign event SID → 放行。
-
-        dummy 窗口内无法验证所有权（SID 尚未由 Stop 事件绑定），当前设计选择放行。
-        此窗口通常极短（/dloop start → 首 Stop），且改 dloop.py start 即可消除。
-        本测试锁定此行为，防止未来无意识变更将其改为 block（会误拦 owner）。
-        """
-        _setup_dtask(tmp_path)
-        _setup_dloop_state(tmp_path, session_id="dloop-20260501-123456")
-        result = _run_guard(tmp_path, event_overrides={"session_id": "foreign-sid"})
-        assert result.returncode == 0  # 显式断言 tradeoff 行为
-
-    def test_4_real_sid_owner_match_allows(self, tmp_path):
-        """dloop active + real SID 匹配 → owner 执行任务，放行。"""
-        _setup_dtask(tmp_path)
-        _setup_dloop_state(tmp_path, session_id="loop-owner-sid")
-        result = _run_guard(tmp_path, event_overrides={"session_id": "loop-owner-sid"})
-        assert result.returncode == 0
-
-    def test_5_real_sid_non_owner_blocks(self, tmp_path):
-        """dloop active + real SID 不匹配 → non-owner，硬阻止 exit(2)。"""
-        _setup_dtask(tmp_path)
-        _setup_dloop_state(tmp_path, session_id="loop-owner-sid")
-        result = _run_guard(tmp_path, event_overrides={"session_id": "other-session"})
-        assert result.returncode == 2
-        assert "diwu-dloop-guard" in result.stderr
-
-    def test_6_real_sid_no_event_sid_blocks(self, tmp_path):
-        """dloop active + 无 event session_id → 未知调用者，硬阻止 exit(2)。
-
-        直接构造不含 session_id/sessionId 字段的完整 payload，
-        因为 event_overrides={} 无法删除已有字段。
-        """
-        _setup_dtask(tmp_path)
-        _setup_dloop_state(tmp_path, session_id="loop-owner-sid")
-        payload = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "Edit",
-            "cwd": str(tmp_path),
-            "tool_input": {"file_path": str(tmp_path / "src" / "main.py")},
-            # 故意不传 session_id / sessionId
-        }
-        result = subprocess.run(
-            [sys.executable, str(TASK_GUARD_SCRIPT)],
-            input=json.dumps(payload),
-            capture_output=True,
-            text=True,
-            cwd=str(tmp_path),
-        )
-        assert result.returncode == 2
-        assert "diwu-dloop-guard" in result.stderr
 
 
 # ── Cron mode guard tests ────────────────────────────────────────
@@ -468,17 +403,4 @@ class TestCronModeGuard:
         assert result.returncode == 0
         assert "diwu-dloop-guard" not in result.stderr
 
-    def test_session_mode_still_blocks_mismatch(self, tmp_path):
-        """回归：session 模式下 SID 不匹配仍然拦截（确保 cron 改动不影响原有逻辑）。"""
-        _setup_dtask(tmp_path)
-        _setup_dloop_state(tmp_path, session_id="owner-sid")  # 默认无 mode 字段 → session 模式
-        payload = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "Edit",
-            "cwd": str(tmp_path),
-            "session_id": "intruder-sid",
-            "tool_input": {"file_path": str(tmp_path / "src" / "hack.py")},
-        }
-        result = _run_script(TASK_GUARD_SCRIPT, payload, tmp_path)
-        assert result.returncode == 2
-        assert "diwu-dloop-guard" in result.stderr
+

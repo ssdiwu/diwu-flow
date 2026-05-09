@@ -34,7 +34,6 @@ WORKFLOW_DLOOP_STATE = ".diwu/dloop-state.json"
 _PLAN_DIR = os.path.normpath(os.path.expanduser("~/.claude/plans"))
 _PLAN_LINE_THRESHOLD = 20  # 行数超过此阈值视为“>=3 步方案”
 _PLAN_GUARD_MARKER = os.path.join(".claude", ".plan-active")
-_DUMMY_PREFIX = "dloop-"  # dloop.py start 写入的 dummy session_id 前缀，首次 Stop 绑定前使用
 _BLOCK_HARD_MESSAGE = (
     "[diwu-plan-guard] 🛑 HARD BLOCK：检测到未落地的 >=3 步实施方案。\n\n"
     "存在已批准但尚未落地的 plan marker（行数 >= {threshold}），但 .diwu/dtask.json 中无对应的\n"
@@ -120,14 +119,9 @@ def _has_active_task(task_json_path):
 
 
 def _should_block_dloop(state_path, session_id=""):
-    """Return True when dloop is active AND the caller is NOT the loop's owner session.
+    """Return True when dloop is active AND the caller should be blocked.
 
-    Decision matrix:
-      - inactive / missing dloop          → False (no guard needed)
-      - active + dummy SID (dloop-*)     → False (first iteration, owner not yet bound)
-      - active + real SID + match        → False (loop owner executing its task)
-      - active + real SID + mismatch     → True  (non-owner external write)
-      - active + real SID + no event SID → True  (unknown caller, block)
+    Cron 模式：每个 iteration 是独立合法 session，始终放行。
     """
     if not os.path.exists(state_path):
         return False
@@ -137,22 +131,8 @@ def _should_block_dloop(state_path, session_id=""):
         dloop = state.get("dloop")
         if not isinstance(dloop, dict) or dloop.get("active") is not True:
             return False
-
         # cron 模式：每个 iteration 是独立合法 session，直接放行
-        if dloop.get("mode") == "cron":
-            return False
-
-        loop_sid = dloop.get("session_id", "")
-
-        # Dummy SID: first iteration before Stop-event binding.
-        # Cannot verify ownership — allow through, downstream guards still apply.
-        if loop_sid.startswith(_DUMMY_PREFIX):
-            return False
-
-        # Real SID bound: enforce ownership check
-        if session_id and loop_sid and session_id == loop_sid:
-            return False  # Loop owner: allow normal task execution
-        return True  # Non-owner or unknown: block
+        return False
     except (json.JSONDecodeError, OSError):
         return False
 

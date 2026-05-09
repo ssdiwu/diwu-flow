@@ -106,7 +106,9 @@ def test_sync_migrates_legacy_dloop_state(tmp_project_dir):
     assert result.ok is True
     assert result.migrated_legacy_loop is True
     state = json.loads(runtime_state_path(tmp_project_dir).read_text(encoding="utf-8"))
-    assert state["dloop"]["session_id"] == "loop-session"
+    # session 模式已移除，迁移后不再保留 session_id，mode 默认为 cron
+    assert state["dloop"].get("session_id") is None
+    assert state["dloop"]["mode"] == "cron"
     assert not legacy.exists()
 
 
@@ -211,7 +213,6 @@ def test_sync_self_heal_clears_status_mismatch_marker(tmp_project_dir):
 def _valid_loop_base(**overrides):
     base = {
         "active": True,
-        "session_id": "test-sid",
         "started_at": "2026-05-09T00:00:00Z",
         "completed_task_ids": [],
         "current_iteration": 0,
@@ -221,13 +222,6 @@ def _valid_loop_base(**overrides):
     }
     base.update(overrides)
     return base
-
-
-def test_normalize_loop_accepts_session_mode():
-    """默认 mode=session（显式传入）通过校验。"""
-    result, err = _normalize_loop(_valid_loop_base(mode="session"))
-    assert err is None
-    assert result["mode"] == "session"
 
 
 def test_normalize_loop_accepts_cron_mode():
@@ -240,11 +234,10 @@ def test_normalize_loop_accepts_cron_mode():
     assert result["cron_job_id"] == "job-123"
 
 
-def test_normalize_loop_defaults_mode_to_session():
-    """无 mode 字段时默认为 'session'。"""
+def test_normalize_loop_defaults_mode_to_cron():
+    """无 mode 字段时默认为 'cron'。"""
     loop = {
         "active": True,
-        "session_id": "test-sid",
         "started_at": "2026-05-09T00:00:00Z",
         "completed_task_ids": [],
         "current_iteration": 0,
@@ -255,7 +248,7 @@ def test_normalize_loop_defaults_mode_to_session():
     }
     result, err = _normalize_loop(loop)
     assert err is None
-    assert result["mode"] == "session"
+    assert result["mode"] == "cron"
 
 
 def test_normalize_loop_rejects_invalid_mode():
@@ -284,9 +277,17 @@ def test_is_cron_mode_helper():
     """is_cron_mode() helper 函数正确判断。"""
     assert is_cron_mode({"mode": "cron"}) is True
     assert is_cron_mode({"mode": "session"}) is False
-    assert is_cron_mode({}) is False  # 无 mode 字段
+    assert is_cron_mode({}) is False  # 无 mode 字段（默认 cron 但字段缺失）
     assert is_cron_mode(None) is False
     assert is_cron_mode("not-a-dict") is False
+
+
+def test_normalize_loop_rejects_session_mode():
+    """mode=session 已被移除，应被拒绝。"""
+    result, err = _normalize_loop(_valid_loop_base(mode="session"))
+    assert err is not None
+    assert "session" in err or "cron" in err
+    assert result is None
 
 
 def test_normalize_loop_preserves_cron_fields_in_sync(tmp_project_dir):

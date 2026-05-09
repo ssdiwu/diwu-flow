@@ -119,17 +119,12 @@ def _normalize_loop(loop: dict | None) -> tuple[dict | None, str | None]:
         return None, "dloop.active 必须是 bool"
 
     active = loop.get("active", False)
-    session_id = loop.get("session_id") or loop.get("sessionId") or ""
     started_at = loop.get("started_at", "")
 
     if active:
-        if not isinstance(session_id, str) or not session_id:
-            return None, "dloop.session_id 必须是非空字符串"
         if not isinstance(started_at, str) or not started_at:
             return None, "dloop.started_at 必须是非空字符串"
     else:
-        if session_id and not isinstance(session_id, str):
-            return None, "dloop.session_id 必须是字符串"
         if started_at and not isinstance(started_at, str):
             return None, "dloop.started_at 必须是字符串"
 
@@ -153,9 +148,9 @@ def _normalize_loop(loop: dict | None) -> tuple[dict | None, str | None]:
     if stop_reason is not None and not isinstance(stop_reason, str):
         return None, "dloop.stop_reason 必须是字符串或 null"
 
-    mode = loop.get("mode", "session")
-    if not isinstance(mode, str) or mode not in ("session", "cron"):
-        return None, f"dloop.mode 必须是 'session' 或 'cron'，实际: {mode!r}"
+    mode = loop.get("mode", "cron")
+    if not isinstance(mode, str) or mode not in ("cron",):
+        return None, f"dloop.mode 必须是 'cron'，实际: {mode!r}"
 
     cron_job_id = loop.get("cron_job_id")
     if cron_job_id is not None and not isinstance(cron_job_id, str):
@@ -167,7 +162,6 @@ def _normalize_loop(loop: dict | None) -> tuple[dict | None, str | None]:
 
     return {
         "active": active,
-        "session_id": session_id,
         "started_at": started_at,
         "completed_task_ids": completed,
         "initial_done_ids": initial_done,

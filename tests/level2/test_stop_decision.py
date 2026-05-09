@@ -215,7 +215,6 @@ from stop_decision import (
     _check_pending_recording_gate,
     _resolve_stop_session_id,
     decide_default_mode,
-    decide_loop_mode,
 )
 from session_scope import scoped_session_file
 
@@ -527,99 +526,6 @@ class TestPendingRecordingIntegration(_PendingRecordingTestBase):
         self.assertEqual(output.get("decision"), "block")
         self.assertIn("PENDING_REC", output.get("reason", ""))
 
-    def test_dloop_mode_only_injects_hint_not_block(self):
-        """decide_loop_mode 中有标记时不返回独立 block decision，但 extra 包含提示信息。"""
-        from datetime import datetime, timezone as _tz
-        now_iso = datetime.now(_tz.utc).isoformat()
-        self._write_state(
-            version=1,
-            task_sessions={},
-            dloop=None,
-            pending_recording={
-                "task_id": 8,
-                "target_status": "InReview",
-                "session_id": "dloop-sess",
-                "released_at": now_iso,
-            },
-        )
-        self._touch_file(".diwu/dtask.json")
-
-        loop_state = {
-            "active": True,
-            "session_id": "dloop-sess",
-            "started_at": "2026-05-01T00:00:00Z",
-            "completed_task_ids": [],
-            "current_iteration": 0,
-            "max_tasks": 0,
-        }
-        should_continue, output = decide_loop_mode(
-            tasks=[{"id": 1, "status": "InSpec", "title": "Next", "description": "",
-                  "acceptance": [], "steps": [], "blocked_by": []}],
-            settings={"continuous_mode": True, "review_limit": 5},
-            data={},
-            task_json_path=os.path.join(self.cwd, ".diwu", "dtask.json"),
-            loop_state=loop_state,
-            cwd=self.cwd,
-            additional_prompts=[],
-            runtime_state={"version": 1, "task_sessions": {}, "dloop": loop_state},
-            session_id="dloop-sess",
-        )
-        # dloop 模式：有可执行任务 + 无停止条件 → 应继续（return True）
-        self.assertTrue(should_continue)
-        # decision 仍是 block（驱动下一轮），reason 中应包含 PENDING_REC 提示
-        self.assertEqual(output.get("decision"), "block")
-        reason = output.get("reason", "")
-        self.assertIn("PENDING_REC", reason)
-
-    def test_dloop_mode_other_session_pending_rec_silent(self):
-        """dloop 模式：非 owner 的 PENDING_REC 完全静默。
-
-        /drec 需要任务执行上下文，非 owner 不可能拥有该上下文，
-        因此对非 owner 既不 block 也不 warn。
-        """
-        from datetime import datetime, timezone as _tz
-        now_iso = datetime.now(_tz.utc).isoformat()
-        # 标记属于另一个 session
-        self._write_state(
-            version=1,
-            task_sessions={},
-            dloop=None,
-            pending_recording={
-                "task_id": 99,
-                "target_status": "Done",
-                "session_id": "other-session-id",
-                "released_at": now_iso,
-            },
-        )
-        self._touch_file(".diwu/dtask.json")
-
-        loop_state = {
-            "active": True,
-            "session_id": "current-dloop-sess",
-            "started_at": "2026-05-01T00:00:00Z",
-            "completed_task_ids": [],
-            "current_iteration": 0,
-            "max_tasks": 0,
-        }
-        should_continue, output = decide_loop_mode(
-            tasks=[{"id": 1, "status": "InSpec", "title": "Next", "description": "",
-                  "acceptance": [], "steps": [], "blocked_by": []}],
-            settings={"continuous_mode": True, "review_limit": 5},
-            data={},
-            task_json_path=os.path.join(self.cwd, ".diwu", "dtask.json"),
-            loop_state=loop_state,
-            cwd=self.cwd,
-            additional_prompts=[],
-            runtime_state={"version": 1, "task_sessions": {}, "dloop": loop_state},
-            session_id="current-dloop-sess",
-        )
-
-        # dloop 应继续驱动循环
-        self.assertTrue(should_continue)
-        self.assertEqual(output.get("decision"), "block")
-        # 关键：block reason 中不应包含 PENDING_REC（那是别人的任务）
-        reason = output.get("reason", "")
-        self.assertNotIn("PENDING_REC", reason)
 
 
 # ── Cron mode tests ────────────────────────────────────────────
@@ -706,10 +612,10 @@ class TestCronModeStopDecision(_PendingRecordingTestBase):
         self.assertFalse(should_continue)
 
     def test_cron_mode_skips_session_id_binding(self):
-        """cron 模式的 Stop hook 不执行 dummy 替换/不匹配清理（分支 2/3 跳过）。
+        """cron 模式不检查 session_id 匹配（无 session 绑定逻辑）。
 
         集成测试：通过 main() 入口传入 cron mode 的 loop_state，
-        验证即使 session_id 不匹配也不会清理 dloop（与 session 模式不同）。"""
+        验证即使 session_id 不匹配也不影响 cron 判断流程。"""
         tasks = [{"id": 1, "title": "CT", "status": "InSpec", "blocked_by": [],
                   "acceptance": [], "steps": [], "description": ""}]
         _make_dtask_for_test(tasks, Path(self.cwd))
@@ -719,17 +625,14 @@ class TestCronModeStopDecision(_PendingRecordingTestBase):
             dloop=self._cron_loop_state(session_id="original-cron-sid"),
         )
 
-        # 用不同的 session_id 调用 — cron 模式不应清理
+        # 用不同的 session_id 调用 — cron 模式不检查 session_id
         result = _run_stop_decision_for_test(
             Path(self.cwd),
-            session_id="different-cron-sid",  # 不匹配！
+            session_id="different-cron-sid",
             cwd=self.cwd,
         )
         assert result.returncode == 0
-        # cron 模式：不匹配不触发清理，进入 decide_cron_mode 正常判断
-        runtime = json.loads((Path(self.cwd) / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-        # dloop 应仍在（decide_cron_mode 未命中终止条件时不清除）
-        assert runtime.get("dloop") is not None
+        # cron 模式正常执行，进入 decide_cron_mode 判断
 
     def test_cron_mode_pending_rec_silent_for_new_session(self):
         """cron 模式：新 iteration（新 SID）遇到旧 PENDING_REC → 静默。

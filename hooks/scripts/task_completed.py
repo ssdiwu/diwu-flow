@@ -62,10 +62,6 @@ def _track_loop_completion(task_id: int, session_id: str):
     runtime_loop = sync_result.state.get("dloop") if sync_result.state else None
     if (not runtime_loop or not runtime_loop.get("active")):
         return
-    # cron 模式：不检查 session_id 匹配（每次是新 session）
-    if runtime_loop.get("mode", "session") != "cron":
-        if runtime_loop.get("session_id") != session_id:
-            return
     current_completed = runtime_loop.get("completed_task_ids", [])
     if task_id in current_completed:
         return  # 防重复：同一 task_id 再次 Done 不追加

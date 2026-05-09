@@ -1,0 +1,285 @@
+- article [ref=e1118]:
+  - paragraph [ref=e1119]:
+    - link "OpenCode logo" [ref=e1120] [cursor=pointer]:
+      - /url: https://opencode.ai
+      - img "OpenCode logo" [ref=e1123]
+  - paragraph [ref=e1124]: The open source AI coding agent.
+  - paragraph [ref=e1125]:
+    - link "Discord" [ref=e1126] [cursor=pointer]:
+      - /url: https://opencode.ai/discord
+      - img "Discord" [ref=e1127]
+    - link "npm" [ref=e1128] [cursor=pointer]:
+      - /url: https://www.npmjs.com/package/opencode-ai
+      - img "npm" [ref=e1129]
+    - link "Build status" [ref=e1130] [cursor=pointer]:
+      - /url: https://github.com/anomalyco/opencode/actions/workflows/publish.yml
+      - img "Build status" [ref=e1131]
+  - paragraph [ref=e1132]:
+    - link "English" [ref=e1133] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.md
+    - text: "|"
+    - link "简体中文" [ref=e1134] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.zh.md
+    - text: "|"
+    - link "繁體中文" [ref=e1135] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.zht.md
+    - text: "|"
+    - link "한국어" [ref=e1136] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.ko.md
+    - text: "|"
+    - link "Deutsch" [ref=e1137] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.de.md
+    - text: "|"
+    - link "Español" [ref=e1138] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.es.md
+    - text: "|"
+    - link "Français" [ref=e1139] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.fr.md
+    - text: "|"
+    - link "Italiano" [ref=e1140] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.it.md
+    - text: "|"
+    - link "Dansk" [ref=e1141] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.da.md
+    - text: "|"
+    - link "日本語" [ref=e1142] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.ja.md
+    - text: "|"
+    - link "Polski" [ref=e1143] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.pl.md
+    - text: "|"
+    - link "Русский" [ref=e1144] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.ru.md
+    - text: "|"
+    - link "Bosanski" [ref=e1145] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.bs.md
+    - text: "|"
+    - link "العربية" [ref=e1146] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.ar.md
+    - text: "|"
+    - link "Norsk" [ref=e1147] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.no.md
+    - text: "|"
+    - link "Português (Brasil)" [ref=e1148] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.br.md
+    - text: "|"
+    - link "ไทย" [ref=e1149] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.th.md
+    - text: "|"
+    - link "Türkçe" [ref=e1150] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.tr.md
+    - text: "|"
+    - link "Українська" [ref=e1151] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.uk.md
+    - text: "|"
+    - link "বাংলা" [ref=e1152] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.bn.md
+    - text: "|"
+    - link "Ελληνικά" [ref=e1153] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.gr.md
+    - text: "|"
+    - link "Tiếng Việt" [ref=e1154] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/README.vi.md
+  - paragraph [ref=e1155]:
+    - link "OpenCode Terminal UI" [ref=e1156] [cursor=pointer]:
+      - /url: https://opencode.ai
+      - img "OpenCode Terminal UI" [ref=e1157]
+  - separator [ref=e1158]
+  - generic [ref=e1159]:
+    - heading "Installation" [level=3] [ref=e1160]
+    - 'link "Permalink: Installation" [ref=e1161] [cursor=pointer]':
+      - /url: "#installation"
+      - img [ref=e1162]
+  - generic [ref=e1164]:
+    - generic [ref=e1165]:
+      - generic [ref=e1166]: "# YOLO"
+      - text: curl -fsSL https://opencode.ai/install | bash
+      - generic [ref=e1167]: "# Package managers"
+      - text: npm i -g opencode-ai@latest
+      - generic [ref=e1168]: "# or bun/pnpm/yarn"
+      - text: scoop install opencode
+      - generic [ref=e1169]: "# Windows"
+      - text: choco install opencode
+      - generic [ref=e1170]: "# Windows"
+      - text: brew install anomalyco/tap/opencode
+      - generic [ref=e1171]: "# macOS and Linux (recommended, always up to date)"
+      - text: brew install opencode
+      - generic [ref=e1172]: "# macOS and Linux (official brew formula, updated less)"
+      - text: sudo pacman -S opencode
+      - generic [ref=e1173]: "# Arch Linux (Stable)"
+      - text: paru -S opencode-bin
+      - generic [ref=e1174]: "# Arch Linux (Latest from AUR)"
+      - text: mise use -g opencode
+      - generic [ref=e1175]: "# Any OS"
+      - text: nix run nixpkgs#opencode
+      - generic [ref=e1176]: "# or github:anomalyco/opencode for latest dev branch"
+    - button "Copy" [ref=e1178] [cursor=pointer]:
+      - img [ref=e1179]
+  - generic [ref=e1182]:
+    - paragraph [ref=e1183]:
+      - img [ref=e1184]
+      - text: Tip
+    - paragraph [ref=e1186]: Remove versions older than 0.1.x before installing.
+  - generic [ref=e1187]:
+    - heading "Desktop App (BETA)" [level=3] [ref=e1188]
+    - 'link "Permalink: Desktop App (BETA)" [ref=e1189] [cursor=pointer]':
+      - /url: "#desktop-app-beta"
+      - img [ref=e1190]
+  - paragraph [ref=e1192]:
+    - text: OpenCode is also available as a desktop application. Download directly from the
+    - link "releases page" [ref=e1193] [cursor=pointer]:
+      - /url: https://github.com/anomalyco/opencode/releases
+    - text: or
+    - link "opencode.ai/download" [ref=e1194] [cursor=pointer]:
+      - /url: https://opencode.ai/download
+    - text: .
+  - table [ref=e1196]:
+    - rowgroup [ref=e1197]:
+      - row "Platform Download" [ref=e1198]:
+        - columnheader "Platform" [ref=e1199]
+        - columnheader "Download" [ref=e1200]
+    - rowgroup [ref=e1201]:
+      - row "macOS (Apple Silicon) opencode-desktop-mac-arm64.dmg" [ref=e1202]:
+        - cell "macOS (Apple Silicon)" [ref=e1203]
+        - cell "opencode-desktop-mac-arm64.dmg" [ref=e1204]:
+          - code [ref=e1205]: opencode-desktop-mac-arm64.dmg
+      - row "macOS (Intel) opencode-desktop-mac-x64.dmg" [ref=e1206]:
+        - cell "macOS (Intel)" [ref=e1207]
+        - cell "opencode-desktop-mac-x64.dmg" [ref=e1208]:
+          - code [ref=e1209]: opencode-desktop-mac-x64.dmg
+      - row "Windows opencode-desktop-windows-x64.exe" [ref=e1210]:
+        - cell "Windows" [ref=e1211]
+        - cell "opencode-desktop-windows-x64.exe" [ref=e1212]:
+          - code [ref=e1213]: opencode-desktop-windows-x64.exe
+      - row "Linux .deb, .rpm, or .AppImage" [ref=e1214]:
+        - cell "Linux" [ref=e1215]
+        - cell ".deb, .rpm, or .AppImage" [ref=e1216]:
+          - code [ref=e1217]: .deb
+          - text: ","
+          - code [ref=e1218]: .rpm
+          - text: ", or"
+          - code [ref=e1219]: .AppImage
+  - generic [ref=e1220]:
+    - generic [ref=e1221]:
+      - generic [ref=e1222]: "# macOS (Homebrew)"
+      - text: brew install --cask opencode-desktop
+      - generic [ref=e1223]: "# Windows (Scoop)"
+      - text: scoop bucket add extras; scoop install extras/opencode-desktop
+    - button "Copy" [ref=e1225] [cursor=pointer]:
+      - img [ref=e1226]
+  - generic [ref=e1229]:
+    - heading "Installation Directory" [level=4] [ref=e1230]
+    - 'link "Permalink: Installation Directory" [ref=e1231] [cursor=pointer]':
+      - /url: "#installation-directory"
+      - img [ref=e1232]
+  - paragraph [ref=e1234]: "The install script respects the following priority order for the installation path:"
+  - list [ref=e1235]:
+    - listitem [ref=e1236]:
+      - code [ref=e1237]: $OPENCODE_INSTALL_DIR
+      - text: "- Custom installation directory"
+    - listitem [ref=e1238]:
+      - code [ref=e1239]: $XDG_BIN_DIR
+      - text: "- XDG Base Directory Specification compliant path"
+    - listitem [ref=e1240]:
+      - code [ref=e1241]: $HOME/bin
+      - text: "- Standard user binary directory (if it exists or can be created)"
+    - listitem [ref=e1242]:
+      - code [ref=e1243]: $HOME/.opencode/bin
+      - text: "- Default fallback"
+  - generic [ref=e1244]:
+    - generic [ref=e1245]:
+      - generic [ref=e1246]: "# Examples"
+      - text: OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+    - button "Copy" [ref=e1248] [cursor=pointer]:
+      - img [ref=e1249]
+  - generic [ref=e1252]:
+    - heading "Agents" [level=3] [ref=e1253]
+    - 'link "Permalink: Agents" [ref=e1254] [cursor=pointer]':
+      - /url: "#agents"
+      - img [ref=e1255]
+  - paragraph [ref=e1257]:
+    - text: OpenCode includes two built-in agents you can switch between with the
+    - code [ref=e1258]: Tab
+    - text: key.
+  - list [ref=e1259]:
+    - listitem [ref=e1260]:
+      - strong [ref=e1261]: build
+      - text: "- Default, full-access agent for development work"
+    - listitem [ref=e1262]:
+      - strong [ref=e1263]: plan
+      - text: "- Read-only agent for analysis and code exploration"
+      - list [ref=e1264]:
+        - listitem [ref=e1265]: Denies file edits by default
+        - listitem [ref=e1266]: Asks permission before running bash commands
+        - listitem [ref=e1267]: Ideal for exploring unfamiliar codebases or planning changes
+  - paragraph [ref=e1268]:
+    - text: Also included is a
+    - strong [ref=e1269]: general
+    - text: subagent for complex searches and multistep tasks. This is used internally and can be invoked using
+    - code [ref=e1270]: "@general"
+    - text: in messages.
+  - paragraph [ref=e1271]:
+    - text: Learn more about
+    - link "agents" [ref=e1272] [cursor=pointer]:
+      - /url: https://opencode.ai/docs/agents
+    - text: .
+  - generic [ref=e1273]:
+    - heading "Documentation" [level=3] [ref=e1274]
+    - 'link "Permalink: Documentation" [ref=e1275] [cursor=pointer]':
+      - /url: "#documentation"
+      - img [ref=e1276]
+  - paragraph [ref=e1278]:
+    - text: For more info on how to configure OpenCode,
+    - link "head over to our docs" [ref=e1279] [cursor=pointer]:
+      - /url: https://opencode.ai/docs
+      - strong [ref=e1280]: head over to our docs
+    - text: .
+  - generic [ref=e1281]:
+    - heading "Contributing" [level=3] [ref=e1282]
+    - 'link "Permalink: Contributing" [ref=e1283] [cursor=pointer]':
+      - /url: "#contributing"
+      - img [ref=e1284]
+  - paragraph [ref=e1286]:
+    - text: If you're interested in contributing to OpenCode, please read our
+    - link "contributing docs" [ref=e1287] [cursor=pointer]:
+      - /url: /anomalyco/opencode/blob/dev/CONTRIBUTING.md
+    - text: before submitting a pull request.
+  - generic [ref=e1288]:
+    - heading "Building on OpenCode" [level=3] [ref=e1289]
+    - 'link "Permalink: Building on OpenCode" [ref=e1290] [cursor=pointer]':
+      - /url: "#building-on-opencode"
+      - img [ref=e1291]
+  - paragraph [ref=e1293]: If you are working on a project that's related to OpenCode and is using "opencode" as part of its name, for example "opencode-dashboard" or "opencode-mobile", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way.
+  - generic [ref=e1294]:
+    - heading "FAQ" [level=3] [ref=e1295]
+    - 'link "Permalink: FAQ" [ref=e1296] [cursor=pointer]':
+      - /url: "#faq"
+      - img [ref=e1297]
+  - generic [ref=e1299]:
+    - heading "How is this different from Claude Code?" [level=4] [ref=e1300]
+    - 'link "Permalink: How is this different from Claude Code?" [ref=e1301] [cursor=pointer]':
+      - /url: "#how-is-this-different-from-claude-code"
+      - img [ref=e1302]
+  - paragraph [ref=e1304]: "It's very similar to Claude Code in terms of capability. Here are the key differences:"
+  - list [ref=e1305]:
+    - listitem [ref=e1306]: 100% open source
+    - listitem [ref=e1307]:
+      - text: Not coupled to any provider. Although we recommend the models we provide through
+      - link "OpenCode Zen" [ref=e1308] [cursor=pointer]:
+        - /url: https://opencode.ai/zen
+      - text: ", OpenCode can be used with Claude, OpenAI, Google, or even local models. As models evolve, the gaps between them will close and pricing will drop, so being provider-agnostic is important."
+    - listitem [ref=e1309]: Built-in opt-in LSP support
+    - listitem [ref=e1310]:
+      - text: A focus on TUI. OpenCode is built by neovim users and the creators of
+      - link "terminal.shop" [ref=e1311] [cursor=pointer]:
+        - /url: https://terminal.shop
+      - text: ; we are going to push the limits of what's possible in the terminal.
+    - listitem [ref=e1312]: A client/server architecture. This, for example, can allow OpenCode to run on your computer while you drive it remotely from a mobile app, meaning that the TUI frontend is just one of the possible clients.
+  - separator [ref=e1313]
+  - paragraph [ref=e1314]:
+    - strong [ref=e1315]: Join our community
+    - link "Discord" [ref=e1316] [cursor=pointer]:
+      - /url: https://discord.gg/opencode
+    - text: "|"
+    - link "X.com" [ref=e1317] [cursor=pointer]:
+      - /url: https://x.com/opencode

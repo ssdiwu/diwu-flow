@@ -49,7 +49,7 @@ class TestTaskCompletedLoopTracking:
     """task_completed.py 的 loop completed_task_ids 追踪行为。"""
 
     def test_match_session_appends_once(self, tmp_path):
-        """session 匹配 + event.task 存在 → append 到 completed_task_ids。"""
+        """loop active + event.task 存在 → append 到 completed_task_ids。"""
         _make_dtask(tmp_path, [
             {"id": 5, "title": "T5", "status": "Done"},
         ])
@@ -75,31 +75,6 @@ class TestTaskCompletedLoopTracking:
         assert result.returncode == 0
         state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
         assert state["dloop"]["completed_task_ids"] == [1, 2, 5]
-
-    def test_mismatch_session_no_append(self, tmp_path):
-        """session 不匹配 → 不追加。"""
-        _make_dtask(tmp_path, [
-            {"id": 5, "title": "T5", "status": "Done"},
-        ])
-        _make_runtime_state(tmp_path, dloop={
-            "active": True,
-            "session_id": "loop-session",
-            "started_at": "2026-04-30T12:00:00Z",
-            "completed_task_ids": [1],
-            "current_iteration": 1,
-            "max_tasks": 5,
-            "stopped_at": None,
-            "stop_reason": None,
-        })
-
-        result = _run_task_completed(tmp_path, {
-            "task": {"id": 5, "title": "T5", "status": "Done"},
-            "sessionId": "different-session",
-        })
-
-        assert result.returncode == 0
-        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
-        assert state["dloop"]["completed_task_ids"] == [1]
 
     def test_missing_event_task_no_append(self, tmp_path):
         """event.task 缺失 → 不追加（不用 fallback heuristic）。"""
