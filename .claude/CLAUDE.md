@@ -2,8 +2,6 @@
 
 **插件版本：0.1.0** | Claude Code Plugin 项目
 
-本文件是 diwu-flow **插件自身的开发手册**。读这份文件的 AI 正在改 diwu-flow 源码，而不是用 diwu-flow 做别的项目。
-
 ## 文档三边界
 
 | 目录 | 定位 | 读它的人 |
@@ -16,15 +14,15 @@
 
 ## 系统分层地图
 
-| 层 | 关键资产 | 回答的核心问题 |
-|---|---------|--------------|
-| L0 入口容器 | didea | 想法挂住 → 持久化 → 下游衔接 |
-| L1 判断收束 | dpth/dref/dprd/ddoc | 值不值得做、怎么想清楚、收束成清单/PRD/文档 |
-| L2 下游扩展 | architect/debugger | 技术审稿 gate / 异常诊断优先 |
-| L3 协议层 | rules/handoff.md | dtask/drun 主编排边界、回交模型、Handoff Report |
-| L4 规则真相源 | rules/ | 状态机、blocked_by、acceptance、verification 规范 |
-| L5 表层能力 | Commands/Skills | drun 双入口、持久化策略、新增删减溶解标准 |
-| 横切增强 | rules/testing.md | 测试策略跨越多层、幅度→验证方式映射 |
+| 层 | 关键资产 | 职责 |
+|---|---------|------|
+| L0 入口容器 | didea | 想法挂住、本地持久化、下游衔接 |
+| L1 判断收束 | dpth/dref/dprd/ddoc | 方向判断、需求细化、PRD 论证、产品文档 |
+| L2 下游扩展 | architect/debugger | 技术审稿 gate、异常诊断与回交 |
+| L3 协议层 | rules/handoff.md | dtask/drun 主编排边界、回交模型、Handoff Report 协议 |
+| L4 规则真相源 | rules/ | 状态机契约、blocked_by、acceptance、verification 规范 |
+| L5 表层能力 | Commands/Skills | drun 双入口、持久化策略、新增/删减/溶解标准 |
+| 横切增强 | rules/testing.md | 测试分层策略、幅度→验证方式映射 |
 
 > 架构原则：Skills 为底，Commands 为壳。Skill frontmatter 零平台耦合。agents/ 和 skills/ 扁平单层，默认路径自动发现，plugin.json 不声明 agents。
 
@@ -84,7 +82,7 @@
 ### 变更传播
 
 - **Rules 同步**：修改 `rules/` 后必须同步 `.claude/rules/` 和 `assets/dinit/assets/rules/` 两处模板
-- **版本号同步**：以 `.claude-plugin/plugin.json` 为真值源；变更时同步 `marketplace.json` + `install.sh` OpenCode stub
+- **版本号同步**：以 `.claude-plugin/plugin.json` 为真值源；变更时同步 `marketplace.json` + `install.sh`
 - **recording 更新**：每次 session 结束前写入 `.diwu/recording/`
 - **时间戳**：写 Session 标题前先跑 `date '+%Y-%m-%d %H:%M:%S'`，禁止手写
 - **`.diwu/` 提交**：origin/main 持续追踪 `.diwu/`（含 `.claude/`）；公开仓库由 `drelease.sh` worktree 隔离发布 clean 版
