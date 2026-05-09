@@ -535,6 +535,44 @@
         120
       ],
       "status": "Done"
+    },
+    {
+      "id": 122,
+      "title": "dloop 移除 session 模式，cron 为唯一驱动",
+      "description": "Issue #22: dloop 目前有 session 和 cron 两种模式。session 模式的驱动链路（Stop hook→block→Agent→/drun）无框架保障，且是 Issue #12 ownership 锁死的根因。本任务删除 session 模式全部代码和文档，cron 成为唯一驱动方式。",
+      "acceptance": [
+        "Given scripts/dloop.py When 解析参数 Then 无 --mode 选项，cmd_start 行为统一为 cron 模式",
+        "Given hooks/scripts/stop_decision.py When 执行 Then 无 decide_loop_mode 函数，无 session SID 绑定三分支逻辑",
+        "Given hooks/scripts/task_entry_guard.py When 检查 _should_block_dloop Then 无 session 分支",
+        "Given hooks/scripts/task_completed.py When 执行 Then cron 跳过检查逻辑已简化（无 session 判断）",
+        "Given skills/dloop/SKILL.md When 读取内容 Then 无 session 模式章节、无模式选择指南表，cron 为唯一描述",
+        "Given commands/dloop.md When 读取内容 Then 与 SKILL.md 一致，无 session 模式引用",
+        "Given pytest tests/ 运行 Then 全量通过，无 session 模式专属测试残留"
+      ],
+      "steps": [
+        "1. [锁定] 分析 scripts/dloop.py 中 session 模式代码边界：--mode 参数解析、cmd_start 中 session 分支、session 相关辅助函数，标记待删区域",
+        "2. [锁定] 分析 hooks/scripts/stop_decision.py 中 session 模式代码：decide_loop_mode 函数、session SID 绑定三分支逻辑、session 相关导入/常量",
+        "3. [锁定] 分析 hooks/scripts/task_entry_guard.py 中 _should_block_dloop 的 session 分支",
+        "4. [锁定] 分析 hooks/scripts/task_completed.py 中 session 模式相关判断逻辑",
+        "5. [锁定] 阅读 skills/dloop/SKILL.md 标记所有 session 模式章节和选择指南表",
+        "6. [锁定] 阅读 commands/dloop.md 标记 session 模式引用",
+        "7. [锁定] 用 grep 定位 6 个目标文件中所有 session 模式关键词（排除非模式引用）",
+        "8. [锁定] 定位 tests/ 中 session 模式专属测试用例",
+        "9. [建议] 逐文件执行删除：scripts/dloop.py → stop_decision.py → task_entry_guard.py → task_completed.py → SKILL.md → commands/dloop.md",
+        "10. [建议] 删除 tests/ 中 session 模式专属测试，保留 cron 测试",
+        "11. [建议] 运行 pytest tests/ 全量回归确认通过",
+        "12. [建议] 用 grep 确认目标文件 + tests/ 中无 session 模式残留引用"
+      ],
+      "files_modified": [
+        "scripts/dloop.py",
+        "hooks/scripts/stop_decision.py",
+        "hooks/scripts/task_entry_guard.py",
+        "hooks/scripts/task_completed.py",
+        "skills/dloop/SKILL.md",
+        "commands/dloop.md"
+      ],
+      "category": "refactor",
+      "status": "InProgress"
     }
   ]
 }
