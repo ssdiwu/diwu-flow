@@ -49,10 +49,10 @@ flowchart TB
         DIDEA["didea<br/>想法捕获 → 持久化"]
     end
 
-    L5 --> L4 --> L3
-    L2 --> L1 --> L0
-    L3 -.-> L2
-    L5 -.-> L2
+    L0 --> L1 --> L2
+    L3 --> L4 --> L5
+    L2 -.-> L3
+    L2 -.-> L5
     RULES -.->|横切增强| TEST["rules/testing.md<br/>测试分层策略"]
 ```
 
