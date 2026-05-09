@@ -27,16 +27,33 @@
 
 ### 六层架构总览
 
-```
-L0 入口容器    didea          想法挂住 → 持久化 → 下游衔接
-L1 判断收束    dpth dref      值不值得做 → 怎么想清楚 → 收束成清单/PRD/文档
-              dprd ddoc       
-L2 下游扩展    architect      技术审稿 gate / 异常诊断与回交
-              debugger        
-L3 协议层      handoff.md     dtask↔drun 主编排边界、回交模型、Handoff Report
-L4 规则真相源  rules/(14文件)  状态机契约、blocked_by、acceptance、verification 规范
-L5 表层能力    Commands/Skills drun 双入口、持久化策略、新增/删减/溶解标准
-横切增强      testing.md     测试分层策略、幅度→验证方式映射
+```mermaid
+flowchart TB
+    subgraph L5["L5 表层能力"]
+        CMD["Commands(13) → Skills(11)<br/>drun 双入口 / 持久化策略"]
+    end
+    subgraph L4["L4 规则真相源"]
+        RULES["rules/(14 文件)<br/>状态机 / blocked_by / acceptance / verification"]
+    end
+    subgraph L3["L3 协议层"]
+        HO["handoff.md<br/>dtask↔drun 主编排 / 回交模型"]
+    end
+    subgraph L2["L2 下游扩展"]
+        ARC["architect<br/>技术审稿"] --- DBG["debugger<br/>异常诊断"]
+    end
+    subgraph L1["L1 判断收束"]
+        DPTH["dpth 方向判断"] --- DREF["dref 需求细化"]
+        DPRD["dprd 产品论证"] --- DDOC["ddoc 产品文档"]
+    end
+    subgraph L0["L0 入口容器"]
+        DIDEA["didea<br/>想法捕获 → 持久化"]
+    end
+
+    L5 --> L4 --> L3
+    L2 --> L1 --> L0
+    L3 -.-> L2
+    L5 -.-> L2
+    RULES -.->|横切增强| TEST["rules/testing.md<br/>测试分层策略"]
 ```
 
 ### Skills（11）与 Commands（13）
@@ -139,11 +156,22 @@ claude plugin add /path/to/diwu-flow
 
 ## 工作流核心
 
-### 最短执行路径
+### 最短用户路径
 
-`/didea` 捕获想法 → `/dpth` 方向判断 → `/dtask` 规划任务 → `/drun` 执行 → `/drec` 记录归档。
+```mermaid
+flowchart LR
+    A["/didea<br/>捕获想法"] --> B{需要判断?}
+    B -->|是| C["/dpth<br/>方向判断"]
+    B -->|否| D["/dtask<br/>规划任务"]
+    C --> D
+    D --> E{选择模式}
+    E -->|单次| F["/drun<br/>执行一个任务"]
+    E -->|连续| G["/dloop<br/>循环执行"]
+    G --> F
+    F --> H["/drec<br/>记录归档"]
+```
 
-如果不需要方向和产品论证环节，可以 `/dtask` 直接规划后 `/drun` 执行。需要连续执行多个任务时，用 `/dloop` 代替 `/drun`。
+> 核心链路：`/didea` 挂住 → `/dpth` 判断 → `/dtask` 拆任务 → `/dloop` 开始循环 → `/drec` 记录。
 
 ### drun 双入口模型
 
