@@ -1,11 +1,11 @@
 # Session 补充规则
 
-> 本文件仅保留 `skills/drun/SKILL.md` 未覆盖的独特内容。主体协议（启动、模式、执行循环）见 drun。
+> 本文件仅保留执行引擎 SKILL.md 未覆盖的独特内容。主体协议（启动、模式、执行循环）见执行引擎文档。
 
 ## InProgress 恢复补充
 
-- 断点恢复只允许发生在 `.diwu/dtask-state.json.task_sessions` 中 owner 匹配当前 session 的 `InProgress` 任务上
-- `dtask-state.json` 缺失、损坏或 owner 缺失时，Hook 必须安全降级：不得误恢复 чужой 任务，也不得误写 checkpoint
+- 断点恢复只允许发生在运行时状态文件中 owner 匹配当前 session 的 `InProgress` 任务上
+- 运行时状态文件缺失、损坏或 owner 缺失时，必须安全降级：不得误恢复其他 session 的任务，也不得误写 checkpoint
 
 ---
 
@@ -15,7 +15,7 @@
 
 **dtask.json 状态变更必须与对应代码变更同一 commit**。禁止将 status 更新（如 InSpec→Done）单独成 commit。
 
-**recording 与代码变更的 commit 必须通过 `/drec` 统一完成**——drec 是项目状态存档的唯一入口，负责写入 recording 文件后执行 `git add -A`（全量变更：代码+.diwu/ 状态文件）+ 原子 `git commit`。调用方（drun 等）不得自行 commit 包含 recording 或 .diwu/ 状态文件。正确顺序：实施完成 → 标记 Done → 调用 `/drec`（传入 session 摘要）→ drec 写入 recording + 全量 commit。
+**recording 与代码变更的 commit 必须通过记录命令统一完成**——记录命令是项目状态存档的唯一入口，负责写入 recording 文件后执行 `git add -A`（全量变更：代码+.diwu/ 状态文件）+ 原子 `git commit`。调用方（执行引擎等）不得自行 commit 包含 recording 或 .diwu/ 状态文件。正确顺序：实施完成 → 标记 Done → 调用记录命令（传入 session 摘要）→ 写入 recording + 全量 commit。
 
 ### recording 时间戳铁律
 
@@ -86,7 +86,7 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 
 ## 工具失败处理协议（3-Strike）
 
-**约束级别**：`[建议]`。由 `post_tool_use_failure.py` 自动执行。
+**约束级别**：`[建议]`。由工具失败追踪机制自动执行（具体实现因项目而异）。
 
 | 尝试 | 策略 | 注入内容 |
 |------|------|---------|
@@ -94,7 +94,7 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 | 2/3 | 更换根本不同的方法 | 强烈建议：换工具/换文件/换策略 |
 | 3+/3 | 广泛重新思考或升级用户 | 阻止继续：质疑假设，考虑升级 |
 
-- **状态持久化**：`/tmp/diwu_ctx_<pid>_errtrack` JSON 文件
+- **状态持久化**：临时文件（路径因项目而异，需确保可清理）
 - **冷却窗口**：默认 60 秒
 - **开关**：`dsettings.json → error_tracking.enabled`（默认 true）
 
@@ -102,7 +102,7 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 
 ## Checkpoint 记录机制
 
-当 context_monitor 达到 CRITICAL+DELAY 阈值时自动写入 checkpoint：
+当上下文监控达到临界阈值时自动写入 checkpoint：
 - 将当前进度压缩写入 recording/ 最新 session 文件末尾
 - 记录格式：
 
@@ -132,7 +132,7 @@ PITFALL_MINIMAL_PATTERN = re.compile(
 | 01:30:05 | Bash | npm install E403 | 2 | 使用镜像源 | 环境漂移 |
 ```
 
-表格是四段式的机器可读版本；两者互为补充。表格方便跨 session 聚合查询，四段式适合人类阅读和 Stop hook 验证。基础版踩坑预注入已由 `session_start.py`（SessionStart hook）实现——每次 session 启动时自动读取 `.diwu/project-pitfalls.md` 并注入 system prompt；高级版跨 session 错误模式自动检测与聚合注入（`inject_errors_decisions.py`，P-004）**仍待实现**。
+表格是四段式的机器可读版本；两者互为补充。表格方便跨 session 聚合查询，四段式适合人类阅读和验证。基础版踩坑预注入由 SessionStart 机制实现——每次 session 启动时自动读取项目高频误判表并注入上下文；高级版跨 session 错误模式自动检测与聚合注入（预留接口 P-004）**仍待实现**。
 
 ---
 

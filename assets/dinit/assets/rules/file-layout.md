@@ -23,7 +23,7 @@
 │   ├── smoke.sh
 │   └── task_<id>_verify.sh
 ├── init.sh                        # 环境初始化脚本（可选）
-└── rules/                         # 工作流规则（14 文件，由 /dinit 同步而来）
+└── rules/                         # 工作流规则（由初始化命令同步而来）
     ├── README.md                  # 规则导航页
     ├── mindset.md                 # 上位心智层（独立注入，非自动加载）
     ├── handoff.md                 # 子代理交接协议
@@ -40,18 +40,7 @@
     └── file-layout.md             # 本文件：目录结构与归档规则
 ```
 
-> 规则文件由插件 UserPromptSubmit hook 注入。**mindset.md 为独立注入**（由 UserPromptSubmit hook 单独读取注入，不随 rules/ 目录批量加载）。
-> rules/ 目录由 `/dinit` 从 `assets/dinit/assets/rules/` 按 `rules-manifest.json` 复制到目标项目供 hook 注入使用。
-
-## .doc/ 目录结构（产品文档层）
-
-```
-.doc/
-├── README.md              # 导航索引：定位/阅读顺序/维护规则
-├── 架构规范.md            # Skills<->Commands 映射/模块边界/Hooks 实现链(6 事件)/数据流图
-├── 状态文件规格.md          # dtask.json 字段+状态机+迁移表/dtask-state.json writer matrix/self-heal
-└── 工程规范.md            # 引用索引纯聚合/禁止事项/变更传播矩阵
-```
+> 规则文件通过项目配置的注入机制加载到 Agent 上下文。具体注入方式因项目而异（hook、手动复制、或工具链集成）。
 
 ## tests/ 目录结构（测试资产）
 
@@ -64,7 +53,7 @@ tests/
 └── conftest.py              # pytest 入口
 ```
 
-> repo-level 基线测试默认进入 `tests/`，不再把 `.diwu/checks/smoke.sh` 和 `task_<id>_verify.sh` 作为标准工作流结构。
+> repo-level 基线测试默认进入 `tests/`，项目基线检查脚本（如 smoke.sh）作为补充手段。
 
 ## 规则文件说明
 
@@ -72,7 +61,7 @@ tests/
 |------|------|--------|
 | `rules/mindset.md` | 上位心智层：三唯一框架、P-J-A 骨架、不确定性门控 | Agent 读（hook 独立注入） |
 | `rules/handoff.md` | 子代理交接协议：启动仪式、回交模型、Agent 设计约束、Plan→Dtask 门控 | Agent 读 |
-| `rules/testing.md` | 测试分层策略：幅度→验证方式映射、补测试触发条件、插件特例 | Agent 读 |
+| `rules/testing.md` | 测试分层策略：幅度→验证方式映射、补测试触发条件 | Agent 读 |
 | `rules/judgments.md` | 全部判断锚点：按阶段索引（启动/实施/验收/纠偏/handoff） | Agent 读 |
 | `rules/task.md` | 任务状态机、GWT acceptance 格式、dtask 结构、blocked_by、提交规范 | Agent 读写 |
 | `rules/workflow.md` | 阶段流转：层级路线图、入口门控、跨阶段回退 | Agent 读 |
@@ -107,8 +96,6 @@ tests/
 
 | 数据 | Source of Truth | 说明 |
 |------|----------------|------|
-| 插件元数据 | `.claude-plugin/plugin.json` | 版本、命令列表 |
 | 任务定义与状态 | `.diwu/dtask.json` | `title/description/acceptance/steps/status` 真相源 |
-| runtime owner / dloop | `.diwu/dtask-state.json` | `task_sessions` + `dloop`，由 `dtask_transition.py` / hooks / dloop 维护 |
-| 规则文件列表 | `assets/dinit/assets/rules-manifest.json` | `/dinit` 按 `rules` 字段复制到目标项目 |
-| 模板文件 | `assets/dinit/assets/*.template` | `/dinit` 复制到用户项目 |
+| runtime owner / dloop | `.diwu/dtask-state.json` | 运行时元数据，不重复保存 task status |
+| 模板文件 | 项目模板目录（因项目而异） | 初始化时复制到用户项目 |

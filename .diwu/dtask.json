@@ -394,6 +394,147 @@
         117
       ],
       "status": "Done"
+    },
+    {
+      "id": 119,
+      "title": "rules 通用性修复：高优先级（移出 diwu-flow 专属内容）",
+      "description": "Issue #19。rules/ 通过 /dinit 同步到任意目标项目，必须写成项目无关的宪法。当前存在 ~15 处对目标项目完全无意义的 diwu-flow 专属内容，需移出到 .doc/ 或 CLAUDE.md，rules/ 只保留通用骨架。",
+      "acceptance": [
+        "Given rules/testing.md When 读取内容 Then 不包含「四、插件项目特例」整节（hooks 验证、三副本同步、state 一致性检查），该内容已迁移至 .doc/",
+        "Given rules/constraints.md When 读取内容 Then 版本号存放位置不写死 plugin.json 而为通用描述；三副本回写约束已移至 .doc/ 或 CLAUDE.md；Command/Skill ≤5 字符约束标注为「仅适用于插件开发」",
+        "Given rules/file-layout.md When 读取内容 Then 不含 hook 注入机制说明（UserPromptSubmit hook 注入等）；不含 .doc/ 目录结构；数据所有权表中无 plugin.json / rules-manifest.json 等插件专属行",
+        "Given rules/session.md When 读取内容 Then 无内部脚本名硬编码（post_tool_use_failure.py / session_start.py / inject_errors_decisions.py）；无 /tmp/diwu_ctx_* 路径",
+        "Given rules/testing.md When 读取内容 Then 补测试触发条件中无「修改 hooks 脚本」行；豁免条件中无 test_doc_consistency 引用",
+        "Given python3 -m pytest tests/ -q 全量运行 Then 所有用例 PASS，无新增 FAILURE"
+      ],
+      "steps": [
+        "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/testing.md，将「四、插件项目特例」整节（含 hooks 验证、三副本同步、JSON state 一致性检查、插件项目重点表）剪切到 .doc/ 下合适位置（如 .doc/架构规范.md 或新建 .doc/rules-plugin-specifics.md），原位保留通用骨架或删除空壳",
+        "2. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md，将版本号写死 plugin.json 的段落改为通用描述（如「版本号由项目配置系统管理」）；将三副本回写约束移至 .doc/ 或 CLAUDE.md 开发铁律；将 Command/Skill ≤5 字符命名约束标注「[仅插件开发]」前缀",
+        "3. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md，将 hook 注入机制说明（「规则文件由插件 UserPromptSubmit hook 注入」等）移至 .doc/；删除 .doc/ 目录结构段或标注「[diwu-flow 源码仓专用]」；数据所有权表中删除 plugin.json / rules-manifest.json 行",
+        "4. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md，将内部脚本名引用（post_tool_use_failure.py / session_start.py / inject_errors_decisions.py）替换为功能描述；将 /tmp/diwu_ctx_<pid>_errtrack 替换为通用临时文件路径描述",
+        "5. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/testing.md，补测试触发条件中「修改 hooks 脚本」行改为通用描述或删除；豁免条件中 test_doc_consistency 引用改为通用描述",
+        "6. [锁定] 同步 rules/ 变更到 .claude/rules/ 和 assets/dinit/assets/rules/ 两处副本（三副本一致）",
+        "7. [锁定] 运行 python3 -m pytest tests/ -q 全量回归确认通过"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/testing.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/testing.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/testing.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/session.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "Done"
+    },
+    {
+      "id": 120,
+      "title": "rules 通用性修复：中优先级（内部名称抽象化）",
+      "description": "Issue #20。rules/ 中存在 ~20 处内部名称泄漏——内容本体是通用的，但表述中嵌入了 diwu-flow 特有名词（dtask/drun/脚本名/内部路径）。需用抽象角色名或功能描述替代，核心方法论保留不变。",
+      "acceptance": [
+        "Given rules/handoff.md When 读取内容 Then 主编排者边界表不写死 dtask/drun，使用抽象角色名（任务编排者/执行引擎）+ 映射说明；注入格式中不硬编码 dtask-state.json/task_sessions",
+        "Given rules/workflow.md When 读取内容 Then 层级路线图不绑定 dtask.json/drun 具体名；入口门控不写死「先写 dtask」",
+        "Given rules/judgments.md When 读取内容 Then 示例不使用 diwu-flow 自身历史决策（dtask-state.json 真真源、scripts/ 共享库等）；continuous_mode 锚点不引用 dloop 配置；无内部 skill/agent 路径硬编码",
+        "Given rules/session.md When 读取内容（#119 已处理部分除外） Then 断点恢复不写死 dtask-state.json.task_sessions；提交原子性不写死 /drec；checkpoint 不引用 context_monitor/CRITICAL+DELAY",
+        "Given rules/exceptions.md When 读取内容 Then 阻塞规则不写死「dtask 设为 Done」，使用通用表述",
+        "Given rules/templates.md When 读取内容 Then smoke.sh 模板职责不限定为 dtask + dsettings.json 的 JSON 合法性检查",
+        "Given python3 -m pytest tests/ -q 全量运行 Then 所有用例 PASS，无新增 FAILURE"
+      ],
+      "steps": [
+        "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/handoff.md，将主编排者边界表的 dtask/drun 替换为抽象角色名（任务编排者/执行引擎），在 CLAUDE.md 或 .doc/ 维护映射表；注入格式中 dtask-state.json/task_sessions 改为功能描述",
+        "2. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md，层级路线图中 dtask.json/drun 替换为通用描述（任务定义文件/执行引擎）；入口门控「先写 dtask」→「先写任务定义」",
+        "3. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md，示例替换为通用技术决策场景（如「统一状态文件 vs 分散状态文件」、「选 scripts/ 作共享库位置」→「选共享库目录位置」）；内部 skill/agent 路径引用改为功能描述",
+        "4. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md（#119 剩余部分），断点恢复中 dtask-state.json.task_sessions → 通用 runtime state 描述；提交原子性中 /drec → 通用记录命令引用；checkpoint 中 context_monitor/CRITICAL+DELAY → 通用阈值描述",
+        "5. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/exceptions.md，「dtask 设为 Done」→「将任务标记为完成」",
+        "6. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/templates.md，smoke.sh 模板职责拓宽为通用 JSON 合法性检查描述",
+        "7. [锁定] 同步所有变更到 .claude/rules/ 和 assets/dinit/assets/rules/ 两处副本（三副本一致）",
+        "8. [锁定] 运行 python3 -m pytest tests/ -q 全量回归确认通过"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/handoff.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/exceptions.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/templates.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/handoff.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/exceptions.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/templates.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/handoff.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/workflow.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/judgments.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/exceptions.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/templates.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        119
+      ],
+      "status": "Done"
+    },
+    {
+      "id": 121,
+      "title": "rules 通用性修复：低优先级（路径与计数清理）",
+      "description": "Issue #21。rules/ 中 ~10 处硬编码行号/计数/内部路径引用——不影响规则语义但不维护会随时间变质。小修小补，不改规则本体。",
+      "acceptance": [
+        "Given rules/mindset.md When 读取内容 Then 无 skills/drun/SKILL.md §Preflight 硬编码路径引用；无 skills/dtask/SKILL.md §子代理策略 硬编码路径引用",
+        "Given rules/session.md When 读取内容 Then 无 skills/drun/SKILL.md 硬编码路径引用",
+        "Given rules/pitfalls.md When 读取内容 Then 无 skills/dcorr/SKILL.md 硬编码行号引用（72-128）；无硬编码行号",
+        "Given rules/exceptions.md When 读取内容 Then 无 correction.md 不存在的引用（已修正为正确目标或功能描述）",
+        "Given rules/README.md When 读取内容 Then 「14 文件」计数已替换为动态描述（如「N 个文件，以 rules-manifest.json 为准」）或直接删除硬编码数字",
+        "Given rules/testing.md When 读取内容 Then L4 典型位置不写死 .diwu/checks/smoke.sh；test_doc_consistency 引用已清理",
+        "Given python3 -m pytest tests/ -q 全量运行 Then 所有用例 PASS，无新增 FAILURE"
+      ],
+      "steps": [
+        "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md，skills/drun/SKILL.md §Preflight → 功能描述（如「执行引擎 Preflight 检查清单」）；skills/dtask/SKILL.md §子代理策略 → 功能描述",
+        "2. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md，skills/drun/SKILL.md 引用 → 功能描述",
+        "3. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/pitfalls.md，skills/dcorr/SKILL.md 行号 72-128 → 删除行号只留文件引用或改为功能描述",
+        "4. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/exceptions.md，correction.md 不存在的引用 → 修正为 skills/dcorr/SKILL.md 或功能描述",
+        "5. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/README.md，「14 文件」→ 删除硬编码或改为「以 rules-manifest.json 为准」",
+        "6. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/testing.md，L4 典型位置 .diwu/checks/smoke.sh → 通用基线检查描述；test_doc_consistency → 通用文档一致性测试描述",
+        "7. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md，数据所有权表中 rules-manifest.json 行（如残留）→ 删除或标注",
+        "8. [锁定] 同步所有变更到 .claude/rules/ 和 assets/dinit/assets/rules/ 两处副本（三副本一致）",
+        "9. [锁定] 运行 python3 -m pytest tests/ -q 全量回归确认通过"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/pitfalls.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/exceptions.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/testing.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/pitfalls.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/exceptions.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/testing.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/pitfalls.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/exceptions.md",
+        "/Users/diwu/Documents/cites/Githubs/diwu-flow/assets/dinit/assets/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/testing.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/file-layout.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        120
+      ],
+      "status": "Done"
     }
   ]
 }

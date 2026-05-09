@@ -13,15 +13,15 @@
 | Perception   | 关键路径可观测；降级行为用户可感知                                                                | 降级时有明确报错或警告，不静默失败                                  |
 | FileOps      | 先读后写(分层)+JSON indent=2+原子替换优先+.diwu/.claude 谨慎修改                                 | Write/Edit前有Read; JSON含indent=2; 敏感文件修改有确认                          |
 
-**版本号存放位置**：`.claude-plugin/plugin.json` 的 `version` 字段（唯一真实来源）。
+**版本号存放位置**：由项目配置系统管理（如 `package.json` version、`Cargo.toml` version、或项目自有配置文件）。全项目必须只有一个唯一真实来源。
 
 ### 版本号升级判定
 
 | 变更类型 | 升级 | 示例 |
 |---------|------|------|
-| 不兼容变更（删 API/Skill/Command 参数/改变数据结构） | **major** | 移除某个 Command、修改 task.json 结构 |
-| 新增功能（新 Skill/新 Command/新能力/新增 hooks） | **minor** | 新增 drun Skill、新增 drec_archive.py 脚本 |
-| Bug 修复 / 文案修正 / 规则微调 / 模板调整 | **patch** | 修复 plugin.json 验证错误、修正 recording 格式 |
+| 不兼容变更（删 API / 改变数据结构 / 破坏行为） | **major** | 移除公开接口、修改核心数据结构 |
+| 新增功能（新能力 / 新入口 / 新集成点） | **minor** | 新增命令、新增脚本、新增外部集成 |
+| Bug 修复 / 文案修正 / 规则微调 / 模板调整 | **patch** | 修复验证错误、修正文档格式 |
 
 ## Constraints 判断锚点
 
@@ -82,15 +82,17 @@
 
 > 从 `mindset.md` 迁入。定义 Command/Skill 名称长度限制。
 
+**[仅插件开发]** 以下约束适用于设计 Claude Code 插件的 Command 和 Skill 名称：
+
 | 类型 | 约束 | 示例 |
 |------|------|------|
-| Command 名称 | ≤5 字符 | `/dstat`、`/dinit`、`/dcorr`、`/dtask`、`/prd`、`/ddoc` |
+| Command 名称 | ≤5 字符 | `/dstat`、`/dinit`、`/dcorr`、`/dtask` |
 | Skill 名称 | ≤5 字符 | `drun`、`dtask`、`drec`、`dcorr`、`dstat` |
 
 ## 规则回写约束
 
 - **README.md 是规则导航索引层，不是规则真相源**。规则正文以 `rules/` 各文件为准。
-- **规则变更必须回写到 `rules/` 开发副本**（唯一编辑源），再同步到 `.claude/rules/` 和 `assets/dinit/assets/rules/`。禁止直接修改后两处副本。
+- **[仅插件开发]** 规则变更必须回写到 `rules/` 开发副本（唯一编辑源），再同步到目标副本。禁止直接修改副本。具体同步目标见插件项目文档。
 
 ## 六维约束设计参考
 

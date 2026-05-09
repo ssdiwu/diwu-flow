@@ -6,16 +6,18 @@
 
 ## 一、主编排者边界
 
-| 主编排者 | 边界 | 不做什么 |
+| 主编排者（抽象角色） | 边界 | 不做什么 |
 |---------|------|---------|
-| `dtask` | 任务定义、状态管理、依赖图、acceptance | 不执行代码、不做验证、不写 recording |
-| `drun` | 执行循环：claim→实施→验证→release | 不改 task 定义、不新建任务、不修改 dtask.json 内容字段 |
+| 任务编排者 | 任务定义、状态管理、依赖图、acceptance | 不执行代码、不做验证、不写 recording |
+| 执行引擎 | 执行循环：claim→实施→验证→release | 不改 task 定义、不新建任务、不修改任务定义文件内容字段 |
 
-**铁律**：`dtask` 只管"做什么、做到什么程度算完"，`drun` 只管"怎么做、怎么证明做完了"。两者不越界。
+> **角色映射（diwu-flow 实现）**：任务编排者 = `dtask`，执行引擎 = `drun`。其他项目可映射到不同命令/工具。
+
+**铁律**：任务编排者只管"做什么、做到什么程度算完"，执行引擎只管"怎么做、怎么证明做完了"。两者不越界。
 
 ## 二、子代理启动仪式规格
 
-> dtask 定义了并行条件与分工策略。本节定义 SubagentStart Hook 触发时自动注入的内容格式——这是 Skills 中未覆盖的交接协议。
+> 任务定义工具定义了并行条件与分工策略。本节定义 SubagentStart Hook 触发时自动注入的内容格式——这是 Skills 中未覆盖的交接协议。
 
 ### 自动注入内容清单
 
@@ -36,7 +38,7 @@ SubagentStart Hook 必须向子代理注入以下四项：
 
 ```
 ## 当前任务: Task#N [title]
-Owner Session: [session_id from .diwu/dtask-state.json.task_sessions]
+Owner Session: [session_id from runtime state file]
 Acceptance:
 - [ ] GWT-1: Given ... When ... Then ...
 - [ ] GWT-2: ...
@@ -118,11 +120,11 @@ Explorer 的默认域是**只读调查**，但以下情况触发跨域切换：
 
 | 派发方 | 接收方 | 典型场景 | 回交产物 |
 |--------|--------|---------|---------|
-| drun (主代理) | explorer | 首次接触代码库、追踪依赖 | 调查报告 + 建议方案 |
-| drun (主代理) | implementer | 明确实现路径后的代码修改 | 交接报告（含 Acceptance 结果） |
-| drun (主代理) | verifier | 实施完成后独立验收 | 验证报告（PASS/FAIL + 证据） |
+| 执行引擎 (主代理) | explorer | 首次接触代码库、追踪依赖 | 调查报告 + 建议方案 |
+| 执行引擎 (主代理) | implementer | 明确实现路径后的代码修改 | 交接报告（含 Acceptance 结果） |
+| 执行引擎 (主代理) | verifier | 实施完成后独立验收 | 验证报告（PASS/FAIL + 证据） |
 | explorer | implementer | explorer 直修小 bug | 简化交接（仅变更摘要） |
-| implementer | verifier | S3 流水线自动衔接 | 完整交接报告 |
+| implementer | verifier | 流水线自动衔接 | 完整交接报告 |
 
 ## 六、Agent 设计约束
 
@@ -139,7 +141,7 @@ Explorer 的默认域是**只读调查**，但以下情况触发跨域切换：
 > 从 `mindset.md` 迁入。守卫实现：`plan_exit_hint.py`（ExitPlanMode 强提示）+ `task_entry_guard.py`（Edit|Write 实施入口守卫）
 
 - **Plan 不是执行契约**：Plan 输出是架构设计方案，不是可直接实施的任务定义
-- **大计划先落任务**：≥3 步的实施工作必须先落地为 `dtask.json` 条目（含 GWT acceptance），再进入 `/drun` 循环
+- **大计划先落任务**：≥3 步的实施工作必须先落地为任务定义文件条目（含 GWT acceptance），再进入执行引擎循环
 - **小改动可直做**：<3 步且结果可预期的小改动可直接执行
 - **双守卫分层**：退出 plan 时有强提示，进入 Edit/Write 写阶段有实施入口守卫
 - **覆盖范围明确**：当前守卫仅覆盖 Edit|Write 主写入路径；Bash 路径暂不拦截，后续可补

@@ -1,10 +1,10 @@
 # 异常处理与 BLOCKED 判定
 
-> **规则约束级别说明**：本文件定义异常处理和 BLOCKED 判定规则。纠偏相关内容见 `correction.md`。除非特别标注 `[建议]`，否则都是必须遵守的约束。
+> **规则约束级别说明**：本文件定义异常处理和 BLOCKED 判定规则。纠偏相关内容见 `skills/dcorr/SKILL.md`。除非特别标注 `[建议]`，否则都是必须遵守的约束。
 
 ## `<private>` 标签约定
 
-用户用 `<private>...</private>` 包裹的内容（密码、密钥、个人敏感信息）不得写入 session 文件和 dtask。仅在当前对话上下文中使用，不得持久化。
+用户用 `<private>...</private>` 包裹的内容（密码、密钥、个人敏感信息）不得写入 session 文件和任务定义文件。仅在当前对话上下文中使用，不得持久化。
 
 ## 需要人工介入的情况
 
@@ -66,8 +66,8 @@
 
 ## 阻塞时的规则
 
-**禁止**：提交 git commit / dtask 设为 Done / 假装完成
-**必须**：session 记录进度和原因 / dtask 退回 InSpec（不是 InDraft）/ 输出 DECISION TRACE + BLOCKED 模板 / 停止等待人工
+**禁止**：提交 git commit / 将任务标记为完成 / 假装完成
+**必须**：session 记录进度和原因 / 任务退回 InSpec（不是 InDraft）/ 输出 DECISION TRACE + BLOCKED 模板 / 停止等待人工
 
 ## 阻塞恢复流程
 

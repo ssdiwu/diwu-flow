@@ -1,6 +1,6 @@
 # 误判分类与项目高频表
 
-> Layer 1（六类泛化模式）已迁移至 `skills/dcorr/SKILL.md` 第 72-128 行，以四列表格完整展开。
+> Layer 1（六类泛化模式）已迁移至纠偏工具 SKILL.md，以四列表格完整展开。
 
 ## 项目高频误判表机制
 
@@ -11,8 +11,8 @@
 | 阶段 | 动作 | 触发位置 |
 |------|------|---------|
 | **创建** | 从 `project-pitfalls.md.template` 初始化 | `/dinit` 命令 |
-| **读取** | SessionStart hook 自动注入到 system prompt（含模板跳过+长度裁剪） | `hooks/scripts/session_start.py` |
-| **追加** | 归档时写入新踩坑条目 | `drec` SKILL.md  |
+| **读取** | SessionStart hook 自动注入到 system prompt（含模板跳过+长度裁剪） | SessionStart hook 脚本 |
+| **追加** | 归档时写入新踩坑条目 | 记录工具 SKILL.md  |
 | **维护** | 定期回顾和清理过时条目 | 人工或归档触发 |
 
 ### 格式规范
@@ -20,7 +20,7 @@
 - 按 `## Source:` 分隔符追踪所属 session
 - 每条标注来源 session 文件名（如 `session-2026-04-18-213522.md`）
 - 禁止写归档文件名或占位符
-- 消费顺序：先查 `dcorr` 泛化模式 → 再查本项目高频表 → 再做判断
+- 消费顺序：先查纠偏工具泛化模式 → 再查本项目高频表 → 再做判断
 
 ---
 
