@@ -82,8 +82,8 @@ cd "$WORKTREE_DIR"
 git config user.email "release@diwu-flow"
 git config user.name "diwu-flow release"
 
-# 删除敏感文件
-for f in .diwu .claude; do
+# 删除敏感文件（本地工具缓存/配置，不应进入公开仓库）
+for f in .diwu .claude .playwright-mcp tests; do
     if [ -e "$f" ]; then
         rm -rf "$f"
         git add -A "$f" 2>/dev/null || true
