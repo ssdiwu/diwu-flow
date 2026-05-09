@@ -14,8 +14,8 @@
 | `/ddoc` | ddoc | 产品文档——正向/逆向/ADR 三种模式 | — |
 | `/dtask` | dtask | 任务规划——生成/管理 dtask.json 任务列表 | — |
 | `/drun` | drun | 单任务执行——Preflight → 实施 → 验证 → 记录 | — |
-| `/dloop` | dloop | 连续循环——while(未停止){ /drun } | — |
-| `/dstop` | dloop | 停止连续循环 | **是** |
+| `/dloop` | dloop | cron 驱动：定时触发 `/drun` 批量执行 | — |
+| `/dstop` | dloop | 停止 cron 循环 | **是** |
 | `/dinit` | （内嵌脚本） | 项目初始化或刷新骨架 | **是** |
 | `/drec` | drec | Session 记录写入与归档 | — |
 | `/dcorr` | dcorr | 纠偏恢复协议——退化检测+四行重写 | — |

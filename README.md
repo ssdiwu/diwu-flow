@@ -15,10 +15,10 @@
 - **L2 下游扩展** — `architect` 技术审稿 gate，`debugger` 异常诊断优先
 - **L3 协议层** — `rules/handoff.md` 定义主编排边界、回交模型、Handoff Report
 - **L4 规则真相源** — 14 个 rules 文件重组，边界清晰，三副本同步
-- **L5 表层能力** — `drun` 双入口、持久化四策略、`dloop` session/cron 双模式
+- **L5 表层能力** — `drun` 双入口、持久化四策略、`dloop` cron 驱动
 - **横切增强** — `rules/testing.md` 测试分层策略
 
-> 全量 428 tests passed。完整架构图与层间关系见 `.doc/架构规范.md`，完整变更见 CHANGELOG.md。
+> 全量 409 tests passed。完整架构图与层间关系见 `.doc/架构规范.md`，完整变更见 CHANGELOG.md。
 
 ---
 
@@ -102,7 +102,7 @@ claude plugin install diwu-flow@ssdiwu
 | | `ddoc` | `/ddoc` | 产品文档——正向（需求→文档）/ 逆向（代码→文档） |
 | 任务闭环 | `dtask` | `/dtask` | 任务管理——GWT 验收 + 状态机 + blocked_by 依赖图 |
 | | `drun` | `/drun` | 单任务执行器——Preflight 5 步 → 实施 → 验证 → 记录。支持双入口（dtask 来源 + direct request） |
-| 连续执行 | `dloop` | `/dloop` `/dstop` | 连续循环——启动后自动续跑每个任务直到完成，支持 session 内循环或 cron 定时触发 |
+| 连续执行 | `dloop` | `/dloop` `/dstop` | cron 驱动：定时触发 `/drun` 批量执行，适合无人值守 |
 | 观察纠偏 | `dstat` | `/dstat` | 项目状态快照——任务进度 / Session / Git 一键查看 |
 | | `dcorr` | `/dcorr` | 纠偏恢复——退化信号检测 + 五步纠偏协议 |
 | | `drec` | `/drec` | Session 记录——踩坑四段式记录 + 原子 commit |
@@ -206,7 +206,7 @@ diwu-flow/
 ├── scripts/                # 共享脚本库
 ├── rules/                  # 14 个运行规则（/dinit 同步到目标项目）
 ├── assets/dinit/           # /dinit 初始化模板
-├── tests/                  # 三级测试（428 passed）
+├── tests/                  # 三级测试（409 passed）
 ├── .doc/                   # 设计文档真相源
 ├── .claude-plugin/         # CC 插件声明
 ├── install.sh              # 多平台安装脚本
@@ -229,7 +229,7 @@ diwu-flow/
 
 ## Version
 
-v0.1.0 — 六层架构全局落地：rules 真相源重构 → architect/debugger 接入 → dpth/dref/dprd 产品思维层 → didea 入口容器 → 说明层重写 + dloop cron 模式。全量 428 tests passed。详见 CHANGELOG.md。
+v0.1.0 — 六层架构全局落地：rules 真相源重构 → architect/debugger 接入 → dpth/dref/dprd 产品思维层 → didea 入口容器 → 说明层重写 + dloop cron 模式。全量 409 tests passed。详见 CHANGELOG.md。
 
 ## License
 

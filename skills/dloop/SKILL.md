@@ -2,7 +2,7 @@
 name: dloop
 version: "3.0"
 type: rule
-description: "drun 的薄壳循环包装——while(未停止){ /drun }，状态初始化、停止条件判定、驱动续跑均委托 drun 完成每轮执行"
+description: "cron 驱动批量执行——定时触发 /drun 自动完成每个任务"
 triggers:
   - "用户要求批量执行、连续执行、循环执行多个任务"
   - "用户说 /dloop、循环、批量、全部任务"
@@ -20,7 +20,7 @@ argument-hint: "[--max-tasks N] [--interval <min>]"
 
 # dloop
 
-/dloop = `while(未停止) { /drun }`（Cron 驱动）
+/dloop = Cron 定时触发 /drun，逐任务自动执行
 
 - 只做三件事：初始化循环状态、检查停止条件、配置 Cron 调度
 - 每轮执行全部委托 `/drun`：选任务 → 实施 → 验证 → 记录 → 循环判定

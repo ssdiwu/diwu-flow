@@ -1,5 +1,5 @@
 ---
-description: "停止 dloop 连续循环"
+description: "停止 dloop cron 循环"
 argument-hint: ""
 allowed-tools: Read, Bash
 effort: low

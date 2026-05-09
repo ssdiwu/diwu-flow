@@ -482,7 +482,7 @@ def decide_default_mode(tasks, settings, data, task_json_path, additional_prompt
         summary = (
             "当前无进行中任务，Session 结束。\n"
             f'可执行任务: Task#{executable[0]["id"]} {executable[0].get("title", "")} (InSpec)\n'
-            "输入 /drun 继续执行，或 /dloop 启动连续循环。"
+            "输入 /drun 继续执行，或 /dloop 启动 cron 批量循环。"
         )
         print(summary, file=sys.stderr)
 
