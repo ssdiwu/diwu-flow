@@ -29,9 +29,9 @@
 - 8 个新测试覆盖核心逻辑 + GitHub 集成 + 布局一致性
 
 **PR#18 (PR5) — 说明层重写 + dloop Cron 模式**
-- **dloop Cron 模式完整实现**：`--mode cron --interval <N>` 支持跨 session 定时调度，每轮新 session 自动执行 `/drun`
+- **dloop Cron 模式完整实现**：Cron 定时触发新 session 自动执行 `/drun`，每轮独立 session 不受 context compression 影响
 - `scripts/dloop.py start` 自动读取真实 session ID，消除 dummy 窗口问题
-- `hooks/scripts/stop_decision.py` 重构三分支（缺失 sid/首次绑定/session 不匹配）+ cron 终止时自动输出 CronDelete 清理指令
+- `hooks/scripts/stop_decision.py` cron 终止时自动输出 CronDelete 清理指令
 - 新增 `commands/README.md` 和 `skills/README.md` 导航文档
 - 说明层口径统一：根 README / 架构规范 / skills README / commands README 数字复核一致
 
@@ -54,7 +54,15 @@
 
 ### Testing
 
-- 全量测试 314 → **428 passed**
+- 全量测试 314 → **409 passed**
+
+### Refactoring — 发版前收口
+
+- **dloop 移除 session 模式**：只保留 cron 驱动，删 session 模式全部代码（`--mode` 参数、`decide_loop_mode`、session SID 三分支、session 隔离逻辑），19 个 session 模式测试移除
+- **CLAUDE.md 原子化重组**：去重→分层→速查，消除 3 处重复定义，行为铁律三分类，行数 ~140→~100
+- **README.md 场景先行重写**：叙事翻转为"问题→能力→设计"，六层架构归 `.doc/`，安装命令修正为 `marketplace add` + `plugin install`
+- **rules 通用性修复**：11 文件逐条去 diwu-flow 专属内容，版本号/命名约束/注入机制/三副本回写全部泛化为通用表述
+- **docs 同步**：`skills/README.md`、`commands/dloop.md` 同步 dloop 移除 session 模式口径
 
 ---
 
