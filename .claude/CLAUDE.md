@@ -17,14 +17,14 @@
 | 禁止（diwu-flow 专属） | 替换为（通用表述） |
 |------------------------|-------------------|
 | 引用 `.claude-plugin/plugin.json` 作为版本号真值源 | 按项目类型的版本号真值源（package.json/pom.xml 等） |
-| 描述三副本同步机制（`rules/`→`.claude/rules/`→`assets/`） | 此内容归 `.doc/` 或 `CLAUDE.md` |
+| 描述三副本同步机制（`rules/`→`.claude/rules/`→`assets/`） | 仅适用于插件自身开发 → 保留在 `CLAUDE.md`，不进入 rules/ |
 | 写死具体 skill/command/agent 名称作为规则主语 | 用抽象角色名（任务编排者/执行引擎/验收方） |
 | 引用 hooks/scripts/ 下具体 `.py` 文件名 | 用功能描述替代（"会话启动时自动注入"） |
-| 硬编码 `.diwu/` 内部实现细节（dtask-state.json 字段、dloop 元数据结构） | 描述概念层约定，实现细节归 `.doc/` |
-| "插件项目特例"章节（如 testing.md §四） | 移入 `.doc/` 或插件内部文档 |
-| Command/Skill 命名长度约束（≤5 字符） | 此为 CC 插件设计约束，不属于通用规则 |
+| 硬编码 `.diwu/` 内部实现细节（dtask-state.json 字段、dloop 元数据结构） | 描述概念层约定；实现细节仅适用于插件自身 → 保留在 `CLAUDE.md` |
+| "插件项目特例"章节（如 testing.md §四） | 仅适用于插件自身开发 → 移入 `CLAUDE.md` |
+| Command/Skill 命名长度约束（≤5 字符） | 此为 CC 插件设计约束 → 保留在 `CLAUDE.md`，不进入 rules/ |
 
-> 检查方法：改 rules/ 时自问——"如果目标是一个 Go 后端项目或 React 前端项目，这句话还有意义吗？"
+> 检查方法：改 rules/ 时自问——"如果目标是一个 Go 后端项目或 React 前端项目，这句话还有意义吗？"若仅适用于 diwu-flow 插件自身开发，则写入本文件 `CLAUDE.md`，不进入 rules/。
 
 ### 六层架构
 
