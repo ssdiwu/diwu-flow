@@ -5,12 +5,60 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'hooks', 'scripts'))
-from stop_decision import decide, format_task, hook_session_id
+from stop_decision import decide, decide_cron_mode, format_task, hook_session_id
 import tempfile as _tmpmod
 
 _TEST_CWD = None
+RUNTIME_STATE_NAME = ".diwu/dtask-state.json"
+
+
+def _make_dtask_for_test(tasks, tmp_path):
+    """Write dtask.json for test (local to this file)."""
+    diwu = tmp_path / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    (diwu / "dtask.json").write_text(
+        json.dumps({"tasks": tasks}), encoding="utf-8"
+    )
+
+
+def _make_dsettings_for_test(tmp_path, **overrides):
+    diwu = tmp_path / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    settings = {"review_limit": 5}
+    settings.update(overrides)
+    (diwu / "dsettings.json").write_text(
+        json.dumps(settings), encoding="utf-8"
+    )
+
+
+def _make_runtime_state_for_test(tmp_path, *, dloop=None, task_sessions=None):
+    (tmp_path / ".diwu").mkdir(exist_ok=True)
+    state = {
+        "version": 1,
+        "task_sessions": task_sessions or {},
+        "dloop": dloop,
+    }
+    (tmp_path / RUNTIME_STATE_NAME).write_text(json.dumps(state), encoding="utf-8")
+
+
+def _run_stop_decision_for_test(tmp_path, env_overrides=None, **kwargs):
+    """Run stop_decision.py with given tmp_path and optional stdin data."""
+    _stop_script = Path(__file__).parent.parent.parent / "hooks" / "scripts" / "stop_decision.py"
+    cmd = [sys.executable, str(_stop_script), "--task-json",
+          str(tmp_path / ".diwu" / "dtask.json")]
+    stdin_data = json.dumps(kwargs) if kwargs else ""
+    env = os.environ.copy()
+    env["DIWU_SILENT"] = "1"
+    env.pop("CLAUDE_SESSION_ID", None)
+    if env_overrides:
+        env.update(env_overrides)
+    return subprocess.run(
+        cmd, input=stdin_data, capture_output=True, text=True,
+        cwd=str(tmp_path), env=env,
+    )
 
 
 def _get_test_cwd():
@@ -572,6 +620,189 @@ class TestPendingRecordingIntegration(_PendingRecordingTestBase):
         # 关键：block reason 中不应包含 PENDING_REC（那是别人的任务）
         reason = output.get("reason", "")
         self.assertNotIn("PENDING_REC", reason)
+
+
+# ── Cron mode tests ────────────────────────────────────────────
+
+class TestCronModeStopDecision(_PendingRecordingTestBase):
+    """decide_cron_mode() 专项测试。"""
+
+    def _cron_loop_state(self, **overrides):
+        base = {
+            "active": True,
+            "mode": "cron",
+            "session_id": "cron-sid-001",
+            "started_at": "2026-05-09T00:00:00Z",
+            "completed_task_ids": [],
+            "current_iteration": 0,
+            "max_tasks": 0,
+        }
+        base.update(overrides)
+        return base
+
+    def test_cron_mode_no_stop_allows_session_end(self):
+        """cron 模式 + 未命中停止条件 → 返回 (False, {}) 允许 session 结束。"""
+        loop_state = self._cron_loop_state(completed_task_ids=[1])
+        should_continue, output = decide_cron_mode(
+            tasks=[
+                {"id": 1, "status": "Done", "title": "Done T", "description": "",
+                 "acceptance": [], "steps": []},
+                {"id": 2, "status": "InSpec", "title": "Next T", "description": "",
+                 "acceptance": [], "steps": [], "blocked_by": []},
+            ],
+            settings={},
+            data={},
+            task_json_path=os.path.join(self.cwd, ".diwu", "dtask.json"),
+            loop_state=loop_state,
+            cwd=self.cwd,
+            additional_prompts=[],
+            runtime_state={"version": 1, "task_sessions": {}, "dloop": loop_state},
+        )
+        self.assertFalse(should_continue)
+        self.assertEqual(output, {})
+
+    def test_cron_mode_max_tasks_triggers_stop(self):
+        """cron 模式 + completed >= max_tasks → 停止并清理 dloop state。"""
+        loop_state = self._cron_loop_state(
+            completed_task_ids=[1, 2, 3], current_iteration=3, max_tasks=3
+        )
+        runtime = {"version": 1, "task_sessions": {}, "dloop": loop_state}
+
+        should_continue, output = decide_cron_mode(
+            tasks=[
+                {"id": i, "status": "Done" if i <= 3 else "InSpec",
+                 "title": f"T{i}", "description": "", "acceptance": [], "steps": []}
+                for i in range(1, 5)
+            ],
+            settings={},
+            data={},
+            task_json_path=os.path.join(self.cwd, ".diwu", "dtask.json"),
+            loop_state=loop_state,
+            cwd=self.cwd,
+            additional_prompts=[],
+            runtime_state=runtime,
+        )
+        self.assertFalse(should_continue)
+        self.assertEqual(output, {})
+        # 验证 dloop 已清理
+        state_file = os.path.join(self.cwd, ".diwu", "dtask-state.json")
+        if os.path.exists(state_file):
+            saved = json.loads(open(state_file).read())
+            self.assertIsNone(saved.get("dloop"))
+
+    def test_cron_mode_no_executable_tasks_stops(self):
+        """cron 模式 + 无可执行任务 → 停止。"""
+        loop_state = self._cron_loop_state(completed_task_ids=[1], current_iteration=1)
+
+        should_continue, output = decide_cron_mode(
+            tasks=[{"id": 1, "status": "Done", "title": "T", "description": "",
+                   "acceptance": [], "steps": []}],
+            settings={}, data={},
+            task_json_path=os.path.join(self.cwd, ".diwu", "dtask.json"),
+            loop_state=loop_state, cwd=self.cwd, additional_prompts=[],
+            runtime_state={"version": 1, "task_sessions": {}, "dloop": loop_state},
+        )
+        self.assertFalse(should_continue)
+
+    def test_cron_mode_skips_session_id_binding(self):
+        """cron 模式的 Stop hook 不执行 dummy 替换/不匹配清理（分支 2/3 跳过）。
+
+        集成测试：通过 main() 入口传入 cron mode 的 loop_state，
+        验证即使 session_id 不匹配也不会清理 dloop（与 session 模式不同）。"""
+        tasks = [{"id": 1, "title": "CT", "status": "InSpec", "blocked_by": [],
+                  "acceptance": [], "steps": [], "description": ""}]
+        _make_dtask_for_test(tasks, Path(self.cwd))
+        _make_dsettings_for_test(Path(self.cwd))
+        _make_runtime_state_for_test(
+            Path(self.cwd),
+            dloop=self._cron_loop_state(session_id="original-cron-sid"),
+        )
+
+        # 用不同的 session_id 调用 — cron 模式不应清理
+        result = _run_stop_decision_for_test(
+            Path(self.cwd),
+            session_id="different-cron-sid",  # 不匹配！
+            cwd=self.cwd,
+        )
+        assert result.returncode == 0
+        # cron 模式：不匹配不触发清理，进入 decide_cron_mode 正常判断
+        runtime = json.loads((Path(self.cwd) / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+        # dloop 应仍在（decide_cron_mode 未命中终止条件时不清除）
+        assert runtime.get("dloop") is not None
+
+    def test_cron_mode_pending_rec_silent_for_new_session(self):
+        """cron 模式：新 iteration（新 SID）遇到旧 PENDING_REC → 静默。
+
+        这是审查修正 #2 的验证：现有 PENDING_REC 门控逻辑在 cron 模式下自然正确，
+        因为每次 iteration 是全新 session（新 SID），非 owner 直接返回 ("", "")。"""
+        from datetime import datetime, timezone as _tz
+        now_iso = datetime.now(_tz.utc).isoformat()
+        # 上一个 cron iteration 留下的 PENDING_REC 标记
+        self._write_state(
+            version=1, task_sessions={}, dloop=None,
+            pending_recording={
+                "task_id": 7, "target_status": "Done",
+                "session_id": "previous-cron-sid",  # 属于上一个 iteration
+                "released_at": now_iso,
+            },
+        )
+        self._touch_file(".diwu/dtask.json")
+
+        loop_state = self._cron_loop_state()
+        should_continue, output = decide_cron_mode(
+            tasks=[{"id": 8, "status": "InSpec", "title": "New T", "description": "",
+                  "acceptance": [], "steps": [], "blocked_by": []}],
+            settings={}, data={},
+            task_json_path=os.path.join(self.cwd, ".diwu", "dtask.json"),
+            loop_state=loop_state, cwd=self.cwd, additional_prompts=[],
+            runtime_state={"version": 1, "task_sessions": {}, "dloop": loop_state},
+        )
+        # decide_cron_mode 不检查 PENDING_REC（只做停止条件判断）
+        # 但即使检查，当前 session_id ≠ previous-cron-sid → 静默
+        self.assertFalse(should_continue)
+
+
+def test_stop_decision_cron_mode_dispatch(tmp_path):
+    """集成测试：decide() 正确分发到 decide_cron_mode()。"""
+    tasks = [
+        {"id": 1, "status": "Done", "title": "D", "description": "",
+         "acceptance": [], "steps": []},
+        {"id": 2, "status": "InSpec", "title": "N", "description": "",
+         "acceptance": [], "steps": [], "blocked_by": []},
+    ]
+    _make_dtask_for_test(tasks, tmp_path)
+    _make_cron_dloop_state(tmp_path)  # 使用上面定义的 helper
+
+    result = _run_stop_decision_for_test(tmp_path, session_id="any-sid", cwd=str(tmp_path))
+    # cron 模式：未命中停止条件 → 返回空 stdout（allow stop / no block decision）
+    assert result.returncode == 0
+    # 不应返回 block decision（session 模式才会 block 续跑）
+    if result.stdout.strip():
+        output = json.loads(result.stdout)
+        # 如果有输出，不应是续跑指令
+        assert "请继续执行 /drun" not in output.get("reason", "")
+
+
+def _make_cron_dloop_state(tmp_path, **overrides):
+    """Create cron-mode dloop state for integration tests."""
+    base = {
+        "active": True,
+        "mode": "cron",
+        "session_id": "cron-int-sid",
+        "started_at": "2026-05-09T00:00:00Z",
+        "completed_task_ids": [],
+        "initial_done_ids": [],
+        "current_iteration": 0,
+        "max_tasks": 0,
+        "stopped_at": None,
+        "stop_reason": None,
+        "cron_job_id": "int-job-999",
+    }
+    base.update(overrides)
+    existing = {"task_sessions": {}}
+    if (tmp_path / RUNTIME_STATE_NAME).exists():
+        existing = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    _make_runtime_state_for_test(tmp_path, dloop=base, task_sessions=existing.get("task_sessions", {}))
 
 
 if __name__ == '__main__':

@@ -26,6 +26,7 @@ from session_scope import read_scoped_session_id  # noqa: E402
 _DUMMY_PREFIX = "dloop-"  # dloop.py start 生成的 dummy session_id 前缀
 from dtask_state import (  # noqa: E402
     clear_loop_state,
+    is_cron_mode,
     loop_state as runtime_loop_state,
     resolve_session_inprogress_task,
     save_runtime_state,
@@ -590,8 +591,54 @@ def decide_loop_mode(tasks, settings, data, task_json_path, loop_state, cwd, add
     }
 
 
+def decide_cron_mode(tasks, settings, data, task_json_path, loop_state, cwd,
+                     additional_prompts, runtime_state):
+    """Cron 模式停止判定：只判断是否终止，不驱动循环续跑。
+
+    cron 模式的每次 iteration 是独立 session，Stop hook 触发时：
+    - 终止条件命中 → 生成报告 + 清理 dloop + 提示执行 /dstop
+    - 未终止 → 返回 (False, {}) 允许 session 自然结束（等下次 Cron 触发）
+    """
+    max_tasks = loop_state.get("max_tasks", 0)
+    iteration = loop_state.get("current_iteration", 0)
+    extra = _prompt_suffix(additional_prompts)
+
+    stop_reason = get_terminal_stop_reason(
+        tasks, settings=settings, data=data, loop_state_data=loop_state
+    )
+    if stop_reason is not None:
+        notify(f"dloop cron 循环结束：{stop_reason}")
+        loop_state["active"] = False
+        loop_state["stopped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        loop_state["stop_reason"] = stop_reason
+        report = _generate_phase_report(loop_state, stop_reason, tasks)
+        clear_loop_state(runtime_state)
+        save_runtime_state(cwd, runtime_state, remove_legacy=True)
+        _verify_dloop_cleared(cwd)
+        print(report, file=sys.stderr)
+        print(
+            "[STOP_HINT] dloop cron 模式已停止。请执行 /dstop 清理资源（含 CronDelete）。",
+            file=sys.stderr,
+        )
+        return False, {}
+
+    # 未终止 → session 自然结束，等下次 Cron 触发
+    _cron_completed = len(loop_state.get("completed_task_ids", []))
+    print(
+        f"[STOP_HINT] [dloop-cron] iteration {iteration} 完成，"
+        f"等待下次 Cron 触发（completed: {_cron_completed} tasks）",
+        file=sys.stderr,
+    )
+    return False, {}
+
+
 def decide(tasks, settings, data, task_json_path, cwd, additional_prompts, loop_state, runtime_state=None, session_id=""):
     if loop_state is not None:
+        if is_cron_mode(loop_state):
+            return decide_cron_mode(
+                tasks, settings, data, task_json_path, loop_state, cwd,
+                additional_prompts, runtime_state or {},
+            )
         return decide_loop_mode(
             tasks, settings, data, task_json_path, loop_state, cwd, additional_prompts, runtime_state or {}, session_id
         )
@@ -646,29 +693,32 @@ if __name__ == "__main__":
 
     if loop_state is not None:
         loop_sid = loop_state.get("session_id", "")
+        loop_mode_is_cron = is_cron_mode(loop_state)
 
-        # 分支1: Stop event 缺失 session_id → 阻止驱动循环（exit 1）
-        if not session_id:
-            print("[STOP_HINT] Stop 事件缺少 session_id，跳过 dloop 驱动", file=sys.stderr)
-            sys.exit(1)
+        # cron 模式：跳过 session_id 绑定逻辑（每次是新 session）
+        if not loop_mode_is_cron:
+            # 分支1: Stop event 缺失 session_id → 阻止驱动循环（exit 1）
+            if not session_id:
+                print("[STOP_HINT] Stop 事件缺少 session_id，跳过 dloop 驱动", file=sys.stderr)
+                sys.exit(1)
 
-        # 分支2: 首次绑定 — dummy ID 替换为真实 session_id（一次性）
-        elif loop_sid.startswith(_DUMMY_PREFIX):
-            loop_state["session_id"] = session_id
-            save_runtime_state(cwd, runtime_state, remove_legacy=True)
+            # 分支2: 首次绑定 — dummy ID 替换为真实 session_id（一次性）
+            elif loop_sid.startswith(_DUMMY_PREFIX):
+                loop_state["session_id"] = session_id
+                save_runtime_state(cwd, runtime_state, remove_legacy=True)
 
-        # 分支3: 已绑定但不匹配 → 清理 dloop 状态，避免孤儿锁
-        elif loop_sid != session_id:
-            print(
-                f"[STOP_HINT] dloop session 不匹配 "
-                f"(owner={loop_sid[:8]}..., current={session_id[:8]}...)，"
-                f"清理 dloop 运行态",
-                file=sys.stderr,
-            )
-            clear_loop_state(runtime_state)
-            save_runtime_state(cwd, runtime_state, remove_legacy=True)
-            loop_state = None
-        # else: 匹配 → 进入 loop mode（原有正常路径）
+            # 分支3: 已绑定但不匹配 → 清理 dloop 状态，避免孤儿锁
+            elif loop_sid != session_id:
+                print(
+                    f"[STOP_HINT] dloop session 不匹配 "
+                    f"(owner={loop_sid[:8]}..., current={session_id[:8]}...)，"
+                    f"清理 dloop 运行态",
+                    file=sys.stderr,
+                )
+                clear_loop_state(runtime_state)
+                save_runtime_state(cwd, runtime_state, remove_legacy=True)
+                loop_state = None
+            # else: 匹配 → 进入 loop mode（原有正常路径）
 
     additional_prompts = []
     try:

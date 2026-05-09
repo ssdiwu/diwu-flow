@@ -394,3 +394,91 @@ class TestDloopGuard:
         )
         assert result.returncode == 2
         assert "diwu-dloop-guard" in result.stderr
+
+
+# ── Cron mode guard tests ────────────────────────────────────────
+
+class TestCronModeGuard:
+    """cron 模式下 task_entry_guard 应放行所有 Edit/Write。"""
+
+    def _setup_cron_dloop(self, tmp_path, session_id="cron-real-sid"):
+        state_path = tmp_path / ".diwu" / "dtask-state.json"
+        state_path.parent.mkdir(exist_ok=True)
+        dloop = {
+            "active": True,
+            "mode": "cron",
+            "session_id": session_id,
+            "started_at": "2026-05-09T00:00:00Z",
+            "completed_task_ids": [],
+            "current_iteration": 0,
+            "max_tasks": 0,
+            "stopped_at": None,
+            "stop_reason": None,
+            "cron_job_id": "cron-job-test",
+        }
+        state_path.write_text(json.dumps({"dloop": dloop}), encoding="utf-8")
+
+    def test_cron_mode_allows_edit_with_real_sid(self, tmp_path):
+        """cron 模式 + 真实 SID + 任意 session_id → 放行（不检查 ownership）。"""
+        _setup_dtask(tmp_path)
+        self._setup_cron_dloop(tmp_path, session_id="cron-owner-sid")
+        payload = {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Edit",
+            "cwd": str(tmp_path),
+            "session_id": "different-cron-sid",  # 不匹配！
+            "tool_input": {"file_path": str(tmp_path / "src" / "main.py")},
+        }
+        result = _run_script(TASK_GUARD_SCRIPT, payload, tmp_path)
+        # cron 模式：放行，exit(0)
+        assert result.returncode == 0
+
+    def test_cron_mode_allows_write_without_session_id(self, tmp_path):
+        """cron 模式 + 无 event session_id → 放行。"""
+        _setup_dtask(tmp_path)
+        self._setup_cron_dloop(tmp_path)
+        payload = {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Write",
+            "cwd": str(tmp_path),
+            # 无 session_id
+            "tool_input": {"file_path": str(tmp_path / "src" / "new.py")},
+        }
+        result = _run_script(TASK_GUARD_SCRIPT, payload, tmp_path)
+        assert result.returncode == 0
+
+    def test_cron_mode_not_relying_on_dummy_prefix(self, tmp_path):
+        """验证 cron 模式放行不是因为 dummy 前缀匹配。
+
+        cron 模式写入的是真实 SID（非 dloop- 前缀），
+        如果只依赖 dummy 前缀快捷方式会错误拦截。
+        此测试确保显式 mode=="cron" 检查生效。
+        """
+        _setup_dtask(tmp_path)
+        # 用一个明确不是 dummy 前缀的真实 SID
+        self._setup_cron_dloop(tmp_path, session_id="very-real-session-id-not-dummy")
+        payload = {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Edit",
+            "cwd": str(tmp_path),
+            "session_id": "another-totally-different-sid",
+            "tool_input": {"file_path": str(tmp_path / "src" / "code.py")},
+        }
+        result = _run_script(TASK_GUARD_SCRIPT, payload, tmp_path)
+        assert result.returncode == 0
+        assert "diwu-dloop-guard" not in result.stderr
+
+    def test_session_mode_still_blocks_mismatch(self, tmp_path):
+        """回归：session 模式下 SID 不匹配仍然拦截（确保 cron 改动不影响原有逻辑）。"""
+        _setup_dtask(tmp_path)
+        _setup_dloop_state(tmp_path, session_id="owner-sid")  # 默认无 mode 字段 → session 模式
+        payload = {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Edit",
+            "cwd": str(tmp_path),
+            "session_id": "intruder-sid",
+            "tool_input": {"file_path": str(tmp_path / "src" / "hack.py")},
+        }
+        result = _run_script(TASK_GUARD_SCRIPT, payload, tmp_path)
+        assert result.returncode == 2
+        assert "diwu-dloop-guard" in result.stderr
