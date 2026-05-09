@@ -83,6 +83,7 @@
 
 - **Rules 同步**：修改 `rules/` 后必须同步 `.claude/rules/` 和 `assets/dinit/assets/rules/` 两处模板
 - **版本号同步**：以 `.claude-plugin/plugin.json` 为真值源；变更时同步 `marketplace.json` + `install.sh`
+- **CHANGELOG 追加**：功能性变更（非 typo/格式修正）完成后立即追加到 `CHANGELOG.md` 当前未发布版本条目下；发版时只需最终确认无遗漏
 - **recording 更新**：每次 session 结束前写入 `.diwu/recording/`
 - **时间戳**：写 Session 标题前先跑 `date '+%Y-%m-%d %H:%M:%S'`，禁止手写
 - **`.diwu/` 提交**：origin/main 持续追踪 `.diwu/`（含 `.claude/`）；公开仓库由 `drelease.sh` worktree 隔离发布 clean 版
@@ -99,7 +100,7 @@
 | # | 检查项 | 方法 |
 |---|--------|------|
 | 1 | `pytest tests/` 全量通过 | `python3 -m pytest tests/ -q` |
-| 2 | CHANGELOG.md 已追加新版本条目 | 人工确认 |
+| 2 | CHANGELOG.md 条目完整无遗漏 | 最终确认（日常已持续追加） |
 | 3 | 版本号已同步到三处 | plugin.json、marketplace.json、install.sh |
 | 4 | dloop runtime 已清空 | `python3 -c "import json; s=json.load(open('.diwu/dtask-state.json')); assert s.get('dloop') is None"` |
 

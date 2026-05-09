@@ -1,5 +1,11 @@
 ## [v0.1.1] - 2026-05-10
 
+### Changed — didea 正文门控 + CLAUDE.md 变更传播整合
+
+- **didea 正文最低内容门槛**（`skills/didea/SKILL.md`）：新增规则 3，create 动作的描述区块不能是纯占位符（"ddd"/"test" 等），AI 必须追问后才写入
+- **didea 软入口引导追问**（`skills/didea/SKILL.md`）：识别信号后写入前必问三句——标题确认 + 场景展开 + 紧迫性判断，确保三个区块非空
+- **CHANGELOG 持续追加**（`.claude/CLAUDE.md`）：CHANGELOG 追加从发版清单移入变更传播，功能性变更完成后立即写入，发版时只需最终确认无遗漏
+
 ### Added — dinit 集成 ddoc 提示
 
 - **Step 8：文档生成提示**（`commands/dinit.md`）：validate 通过后根据项目规模自动输出对应建议
