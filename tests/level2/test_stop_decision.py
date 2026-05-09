@@ -684,8 +684,7 @@ class TestCronModeStopDecision(_PendingRecordingTestBase):
             runtime_state=runtime,
         )
         self.assertFalse(should_continue)
-        self.assertEqual(output.get("cron_action"), "delete")
-        self.assertEqual(output.get("cron_job_id"), "test-cron-job-id")
+        self.assertEqual(output, {})
         # 验证 dloop 已清理
         state_file = os.path.join(self.cwd, ".diwu", "dtask-state.json")
         if os.path.exists(state_file):
@@ -764,9 +763,9 @@ class TestCronModeStopDecision(_PendingRecordingTestBase):
         self.assertFalse(should_continue)
 
     def test_cron_mode_terminal_outputs_delete_instruction(self):
-        """cron 模式终止时 stdout 输出 cron_action: delete + cron_job_id。
+        """cron 模式终止时：stdout 为空（框架协议层），stderr 含 /dstop 文本提示。
 
-        Agent 读取后可自动执行 CronDelete，无需人工 /dstop。"""
+        内部指令（cron_action）不应泄漏到 hook stdout——那是 dloop.py stop() 的职责。"""
         tasks = [{"id": 1, "title": "CT", "status": "Done", "blocked_by": [],
                   "acceptance": [], "steps": [], "description": ""}]
         _make_dtask_for_test(tasks, Path(self.cwd))
@@ -784,14 +783,13 @@ class TestCronModeStopDecision(_PendingRecordingTestBase):
 
         result = _run_stop_decision_for_test(Path(self.cwd), cwd=self.cwd)
         assert result.returncode == 0
-        # stdout 应包含 cron_action: delete 指令
-        assert result.stdout.strip(), "终止时应输出 JSON 指令"
-        output = json.loads(result.stdout)
-        assert output.get("cron_action") == "delete"
-        assert output.get("cron_job_id") == "test-cron-job-id"
-        # stderr 应含自动清理提示（非手动 /dstop 提示）
-        assert "CronDelete" in result.stderr
-        assert "自动输出清理指令" in result.stderr
+        # stdout 不含内部指令字段（cron_action 是 dloop.py 的职责）
+        if result.stdout.strip():
+            output = json.loads(result.stdout)
+            assert "cron_action" not in output, "内部指令不应泄漏到 hook stdout"
+        # stderr 含 /dstop 文本提示 + CronJob ID
+        assert "/dstop" in result.stderr
+        assert "test-cron-job-id" in result.stderr
 
 
 def test_stop_decision_cron_mode_dispatch(tmp_path):
