@@ -247,3 +247,5 @@
 - [分层未拆清] 全量 `pytest -q` 出现 1 个失败 → 失败源于并行新增的 `run_hook.py`，与本轮 scoped session id 改动链路无关 → 若直接把全量失败归因到本轮改动会误判修复范围 → 应先按文件所有权和失败栈定位变更来源，本轮只承诺相关测试 78 passed，并把并行失败单独标注。 （来源: session-2026-05-04-231447.md）
 ## Source: archive-aggregate-2026-05-09
 - [验证误读] test_task_168_no_hardcoded_paths 白名单只覆盖了 `or os.getcwd()` 和 `globals()...os.getcwd()` 两种模式 → 遗漏 run_hook.py 的三元表达式 `else os.getcwd()` fallback → 补充 GETCWD_TERNARY_ELSE_PATTERN 正则后通过。教训：白名单正则需覆盖同一语义的所有语法变体（or / ternary else / 默认参数） （来源: session-2026-05-05-140547.md）
+## Source: archive-aggregate-2026-05-09
+- [分层未拆清] 初版方案搞反所有权——计划从 rules/ 删内容让 drec 当权威源 → 用户纠正：rules/ 是宪法（hook 注入 system prompt），skills/ 只应是操作手册 → 正确方向是从 skill 删掉重复的 rules 内容并改为引用 （来源: session-2026-05-05-180604.md）
