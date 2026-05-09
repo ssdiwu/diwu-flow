@@ -60,6 +60,6 @@
 ## Skill 属性速查
 
 - 所有 Skill frontmatter 无平台专属字段（零平台耦合）
-- 类型分布：rule(7) / product(2) / tool(2)
+- 类型分布：rule(6) / product(2) / tool(3)
 - `dstop` 不是 Skill——它是 command-only 特例（无 SKILL.md）
 - 完整方法论见各 `skills/{name}/SKILL.md`

@@ -1,20 +1,21 @@
-# Continue Here — PR5 定义已就位（下一位 AI 必读）
+# Continue Here — PR5 说明层重写 + dloop cron 模式（下一位 AI 必读）
 
 ## 当前分支
 - `feature/pr5-surface-model-docs`
 
-## 当前唯一目标
-- 在 **不改 rules 真相源正文、不改已有 skill/command/agent 本体实现** 的前提下，完成 **PR5：说明层与表层能力模型重写**。
+## 当前目标（两个独立工作项）
+
+1. **PR5 说明层重写**：统一 `.doc/架构规范.md`、根 README、skills/README.md 等说明层口径，与代码实际结构严格对齐。
+2. **dloop cron 模式**：在 `skills/dloop/SKILL.md` 和 `scripts/dloop.py` 中实现 cron 定时循环模式，支持 `--mode cron --interval N` 启动无人值守批量执行。
+
+两者共享同一分支，**不冲突**：说明层改文档口径，cron 模式改实现代码。
 
 ## 先说结论
-- **PR4 已合并进 `main`**，当前 PR5 分支就是从最新 `main` 开出来的干净主线。
-- PR5 的职责是：**把项目的“说明层”收口到位**。
-- 这意味着本轮主要改的是：
-  - `.doc/架构规范.md`
-  - `.doc/README.md`
-  - 根 `README.md`
-  - 如确认需要，再补 `skills/README.md` / `commands/README.md`
-- **不要**在 PR5 里回头重写 rules 真相源、技能本体、agent 本体、hooks 实现链代码、didea/dpth/dtask/drun 的实现逻辑。
+- **PR4 已合并进 `main`**，当前分支就是从最新 `main` 开出来的干净主线。
+- 分支包含两个独立工作项：
+  - **说明层重写**：把项目的说明层（`.doc/架构规范.md`、根 README、skills/README.md 等）收口到位
+  - **dloop cron 模式**：实现定时循环无人值守执行（见 `skills/dloop/SKILL.md` §Cron 模式）
+- **不要**在分支里回头重写 rules 真相源、agent 本体，或顺手改与本轮无关的 hooks/scripts 逻辑。
 
 ---
 
@@ -28,8 +29,9 @@
 
 ### 当前 `main` 的能力格局
 - `didea` 已存在，并且是**入口容器层**
-- `dpth` / `dref` / `dprd` 已存在，并且是**产品判断 / 收束层**
+- `dpth` / `dref` / `dprd` / `ddoc` 已存在，并且是**产品判断 / 收束层**
 - `dtask` / `drun` / `drec` 已存在，并且是**执行层**
+- `dloop` 已存在，支持 **session 模式和 cron 模式**（cron 模式正在本分支实现）
 - `architect` / `debugger` / `explorer` / `implementer` / `verifier` 已存在，并且 agent 边界已稳定
 
 ### PR5 的角色
@@ -40,9 +42,7 @@
 
 ## PR5 一句话定义（canonical）
 
-> **PR5 重写项目的说明层与表层能力模型表达：统一 `.doc/架构规范.md`、根 README、未来 `skills/README.md` / `commands/README.md` 的角色，让“项目是什么、各层做什么、用户怎么上手”与代码实际结构严格对齐。**
-
-这句定义来自既有设计地图，是本轮的唯一范围锚点。
+> **PR5 重写项目的说明层与表层能力模型表达：统一 `.doc/架构规范.md`、根 README、skills/README.md 等的角色，让”项目是什么、各层做什么、用户怎么上手”与代码实际结构严格对齐。同时在 dloop 中实现 cron 定时循环模式。**
 
 ---
 
@@ -96,7 +96,7 @@
 - **Part A：能力架构层**
   - Commands / Skills / Agents / Rules / Scripts / Hooks / Assets 如何协作
   - 数据流 / 运行链路 / 层间关系
-  - `didea -> dpth/dref/dprd -> dtask -> drun -> drec` 的主链
+  - `didea -> dpth/dref/dprd/ddoc -> dtask -> drun -> drec` 的主链
   - `architect` / `debugger` 的位置
 - **Part B：源码仓结构规范层**
   - 新 command / skill / agent / rule / README / test / asset 该放哪里
@@ -115,15 +115,21 @@
   - 细节要去哪看
 - 只做说明与导航，不写规则正文
 
-### 4. 如确有必要，可新增
-- `skills/README.md`
-- `commands/README.md`
+### 4. skills/README.md（如存在）
+- 修正 Skill 类型分布统计，与实际 frontmatter 一致
 
 ### 5. 表层能力模型说明层结论
 - `drun dual-entry`
+- `dloop session / cron 双模式`（见 `skills/dloop/SKILL.md` §Cron 模式）
 - Persistence Policy
 - command / skill 的新增、删减、溶解原则
 - `dstop` 这类 command-only 特例的定位
+
+### 6. dloop cron 模式实现（本分支已并入）
+- 修改 `skills/dloop/SKILL.md` 补充 cron 模式说明
+- 修改 `scripts/dloop.py`、`scripts/dtask_state.py`、相关 hooks 实现 cron 模式运行链路
+- 补充 `tests/level2/` 与 `tests/level2_scripts/` 对应测试
+- 保持实现范围聚焦在 dloop cron 模式本身，不扩散到其他能力
 
 ---
 
@@ -131,11 +137,10 @@
 
 - 不改 `rules/` 真相源正文
 - 不改 `agents/` 本体
-- 不改 `skills/` 本体实现
-- 不改 `commands/` 本体实现
+- 不改 `skills/` / `commands/` / `agents/` 其他本体实现（`dloop` cron 模式相关改动除外）
 - 不实现 `drun dual-entry` 行为本身（只能写说明层结论）
 - 不改 `didea` / `dpth` / `architect` / `debugger` 的行为逻辑
-- 不趁机做“顺手优化”
+- 不趁机做”顺手优化”
 - 不新增与本轮无关的 hooks / scripts 改造
 
 ---
@@ -196,11 +201,11 @@ PR5 的正确动作是：**先以现有实现为事实，再改说明层。**
 > 注意：这些是当前会话已观察到的事实，不等于你可以不复核就直接写入文档。
 
 - Skill 注册数：11（以 `.claude-plugin/plugin.json` 为准）
-- Command 注册数：12（以 `.claude-plugin/plugin.json` 为准）
+- Command 注册数：13（以 `.claude-plugin/plugin.json` 为准）
 - Agent 文件数：5（`architect/debugger/explorer/implementer/verifier`）
 - Rules 文件数：14
-- Hook 事件数：6
-- Hook 脚本数：10
+- Hook 事件数：8（SessionStart / TaskCreated / PreToolUse(Bash) / PreToolUse(ExitPlanMode) / PreToolUse(Edit|Write) / TaskCompleted / Stop / PreCompact）
+- Hook 业务脚本数：11（不含 run_hook.py wrapper）
 - 插件版本：`0.0.12`（唯一真值来源：`.claude-plugin/plugin.json`）
 
 ---
