@@ -1,19 +1,8 @@
 # diwu-flow
 
-**插件版本：0.1.0**
-
-**当前项目是一个 Claude Code Plugin（插件）项目**
-
-## 核心原则
-
-- Skills 为底，Commands 为壳：所有方法论在 Skills 中，Commands 是薄封装
-- 零平台耦合：Skill frontmatter 无平台专属字段（无 context/agent/model/allowed-tools/hooks）
-- 扁平结构：agents/（默认路径自动发现，plugin.json 不声明）和 skills/ 均为单层目录，最大化平台兼容性
-- 少即是多，克制且清晰；具体胜于抽象；引导顺序即优先级
+**插件版本：0.1.0** | Claude Code Plugin 项目
 
 ## 系统分层地图
-
-### 文档三边界
 
 | 目录 | 定位 | 承载 | 不承载 |
 |------|------|------|--------|
@@ -23,19 +12,21 @@
 
 ### 六层架构
 
-| 层 | 编号 | 关键资产 | 回答的核心问题 |
-|---|------|---------|--------------|
-| 入口容器 | L0 | didea | 想法如何挂住、是否持久化、是否同步 GitHub issue |
-| 判断收束 | L1 | dpth/dref/dprd/ddoc | 值不值得做、怎么想清楚、怎么收束成清单/PRD/文档 |
-| 下游扩展 | L2 | architect/debugger | 技术设计边界如何补齐、工程异常排查如何补齐 |
-| 协议层 | L3 | rules/handoff.md | dtask/drun 主编排边界、正向/异常/跨域回交、Handoff Report |
-| 规则真相源 | L4 | rules/ 体系 | 新设计如何回写到 rules/、各 rule 文件职责边界 |
-| 表层能力 | L5 | Commands/Skills 分层 | drun 双入口、持久化策略、command/skill 新增删减溶解标准 |
-| 横切增强 | — | rules/testing.md | 测试策略如何跨越多层工作 |
+| 层 | 关键资产 | 回答的核心问题 |
+|---|---------|--------------|
+| L0 入口容器 | didea | 想法挂住 → 持久化 → 下游衔接 |
+| L1 判断收束 | dpth/dref/dprd/ddoc | 值不值得做、怎么想清楚、收束成清单/PRD/文档 |
+| L2 下游扩展 | architect/debugger | 技术审稿 gate / 异常诊断优先 |
+| L3 协议层 | rules/handoff.md | dtask/drun 主编排边界、回交模型、Handoff Report |
+| L4 规则真相源 | rules/ 体系(14文件) | 状态机、blocked_by、acceptance、verification 规范 |
+| L5 表层能力 | Commands/Skills | drun 双入口、持久化策略、新增删减溶解标准 |
+| 横切增强 | rules/testing.md | 测试策略跨越多层、幅度→验证方式映射 |
 
-> 做任务分类或优先级判断时，先定位目标层。改 rules/ 时不越界改 `.doc/`；改说明层时不改动真相源。
+> 架构原则：Skills 为底（方法论），Commands 为壳（薄封装）；Skill frontmatter 零平台耦合（无 context/agent/model/hooks）；agents/ 和 skills/ 均为扁平单层目录，默认路径自动发现，plugin.json 不声明 agents 字段。
 
 ## 上位心智层
+
+**少即是多，克制且清晰；具体胜于抽象；引导顺序即优先级。**
 
 **三唯一框架**：进入任务前确认唯一主线目录、唯一运行入口、canonical。
 
@@ -45,42 +36,74 @@
 
 **证据优先级**：L1 运行态 > L2 调用链 > L3 自动化断言 > L4 表面观察 > L5 间接推断。默认 L1-3 主判。
 
-## Skill 索引
+## 资产速查
 
-| 名称 | 类型 | 触发场景 |
-|------|------|---------|
-| `dtask` `drun` `dcorr` `drec` | rule | 任务/执行/纠偏/记录 |
-| `dprd` `dpth` `ddoc` `dref` `dstat` `didea` | product/tool | 产品论证/产品思维/文档/需求细化/状态/想法捕获 |
-| `dloop` `dstop` | command | 连续循环/停止循环 |
-| `rules/*` | 参考 | exceptions/templates/file-layout/constraints |
+### Skills (11)
+
+| 分组 | Skill | 一句话 |
+|------|-------|--------|
+| 入口容器 | `didea` | 想法捕获与下游衔接 |
+| 思考收束 | `dpth` `dref` `dprd` `ddoc` | 方向判断 / 需求细化 / PRD / 文档 |
+| 任务闭环 | `dtask` `drun` | 任务定义 → 单任务执行 |
+| 连续执行 | `dloop` | drun 薄壳循环（session/cron 双模式） |
+| 观察纠偏 | `dstat` `dcorr` `drec` | 状态快照 / 纠偏恢复 / Session 记录 |
+
+### Agents (5)
+
+| Agent | 定位 | 核心约束 |
+|-------|------|---------|
+| explorer | 只读探索 | 不修改文件 |
+| implementer | 代码实施 | 先读后写；JSON indent=2 |
+| verifier | 独立验收 | 不允许 Edit/Write；不信任 implementer 自述 |
+| architect | 技术审稿 | 不改代码；只审 dtask 定义域 |
+| debugger | 异常调查 | 不直接修代码；诊断后回交修复链 |
+
+> 故障隔离：任何非核心 agent 失败时退化回 explorer→implementer→verifier 闭环。
+
+### Commands (13)
+
+drun, dtask, dinit, dprd, ddoc, drec, dref, dcorr, dstat, dloop, dstop, didea, dpth
+
+（dstop 和 dinit 为仅有的两个 command-only 特例，无对应 Skill。）
+
+### 关键目录
+
+| 目录 | 内容 |
+|------|------|
+| `commands/` | 13 个薄壳命令 |
+| `skills/` | 11 个方法论 Skill（唯一真相源） |
+| `agents/` | 5 个执行 Agent（默认路径自动发现） |
+| `scripts/` | 共享脚本（common.py/dtask_transition/dloop/dstat/...） |
+| `hooks/` | Hook 脚本（6 事件 / 10 业务脚本 + 1 wrapper） |
+| `rules/` | 14 个参考规则文件 |
+| `assets/` | /dinit 初始化模板 |
+| `tests/` | 三级测试（L1 配置 / L2 脚本 / L3 一致性） |
 
 ## 行为铁律
 
-**Push 前必跑**：`pytest tests/` 全量回归通过后才可 commit & push。
+### 实施类
 
-**Rules 同步**：修改 `rules/` 后必须同步到 `.claude/rules/` 和 `assets/dinit/assets/rules/` 两处模板。
+- **Push 前必跑**：`pytest tests/` 全量回归通过后才可 commit & push
+- **Rules 同步**：修改 `rules/` 后必须同步 `.claude/rules/` 和 `assets/dinit/assets/rules/` 两处模板
+- **recording 更新**：每次 session 结束前必须写入 `.diwu/recording/`
+- **时间戳**：写入 Session 标题前先跑 `date '+%Y-%m-%d %H:%M:%S'`，禁止手写
+- **`.diwu/` 提交**：origin/main 持续追踪 `.diwu/`（含 `.claude/`）；公开仓库由 `drelease.sh` worktree 隔离发布 clean 版
+- **CC 专属**：hooks/、`.claude-plugin/`、`assets/` 为 CC 专属内容
 
-**时间戳规则**：写入 Session 标题前必须先运行 `date '+%Y-%m-%d %H:%M:%S'`，禁止手写日期。
+### 版本号
 
-**recording 更新**：每次 session 结束前必须写入 `.diwu/recording/`。
+- 真相源：`.claude-plugin/plugin.json` 的 `version` 字段
+- 变更时同步：`marketplace.json` + `install.sh` OpenCode stub
 
-**`.diwu/` 提交规则**：origin/main 持续追踪 `.diwu/`（含 `.claude/`）。公开仓库通过 `drelease.sh` worktree 隔离模式发布 clean 版（自动排除 `.diwu/`、`.claude/` 等敏感文件）。
+### 文件操作
 
-**版本号同步**：插件版本以 `.claude-plugin/plugin.json` 为真值来源；变更版本号时必须同步更新 `.claude-plugin/marketplace.json` 和 `install.sh` 中的 OpenCode stub 版本。
-
-**文件操作安全铁律**：
-- **先读后写（分层）**：修改已有文件前必须先读取将被修改的当前内容；整文件重写必须先读取完整文件；全新创建且确认不存在时可跳过读取。
-- **JSON 格式化**：写入 .json 文件时必须 indent=2, ensure_ascii=False（禁止单行压缩）。
-- **原子替换优先**：修改已有内容优先用 Edit 精确匹配替换；仅整文件重写时用 Write（须满足先读后写）。
-- **敏感目录谨慎**：.diwu/ 和 .claude/ 下配置文件修改需确认不破坏现有结构或丢失数据。
-
-- 修改 Skill 后验证 frontmatter YAML 合法性
-- plugin.json 不声明 agents 字段（默认路径自动发现）
-- CC 专属内容仅限 hooks/、.claude-plugin/、assets/
+- **先读后写**：修改已有文件前必须 Read；整文件重写必须先读完整文件；全新创建且确认不存在时可跳过
+- **JSON 格式**：indent=2, ensure_ascii=False（禁止单行压缩）
+- **原子替换优先**：优先 Edit 精确匹配；仅整文件重写用 Write
+- **敏感目录谨慎**：`.diwu/` 和 `.claude/` 下修改需确认不破坏现有结构或丢失数据
+- **Skill 验证**：修改 Skill 后验证 frontmatter YAML 合法性
 
 ## 公开版本发布流程
-
-> 私有仓库 → 公开仓库，只需配置一次 remote：
 
 **发版前检查清单**：
 
@@ -99,15 +122,3 @@ git remote add public git@github.com:ssdiwu/diwu-flow.git
 ./drelease.sh v{version} --push-public
 # → 先推 origin/main（含 .diwu/）→ 创建临时 worktree 清理敏感文件 → 推送 clean 版到 public/main
 ```
-
-## 项目结构
-
-- `commands/` — 用户命令封装（drun, dtask, dinit, dprd, ddoc, drec, dref, dcorr, dstat, dloop, dstop, didea）
-- `skills/` — 技能文件（dtask, drun, dcorr, drec, dprd, ddoc, dref, dstat, dloop, didea）
-- `scripts/` — 共享脚本工具库（common.py 含 plugin_root/load_json/save_json/max_task_id 等函数），新增 script-backed 执行通道
-- `rules/` — 方法论规则文件
-- `agents/` — 核心执行 Agent（explorer/implementer/verifier，默认路径自动发现）
-- `assets/` — 模板资产
-- `tests/` — 测试用例
-- `hooks/` — 钩子脚本
-- `drelease.sh` — 公开版本发布脚本
