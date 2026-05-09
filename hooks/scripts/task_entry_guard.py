@@ -138,6 +138,10 @@ def _should_block_dloop(state_path, session_id=""):
         if not isinstance(dloop, dict) or dloop.get("active") is not True:
             return False
 
+        # cron 模式：每个 iteration 是独立合法 session，直接放行
+        if dloop.get("mode") == "cron":
+            return False
+
         loop_sid = dloop.get("session_id", "")
 
         # Dummy SID: first iteration before Stop-event binding.

@@ -35,13 +35,20 @@ def _invalid_state_result(reason: str) -> dict:
     }
 
 
-def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
+def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None,
+               mode: str = "session", interval: str = None,
+               cron_job_id: str = None) -> dict:
     """启动 dloop 循环。"""
     diwu_dir = cwd / DIWU_DIR
     state_path = runtime_state_path(cwd)
     dtask_payload = _task_payload(cwd)
     tasks = [task for task in dtask_payload.get("tasks", []) if isinstance(task, dict)]
     settings = load_json_or_empty(cwd / DSETTINGS_JSON)
+
+    # 优先使用真实 session ID（消除 dummy 窗口）
+    if not session_id:
+        from session_scope import read_scoped_session_id
+        session_id = read_scoped_session_id(str(cwd))
 
     # Stale-state 兜底（#23）：检查已有 state 文件是否为 terminal_stale
     stale_cleanup_reason = None
@@ -64,6 +71,16 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
             "formatted_text": "⚠️ dloop 已在运行中。请先执行 /dstop 停止当前循环。",
         }
 
+    # Cron 模式校验
+    if mode == "cron":
+        if not interval:
+            return {
+                "ok": False,
+                "status": "missing_interval",
+                "message": "cron 模式需要 --interval 参数（如 3m, 5m）",
+                "formatted_text": "❌ cron 模式缺少 --interval 参数",
+            }
+
     # 任务可用性检查（T17）
     executable = get_executable_tasks(tasks)
 
@@ -84,6 +101,7 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
     # 创建状态文件
     state = {
         "active": True,
+        "mode": mode,
         "session_id": session_id if session_id else f"dloop-{datetime.now(timezone.utc).strftime('%Y-%m-%d-%H%M%S')}",
         "started_at": datetime.now(timezone.utc).isoformat(),
         "completed_task_ids": [],
@@ -93,6 +111,8 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
         "stopped_at": None,
         "stop_reason": None,
     }
+    if mode == "cron" and cron_job_id:
+        state["cron_job_id"] = cron_job_id
     set_loop_state(runtime_sync.state, state)
     save_runtime_state(cwd, runtime_sync.state, remove_legacy=True)
 
@@ -102,24 +122,53 @@ def cmd_start(cwd: Path, max_tasks: int = None, session_id: str = None) -> dict:
     if stale_cleanup_reason:
         cleanup_note = f"\n🧹 已清理残留 state（{stale_cleanup_reason}）\n"
 
-    return {
-        "ok": True,
-        "status": "started",
-        "data": {"state_file": str(state_path)},
-        "message": (
+    # 构建返回数据
+    start_data = {"state_file": str(state_path), "mode": mode}
+    if mode == "cron":
+        start_data["interval"] = interval
+        if cron_job_id:
+            start_data["cron_job_id"] = cron_job_id
+        else:
+            start_data["cron_action"] = "create"  # 调用方需执行 CronCreate
+
+    # 构建返回消息
+    if mode == "cron":
+        msg_body = (
+            f"模式: cron | 间隔: {interval}\n"
+            f"   活跃任务数: {active_count}\n"
+            f"   最大任务数: {'∞(无限)' if effective_max == 0 else effective_max}\n"
+            + (f"   CronJob ID: {cron_job_id}\n" if cron_job_id else
+               "   ⚠️ 需调用方执行 CronCreate(cron={interval}, prompt=\"/drun --max-tasks 1\") 并注册 job_id\n")
+            + f"{cleanup_note}"
+        )
+        message = (
+            f"dloop cron 模式已配置 (interval: {interval}, max_tasks: {'∞' if effective_max == 0 else effective_max})\n"
+            + (f"CronJob ID: {cron_job_id}" if cron_job_id else "需调用方创建 CronJob 并注册 job_id")
+            + f"\n{cleanup_note}"
+        )
+        formatted = f"🔄 dloop cron 模式已配置\n{msg_body}"
+    else:
+        msg_body = (
+            f"   活跃任务数: {active_count}\n"
+            f"   最大任务数: {'∞(无限)' if effective_max == 0 else effective_max}\n"
+            f"   来源: {'自动(活跃任务快照)' if max_tasks is None else '手动指定'}\n"
+            f"{cleanup_note}"
+            f"   请立即发起 /drun 完成首轮任务（Task#{first_task['id']} {first_task.get('title', '')}）"
+        )
+        message = (
             f"dloop 已启动 (max_tasks: {'∞(无限)' if effective_max == 0 else effective_max}, "
             f"source: {'auto' if max_tasks is None else 'manual'})\n"
             f"{cleanup_note}"
             f"请立即发起 /drun 完成首轮任务（Task#{first_task['id']} {first_task.get('title', '')}）"
-        ),
-        "formatted_text": (
-            f"🔄 dloop 已启动\n"
-            f"{cleanup_note}"
-            f"   活跃任务数: {active_count}\n"
-            f"   最大任务数: {'∞(无限)' if effective_max == 0 else effective_max}\n"
-            f"   来源: {'自动(活跃任务快照)' if max_tasks is None else '手动指定'}\n"
-            f"   请立即发起 /drun 完成首轮任务（Task#{first_task['id']} {first_task.get('title', '')}）"
-        ),
+        )
+        formatted = f"🔄 dloop 已启动\n{msg_body}"
+
+    return {
+        "ok": True,
+        "status": "started",
+        "data": start_data,
+        "message": message,
+        "formatted_text": formatted,
     }
 
 
@@ -175,19 +224,23 @@ def cmd_status(cwd: Path) -> dict:
             "completed_task_ids": completed,
             "max_tasks": max_t,
             "started_at": started,
+            "mode": data.get("mode", "session"),
+            "cron_job_id": data.get("cron_job_id"),
         },
         "formatted_text": (
-            f"🔄 dloop 运行中\n"
+            f"🔄 dloop 运行中 [{data.get('mode', 'session')} 模式]\n"
             f"   当前轮次: {iteration}\n"
             f"   已完成: {len(completed)} 个任务\n"
             f"   最大任务数: {max_t}\n"
             f"   启动时间: {started}"
+            + (f"\n   CronJob ID: {data.get('cron_job_id')}" if data.get('cron_job_id') else "")
         ),
     }
 
 
 def cmd_stop(cwd: Path) -> dict:
-    """停止 dloop 循环。读取 dtask-state.json.dloop → 摘要 → 清除 → 持久化。"""
+    """停止 dloop 循环。读取 dtask-state.json.dloop → 摘要 → 清除 → 持久化。
+    cron 模式下额外调用 CronDelete 清理调度资源（P1）。"""
     sync_result = sync_runtime_state(cwd, persist=True, ensure_exists=False)
     if sync_result.is_invalid:
         return {
@@ -209,21 +262,37 @@ def cmd_stop(cwd: Path) -> dict:
     completed = dloop.get("completed_task_ids", [])
     iteration = dloop.get("current_iteration", 0)
     completed_count = len(completed)
+    loop_mode = dloop.get("mode", "session")
+    cron_job_id = dloop.get("cron_job_id")
 
     clear_loop_state(sync_result.state)
     save_runtime_state(cwd, sync_result.state, remove_legacy=True)
 
+    stop_data = {
+        "completed_count": completed_count,
+        "iteration": iteration,
+        "mode": loop_mode,
+    }
+    if loop_mode == "cron" and cron_job_id:
+        stop_data["cron_job_id"] = cron_job_id
+        stop_data["cron_action"] = "delete"  # 调用方需执行 CronDelete
+
+    message = f"dloop 已取消（{loop_mode} 模式，已完成 {completed_count} 个任务，第 {iteration} 轮）"
+    formatted = (
+        f"✅ dloop 已取消 [{loop_mode} 模式]\n"
+        f"   已完成任务数: {completed_count}\n"
+        f"   当前轮次: {iteration}"
+    )
+    if loop_mode == "cron" and cron_job_id:
+        message += f"，需调用方执行 CronDelete(id={cron_job_id})"
+        formatted += f"\n   ⚠️ 需调用方执行 CronDelete(id={cron_job_id})"
+
     return {
         "ok": True,
         "status": "cancelled",
-        "completed_count": completed_count,
-        "iteration": iteration,
-        "message": f"dloop 已取消（已完成 {completed_count} 个任务，第 {iteration} 轮）",
-        "formatted_text": (
-            f"✅ dloop 已取消\n"
-            f"   已完成任务数: {completed_count}\n"
-            f"   当前轮次: {iteration}"
-        ),
+        **stop_data,
+        "message": message,
+        "formatted_text": formatted,
     }
 
 
@@ -236,6 +305,9 @@ def main():
     p_start.add_argument("--cwd", type=str, default=".", help="项目根目录")
     p_start.add_argument("--max-tasks", type=int, default=None, help="最大任务数（省略=自动取活跃任务数，0=无限）")
     p_start.add_argument("--session-id", type=str, default=None, help="真实 session ID（省略则自动生成 dloop-<timestamp> 格式）")
+    p_start.add_argument("--mode", type=str, default="session", choices=["session", "cron"], help="运行模式：session(默认) 或 cron")
+    p_start.add_argument("--interval", type=str, default=None, help="cron 模式触发间隔（如 3m, 5m）")
+    p_start.add_argument("--cron-job-id", type=str, default=None, help="cron 模式：CronCreate 返回的 job_id（由调用方传入）")
 
     # status 子命令
     p_status = sub.add_parser("status", help="查询 dloop 状态")
@@ -248,7 +320,14 @@ def main():
     args = parser.parse_args()
 
     if args.command == "start":
-        result = cmd_start(Path(args.cwd).resolve(), max_tasks=args.max_tasks, session_id=args.session_id)
+        result = cmd_start(
+            Path(args.cwd).resolve(),
+            max_tasks=args.max_tasks,
+            session_id=args.session_id,
+            mode=args.mode,
+            interval=args.interval,
+            cron_job_id=args.cron_job_id,
+        )
     elif args.command == "status":
         result = cmd_status(Path(args.cwd).resolve())
     elif args.command == "stop":

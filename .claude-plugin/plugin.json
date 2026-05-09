@@ -32,6 +32,7 @@
     "./commands/dstat.md",
     "./commands/dloop.md",
     "./commands/dstop.md",
-    "./commands/didea.md"
+    "./commands/didea.md",
+    "./commands/dpth.md"
   ]
 }

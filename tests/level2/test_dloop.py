@@ -472,3 +472,118 @@ def test_stop_decision_loop_mode_reason_delegates_drun(tmp_path):
     assert "请继续执行 /drun" in output.get("reason", "")
     # 不应包含具体任务名
     assert "Next task" not in output.get("reason", "")
+
+
+# ── Cron mode tests ──────────────────────────────────────────────
+
+def _make_cron_dloop_state(tmp_path, **overrides):
+    """Create dloop state with mode=cron."""
+    base = {
+        "active": True,
+        "mode": "cron",
+        "session_id": "cron-session-001",
+        "started_at": "2026-05-09T00:00:00Z",
+        "completed_task_ids": [],
+        "initial_done_ids": [],
+        "current_iteration": 0,
+        "max_tasks": 0,
+        "stopped_at": None,
+        "stop_reason": None,
+        "cron_job_id": "test-job-123",
+    }
+    base.update(overrides)
+    _make_dloop_state(tmp_path, **{k: v for k, v in base.items() if k != "active"})
+
+
+def test_dloop_cron_mode_start_requires_interval(tmp_path):
+    """cron 模式缺少 --interval → 返回 error。"""
+    import subprocess
+    result = subprocess.run(
+        [sys.executable, str(SCRIPTS_DIR / "dloop.py"), "start",
+         "--cwd", str(tmp_path), "--mode", "cron"],
+        capture_output=True, text=True,
+    )
+    data = json.loads(result.stdout)
+    assert data["ok"] is False
+    assert data["status"] == "missing_interval"
+
+
+def test_dloop_cron_mode_start_creates_state_with_mode(tmp_path):
+    """cron 模式 start 写入 mode=cron 到 state。"""
+    tasks = [{"id": 1, "title": "Cron task", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)
+
+    from dloop import cmd_start
+    result = cmd_start(
+        tmp_path, max_tasks=0, session_id="cron-test-sid",
+        mode="cron", interval="3m",
+        # 不传 cron_job_id → 应返回 cron_action="create"
+    )
+    assert result["ok"] is True
+    assert result["data"]["mode"] == "cron"
+    assert result["data"].get("cron_action") == "create"
+
+    # 验证 state 文件
+    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert state["dloop"]["mode"] == "cron"
+    assert state["dloop"]["active"] is True
+
+
+def test_dloop_cron_mode_start_with_job_id(tmp_path):
+    """cron 模式 + 已有 job_id → state 包含 cron_job_id。"""
+    tasks = [{"id": 1, "title": "T", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)
+
+    from dloop import cmd_start
+    result = cmd_start(
+        tmp_path, mode="cron", interval="5m", cron_job_id="existing-job-456",
+    )
+    assert result["ok"] is True
+    assert result["data"]["cron_job_id"] == "existing-job-456"
+    assert "cron_action" not in result["data"]
+
+    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    assert state["dloop"]["cron_job_id"] == "existing-job-456"
+
+
+def test_dloop_status_shows_cron_mode(tmp_path):
+    """cmd_status() 输出包含 mode 和 cron_job_id。"""
+    tasks = [{"id": 1, "title": "Status T", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)  # 需要 dtask.json 防止 stale 判定
+    _make_cron_dloop_state(tmp_path)
+
+    from dloop import cmd_status
+    result = cmd_status(tmp_path)
+    assert result["ok"] is True
+    assert result["status"] == "running"
+    assert result["data"]["mode"] == "cron"
+    assert result["data"]["cron_job_id"] == "test-job-123"
+    assert "cron" in result["formatted_text"]
+
+
+def test_dloop_stop_cron_mode_returns_cleanup_instruction(tmp_path):
+    """cmd_stop() 在 cron 模式下返回 cron_action=delete。"""
+    _make_cron_dloop_state(tmp_path)
+
+    from dloop import cmd_stop
+    result = cmd_stop(tmp_path)
+    assert result["ok"] is True
+    assert result["status"] == "cancelled"
+    assert result["mode"] == "cron"
+    assert result["cron_action"] == "delete"
+    assert result["cron_job_id"] == "test-job-123"
+
+
+def test_dloop_session_mode_backward_compatible(tmp_path):
+    """默认 --mode=session 行为不变（向后兼容）。"""
+    tasks = [{"id": 1, "title": "T", "status": "InSpec"}]
+    _make_dtask(tasks, tmp_path)
+
+    from dloop import cmd_start
+    result = cmd_start(tmp_path, session_id="compat-test")
+    assert result["ok"] is True
+    assert result["data"]["mode"] == "session"
+
+    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    # 默认 mode 不写入（_normalize_loop 默认为 "session"）
+    assert state["dloop"].get("mode", "session") == "session"

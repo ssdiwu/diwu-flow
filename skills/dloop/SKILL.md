@@ -15,7 +15,7 @@ depends:
   - dtask
   - drun
 effort: low
-argument-hint: "[--max-tasks N] [--session-id <sid>]"
+argument-hint: "[--max-tasks N] [--mode {session|cron}] [--interval <min>] [--session-id <sid>]"
 ---
 
 # dloop
@@ -28,11 +28,25 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 
 ## 生命周期
 
+### Session 模式（默认）
+
 ```
 1. 启动：/dloop 写入 dtask-state.json.dloop（含 session_id、max_tasks 快照）
-2. 执行：每轮调用 /drun 完成单任务全链路
+2. 执行：同一 session 内循环：/drun → Stop → /drun → Stop ...
 3. 判定：Stop hook 检查停止条件，决定 block（继续）或 allow stop
 4. 结束：任一停止条件触发 → 输出阶段报告 → 清理 loop 元数据
+```
+
+### Cron 模式（`--mode cron`）
+
+```
+1. 启动：/dloop --mode cron --interval 3m
+   → 写入 dloop state(mode=cron, active=true)
+   → 创建 CronJob(prompt="/drun --max-tasks 1")，保存 job_id
+2. 执行：每次 Cron 触发独立 session → /drun(读 dtask.json) → session 结束
+3. 判定：每次 iteration 的 Stop hook → decide_cron_mode() → 终止或放行
+4. 停止：终止条件命中 → 清理 dloop + 提示执行 /dstop
+   → /dstop 自动 CronDelete(job_id) + 清理 dloop state
 ```
 
 ## 停止条件（OR，任一触发即停止）
@@ -49,13 +63,15 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 ```json
 {
   "active": true,
+  "mode": "session",
   "session_id": "<CLAUDE_CODE_SESSION_ID>",
   "started_at": "2026-04-30T12:00:00Z",
   "completed_task_ids": [1, 2, 3],
   "current_iteration": 3,
   "max_tasks": 10,
   "stopped_at": null,
-  "stop_reason": null
+  "stop_reason": null,
+  "cron_job_id": null
 }
 ```
 
@@ -64,13 +80,15 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `active` | bool | 循环是否活跃 |
-| `session_id` | string | 启动循环的 session ID（用于隔离） |
+| `mode` | string | `"session"`（默认）或 `"cron"` |
+| `session_id` | string | 启动循环的 session ID（session 模式用于隔离；cron 模式记录首次 SID） |
 | `started_at` | string | ISO 8601 启动时间戳 |
 | `completed_task_ids` | int[] | 已完成的 task ID 列表 |
 | `current_iteration` | int | 当前迭代次数（从 1 开始） |
 | `max_tasks` | int | 最大任务数限制（0=无限） |
 | `stopped_at` | string/null | 停止时间（运行中为 null） |
 | `stop_reason` | string/null | 停止原因（运行中为 null）|
+| `cron_job_id` | string/null | CronCreate 返回的 job ID（仅 cron 模式）|
 
 ## Agent 行为规范
 
@@ -85,27 +103,94 @@ argument-hint: "[--max-tasks N] [--session-id <sid>]"
 
 ## Session ID 绑定策略
 
-| 场景 | 行为 |
-|------|------|
-| 正常流程 | start(`dloop-*`) → Stop(SID) → 绑定 SID → 后续必须匹配 SID |
-| Stop 缺失 SID | → 退出 loop mode（不允许驱动循环） |
-| 错误 SID | → 退出 loop mode |
-| 已绑定但新 Stop 不匹配 | → 退出 loop mode，走 default mode |
+| 场景 | 模式 | 行为 |
+|------|------|------|
+| 正常流程 | session | start(`dloop-*`) → Stop(SID) → 绑定 SID → 后续必须匹配 SID |
+| Stop 缺失 SID | session | → 退出 loop mode（不允许驱动循环） |
+| 错误 SID | session | → 退出 loop mode |
+| 已绑定但新 Stop 不匹配 | session | → 退出 loop mode，走 default mode |
+| 任意 SID | **cron** | **跳过绑定检查**：每次 iteration 是独立合法 session，不校验 ownership |
+| 无 event session_id | **cron** | **放行**：task_entry_guard 显式检查 `mode=="cron"` 后直接放行 |
 
 **首次绑定机制**：`dloop.py start` 生成的 `dloop-<timestamp>` 为 dummy ID；第一个带真实 session_id 的 Stop event 自动将其替换并持久化。
 
 ## completed_task_ids 维护
 
 - **写入方**：`task_completed.py` hook（TaskCompleted 事件时）
-- **写入条件**：(1) `event.task.id` 存在且合法 (2) loop 活跃 (3) loop session_id 匹配事件 session_id (4) 该 task_id 尚未在列表中
+- **写入条件**：(1) `event.task.id` 存在且合法 (2) loop 活跃 (3) **session 模式**要求 loop session_id 匹配事件 session_id；**cron 模式跳过此检查** (4) 该 task_id 尚未在列表中
 - **读取方**：`stop_decision.py` — 仅用于 max_tasks 判定和阶段报告，**不写入**
 - **精确语义**：只认 `event.task.id` 原始信号，不使用 fallback heuristic
 
 ## Session 隔离
 
-- `dtask-state.json.dloop` 含 `session_id`，确保只有启动循环的 session 能驱动它
+- **session 模式**：`dtask-state.json.dloop` 含 `session_id`，确保只有启动循环的 session 能驱动它
 - 其他 session 的 Stop hook 检测到 session_id 不匹配时直接 allow stop
 - 防止一个项目的循环干扰同项目其他 session
+- **cron 模式**：无 session 隔离——每次 iteration 是独立合法 session，`task_entry_guard` 显式放行所有 Edit/Write
+
+## Cron 模式详解
+
+### 语义
+
+Cron 模式将 `/dloop` 从"**同一 session 内循环控制器**"变为"**跨 session 调度器配置器**"。核心变化：
+
+| 维度 | Session 模式 | Cron 模式 |
+|------|-------------|-----------|
+| 执行载体 | 同一 Claude Code session 持续存活 | 每次 Cron 触发全新独立 session |
+| 循环驱动 | Stop hook 输出 `block` → Agent 发起 `/drun` | Cron 定时触发 → 新 session 自动执行 `/drun` |
+| 上下文保持 | 累积（context window 内） | **冷启动**（每次从 dtask.json + CLAUDE.md 重建） |
+| 停止方式 | stop_decision 阶段报告 + 清理 | decide_cron_mode 判定 + `/dstop` 清理 CronJob |
+| session_id 作用 | ownership 隔离（必须匹配） | 仅记录，不做 ownership 校验 |
+
+### 用法
+
+```bash
+# 启动 cron 模式循环（每 3 分钟触发一次）
+/dloop --mode cron --interval 3m --max-tasks 0
+
+# 启动带上限的 cron 循环（每 5 分钟，最多 10 个任务）
+/dloop --mode cron --interval 5m --max-tasks 10
+
+# 查看状态（显示 mode + cron_job_id）
+/dloop status
+
+# 停止（自动清理 CronJob + dloop state）
+/dstop
+```
+
+### 冷启动链路
+
+每次 Cron 触发的 iteration 是**全新的 Claude Code session**，无累积上下文。可用的跨 session 持久化层：
+
+| 注入层 | 来源 | 可用性 |
+|--------|------|--------|
+| `.claude/CLAUDE.md` | git 仓库内文件 | 自动加载 |
+| `.claude/rules/*` | UserPromptSubmit hook 注入 | 自动加载 |
+| `.diwu/dtask.json` | 任务定义真相源 | `/drun` 读取 |
+| `.diwu/recording/*.md` | 历史 session 记录 | 文件系统可读 |
+| `.diwu/decisions.md` | 设计决策记录 | 文件系统可读 |
+
+> **不足**：细粒度的"为什么选这个方案而不选那个"推理过程可能丢失。由 `recording/` 和 `decisions.md` 部分弥补。
+
+### 停止条件差异
+
+| 条件 | Session 模式 | Cron 模式 |
+|------|-------------|-----------|
+| 无可执行任务 | → 阶段报告 + 清理 | → 阶段报告 + 清理 + 提示 `/dstop` |
+| 达到 max_tasks | → 阶段报告 + 清理 | → 阶段报告 + 清理 + 提示 `/dstop` |
+| PENDING REVIEW | → 阶段报告 + 清理 | → 阶段报告 + 清理 + 提示 `/dstop` |
+| 用户 `/dstop` | → 立即清理 | → CronDelete(job_id) + 清理 |
+| 未命中终止条件 | → block + 继续 `/drun` | → **允许 session 自然结束**（等下次 Cron 触发） |
+
+### 选择指南
+
+| 场景 | 推荐模式 | 理由 |
+|------|---------|------|
+| 少量任务（<5），快速批量 | session | 无冷启动开销，上下文连续 |
+| 大量任务（>5），预计运行时间长 | cron | 不受 context compression 影响 |
+| 需要 agent 积累经验（前轮决策影响后轮） | session | 上下文保留 |
+| 任务间独立性高（每个任务自包含） | cron | 冷启动代价低 |
+| 无人值守批量执行 | cron | 自动持续运行，无需人工续跑 |
 
 ## 循环结束：自动阶段报告
 

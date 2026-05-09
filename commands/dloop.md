@@ -1,6 +1,6 @@
 ---
 description: 启动连续任务循环
-argument-hint: "[--max-tasks N]"
+argument-hint: "[--max-tasks N] [--mode {session|cron}] [--interval <min>]"
 allowed-tools: Read, Bash
 effort: low
 ---
@@ -12,10 +12,15 @@ effort: low
 ## 用法
 
 ```bash
+# Session 模式（默认）
 /dloop                             # 自动取启动时全部 InSpec + InProgress 任务数作为快照
 /dloop --max-tasks 5               # 最多执行 5 个任务
 /dloop --max-tasks 0               # 无限模式，直到无可执行任务
 /dloop --session-id <sid>          # 传入真实 session ID（可选，首次 Stop 事件自动绑定）
+
+# Cron 模式（跨 session 调度）
+/dloop --mode cron --interval 3m   # 每 3 分钟触发一次新 session 执行 /drun
+/dloop --mode cron --interval 5m --max-tasks 10  # 每 5 分钟，最多 10 个任务
 ```
 
 ## 运行时真相源
@@ -23,6 +28,7 @@ effort: low
 - loop 元数据保存在 `.diwu/dtask-state.json.dloop`
 - 不再把 `.diwu/dloop-state.json` 当作长期真相源；它只作为 legacy 输入，在 `start/status/stop_decision` 中一次性迁移
 - 普通 `InProgress` owner 保存在 `.diwu/dtask-state.json.task_sessions`
+- dloop state 新增字段：`mode`（"session"|"cron"）、`cron_job_id`（CronCreate 返回的 job ID）
 
 ## 状态与停止
 
@@ -49,3 +55,14 @@ effort: low
 `/dloop start` 生成 `dloop-<timestamp>` 格式 dummy ID；首次带真实 `session_id` 的 Stop 事件自动将其替换并持久化。此后只有匹配该 session_id 的 Stop 事件才能驱动循环。
 
 > `/drun` 不负责 dloop 生命周期管理；`/dloop` 也不绕过 `dtask_transition.py` 对任务状态的显式接管。
+
+## Cron 模式
+
+`--mode cron` 将循环执行从"同一 session 内循环"变为"Cron 定时触发独立 session"。每次 iteration 冷启动读取 `dtask.json` 执行 `/drun`，session 结束后等下次 Cron 触发。
+
+- **启动**：`/dloop --mode cron --interval <min> [--max-tasks N]`
+- **状态**：`/dloop status` 显示 `mode: cron` + `cron_job_id: <job-id>`
+- **停止**：`/dstop` 自动清理 CronJob + dloop state
+- **降级**：若 CronCreate 不可用，回退到 session 模式并输出 warning
+
+详见 `skills/dloop/SKILL.md` "Cron 模式详解" 章节。

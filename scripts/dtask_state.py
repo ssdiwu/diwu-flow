@@ -153,6 +153,14 @@ def _normalize_loop(loop: dict | None) -> tuple[dict | None, str | None]:
     if stop_reason is not None and not isinstance(stop_reason, str):
         return None, "dloop.stop_reason 必须是字符串或 null"
 
+    mode = loop.get("mode", "session")
+    if not isinstance(mode, str) or mode not in ("session", "cron"):
+        return None, f"dloop.mode 必须是 'session' 或 'cron'，实际: {mode!r}"
+
+    cron_job_id = loop.get("cron_job_id")
+    if cron_job_id is not None and not isinstance(cron_job_id, str):
+        return None, "dloop.cron_job_id 必须是字符串或 null"
+
     initial_done = loop.get("initial_done_ids", [])
     if not isinstance(initial_done, list) or not all(_is_non_negative_int(tid) for tid in initial_done):
         initial_done = []
@@ -167,6 +175,8 @@ def _normalize_loop(loop: dict | None) -> tuple[dict | None, str | None]:
         "max_tasks": max_tasks,
         "stopped_at": stopped_at,
         "stop_reason": stop_reason,
+        "mode": mode,
+        "cron_job_id": cron_job_id,
     }, None
 
 
@@ -422,6 +432,13 @@ def clear_loop_state(runtime_state: dict) -> bool:
         return False
     runtime_state["dloop"] = None
     return True
+
+
+def is_cron_mode(loop_state: dict | None) -> bool:
+    """Return True when dloop is in cron mode."""
+    if not isinstance(loop_state, dict):
+        return False
+    return loop_state.get("mode") == "cron"
 
 
 def resolve_session_inprogress_task(
