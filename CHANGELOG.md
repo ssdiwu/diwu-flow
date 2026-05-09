@@ -1,3 +1,63 @@
+## [v0.1.0] - 2026-05-09
+
+### Architecture — 六层架构全局落地（PR#9 + PR#10 + PR3 + PR#11 + PR#18）
+
+**PR#9 — Rules 真相源统一重构**
+- 新增 `rules/handoff.md`（子代理交接协议）：dtask/drun 主编排者铁律边界、SubagentStart Hook 四维自动注入（Session 摘要 + 任务上下文 + Handoff Report 模板 + Plan→Dtask 门控）
+- 新增 `rules/testing.md`（测试分层策略）：L1-L4 四层模型、幅度→验证方式映射、补测试触发条件；分工明确——testing 管"写什么测试"，verification 管"什么算完成"
+- 重组 9 个已有 rules 文件边界（workflow/task/file-layout/mindset/verification/constraints/templates/judgments/README），消除职责重叠
+- 三处副本同步：`rules/` ↔ `.claude/rules/` ↔ `assets/dinit/assets/rules/` 共 28 diff 一致
+- 新增 `agents/README.md` 作为 agents 层导航文档
+
+**PR#10 (PR2) — Architect / Debugger Agent 落地**
+- 新增 `agents/architect.md`：技术审稿专家，归属 dtask 定义域，5 种触发条件（新增模块/改变数据流/修改核心抽象/影响 agent 边界/影响 rules 结构）
+- 新增 `agents/debugger.md`：异常调查专家，归属 drun 执行域，4 种触发条件（acceptance 不符/3-Strike 工具失败/bug 排查/环境异常）
+- 更新 `skills/dtask/SKILL.md` 和 `skills/drun/SKILL.md` 嵌入 agent 路由逻辑
+- 新增三级测试：`test_agents_config.py`(L1) / `test_agent_routing.py`(L2) / `test_agent_collaboration.py`(L3)
+- 更新 `rules/judgments.md` 纳入 architect/debugger 判定规则
+
+**PR3 — 产品思维层（dpth / dref / dprd）建设**
+- **dpth** (`skills/dpth/SKILL.md` + `commands/dpth.md`)：产品思维协作 skill，三模式路由（诊断/创始人/构建者），灵魂三问门控；配套 10 个 references 文件
+- **dref** v2.0 重写：从 SOP 模板升级为增强式产品思维——先判真伪需求四维判断，再收敛为可执行检查清单
+- **dprd** v2.0 重写：增强式产品论证——灵魂三问方向门控 → JTBD/故事思维/MVP 减法/逆向思维框架按需取用 → 渐进式收束输出 PRD
+- 产品层 triggers 全面口语化改造，关键词匹配更自然
+
+**PR#11 (PR4) — didea 入口容器层落地**
+- 新增 `skills/didea/SKILL.md`：第 0 层入口容器，6 个动作（create/list/show/refine/archive/push），双入口模型（CLI + 对话式），下游衔接 dpth/dref/dprd/dtask
+- 新增 `commands/didea.md` + `scripts/didea_core.py` + `scripts/didea_github.py`
+- Plugin 注册：`plugin.json` / `marketplace.json` / `install.sh` / `CLAUDE.md` 同步更新
+- 8 个新测试覆盖核心逻辑 + GitHub 集成 + 布局一致性
+
+**PR#18 (PR5) — 说明层重写 + dloop Cron 模式**
+- **dloop Cron 模式完整实现**：`--mode cron --interval <N>` 支持跨 session 定时调度，每轮新 session 自动执行 `/drun`
+- `scripts/dloop.py start` 自动读取真实 session ID，消除 dummy 窗口问题
+- `hooks/scripts/stop_decision.py` 重构三分支（缺失 sid/首次绑定/session 不匹配）+ cron 终止时自动输出 CronDelete 清理指令
+- 新增 `commands/README.md` 和 `skills/README.md` 导航文档
+- 说明层口径统一：根 README / 架构规范 / skills README / commands README 数字复核一致
+
+### Bugfix — 批量修复
+
+- **dloop session ownership 修复**：非 owner session 的 PENDING_REC 完全静默；session mismatch 时自动清理 `dtask-state.json` 孤儿状态 → `clear_loop_state()`
+- **stop_decision stdout 泄漏修复**：移除 `cron_action` 内部指令泄漏到用户可见输出
+- **stop_decision 退出码修正**：无 InProgress 任务时统一 exit(0)，不再显示 error
+- **claim owner 防护**：`dtask_transition.py` 增加脚本级 owner mismatch 拒绝验证
+- **归档格式修正**：`drec_archive.py` list→dict 标准格式 + max_task_id 防御兼容
+- **dvfy 残留清理**：删除 `skills/dvfy/SKILL.md`（溶解到 drun 内部）
+- **dadr 残留清理**：从 rules/file-layout.md / mindset.md 三副本移除 dadr 引用
+
+### Documentation — 说明层完善
+
+- 新增 `commands/README.md`（13 Commands 导航文档）和 `skills/README.md`（11 Skills 导航文档）
+- `.doc/架构规范.md` 重写为六层架构描述
+- 根 `README.md` 全面重写：Layer 1-3 分层表、drun dual-entry 模型、Persistence Policy
+- Hook 事件计数从 8 修正为 6（hooks.json 实际事件键数）+ 10 业务脚本 + 1 wrapper
+
+### Testing
+
+- 全量测试 314 → **428 passed**
+
+---
+
 ## [v0.0.12] - 2026-05-05
 
 ### Infrastructure — Hook 可观测性与阻断策略重构

@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/ssdiwu/diwu-flow)
 
-多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合、想法捕获、产品思维等 **11 个核心 Skill** + **5 个执行 Agent**。（v0.0.12）
+多平台 AI 辅助开发方法论体系——**Skills 为底，Commands 为壳**。覆盖任务管理、判断锚点、纠偏恢复、需求分析、需求细化、归档聚合、想法捕获、产品思维等 **11 个核心 Skill** + **5 个执行 Agent**。（v0.1.0）
 
 ---
 
@@ -121,7 +121,7 @@ claude plugin add /path/to/diwu-flow
 
 | 平台 | 命令 | 产物 |
 |------|------|------|
-| Claude Code | `claude plugin add <path>` | 11 Skill + 5 Agent + 13 Command + 8 Hook 事件 / 11 业务脚本 + 1 wrapper |
+| Claude Code | `claude plugin add <path>` | 11 Skill + 5 Agent + 13 Command + 6 Hook 事件 / 10 业务脚本 + 1 wrapper |
 | Codex CLI | `./install.sh --platform codex` | Skills + Agents symlink 到 `~/.codex/` |
 | OpenCode | `./install.sh --platform opencode` | Plugin + symlink to `.opencode/` |
 | 卸载 | `./install.sh --uninstall [--dry-run]` | 清理 symlink（dry-run 仅预览不删除） |
@@ -179,7 +179,7 @@ claude plugin add /path/to/diwu-flow
 
 > 使用默认路径自动发现，不在 plugin.json 中声明。故障隔离：任何非核心 agent 失败时退化回 explorer→implementer→verifier 闭环。
 
-### Hooks（8 事件 / 11 业务脚本 + 1 wrapper）
+### Hooks（6 事件键 / 10 业务脚本 + 1 wrapper）
 
 所有 hook 命令经 `run_hook.py` 包装执行，输出统一带 `[事件/脚本名]` 前缀；stderr 会追加到 `.diwu/logs/hooks.log`，不再使用 `2>/dev/null` 全吞。
 
@@ -348,7 +348,7 @@ InDraft → InSpec → InProgress → InReview → Done
 ```
 diwu-flow/
 ├── .claude-plugin/
-│   ├── plugin.json              # 插件声明（11 Skill + 13 Command）
+│   ├── plugin.json              # 插件声明（11 Skill + 13 Command + 5 Agent，v0.1.0）
 │   └── marketplace.json         # 发布市场元数据
 ├── skills/                      # 11 个方法论 Skill（唯一真相源）
 │   └── {name}/SKILL.md
@@ -358,7 +358,7 @@ diwu-flow/
 │   ├── README.md                #   Agent 速查表
 │   └── {name}.md
 ├── hooks/
-│   ├── hooks.json               # 8 事件 / 11 业务脚本注册表
+│   ├── hooks.json               # 6 事件 / 10 业务脚本 + 1 wrapper 注册表
 │   └── scripts/                 # Python hook 实现
 ├── scripts/                     # 共享脚本库（common.py/dtask_transition/session_scope/dloop/dstat/...）
 ├── rules/                       # 14 个参考规则文件（渐进式披露，Read on demand）
@@ -383,7 +383,7 @@ diwu-flow/
 | 11 Skills | plugin.json 声明 | symlink SKILL.md | symlink SKILL.md |
 | 5 Agents | 默认路径自动发现 | symlink .md | symlink .md |
 | 13 Commands | Slash Commands | 不支持 | 声明式索引(.md) |
-| 8 Hook 事件 / 11 业务脚本 + 1 wrapper | hooks.json | 不支持 | v1 不移植 |
+| 6 Hook 事件 / 10 业务脚本 + 1 wrapper | hooks.json | 不支持 | v1 不移植 |
 | Python 脚本 | CLAUDE_PLUGIN_ROOT | 不支持 | 不支持 |
 
 ---
@@ -408,7 +408,7 @@ flowchart TD
 
 ## Version
 
-v0.0.12 — PR1-PR4 合并完成（rules 真相源重构 + architect/debugger 接入 + dpth/dref/dprd 增强 + didea 容器层）。dloop cron 模式正在本分支实现。详见 [CHANGELOG.md](CHANGELOG.md)。
+v0.1.0 — 六层架构全局落地：rules 真相源重构(pr#9) → architect/debugger(pr#10) → dpth/dref/dprd 产品思维层(pr3) → didea 入口容器(pr#11) → 说明层重写+dloop cron 模式(pr#18)。详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License
 
