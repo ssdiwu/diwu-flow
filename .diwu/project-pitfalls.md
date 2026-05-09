@@ -249,3 +249,5 @@
 - [验证误读] test_task_168_no_hardcoded_paths 白名单只覆盖了 `or os.getcwd()` 和 `globals()...os.getcwd()` 两种模式 → 遗漏 run_hook.py 的三元表达式 `else os.getcwd()` fallback → 补充 GETCWD_TERNARY_ELSE_PATTERN 正则后通过。教训：白名单正则需覆盖同一语义的所有语法变体（or / ternary else / 默认参数） （来源: session-2026-05-05-140547.md）
 ## Source: archive-aggregate-2026-05-09
 - [分层未拆清] 初版方案搞反所有权——计划从 rules/ 删内容让 drec 当权威源 → 用户纠正：rules/ 是宪法（hook 注入 system prompt），skills/ 只应是操作手册 → 正确方向是从 skill 删掉重复的 rules 内容并改为引用 （来源: session-2026-05-05-180604.md）
+## Source: archive-aggregate-2026-05-09
+- [分层未拆清] 方案初版和修正版均混用 end.py/end.md 文件名（实际为 dend.py/dend.md）→ 根因是未先读真实现状就写方案 → 正确做法：方案编写前必须用 explorer agent 确认每个引用文件的真实路径和内容 （来源: session-2026-05-06-014200.md）- [环境漂移] drec SKILL.md 引用的 archive 脚本路径含版本号缓存目录（0.0.11），升级后路径失效 → 应优先使用项目本地 scripts/ 路径而非插件缓存路径 （来源: session-2026-05-06-014200.md）- [验证误读] 声称"全量迁移完成"但 .claude/CLAUDE.md:30 和 :81 两处遗漏 → grep 验收范围不够精确（未含 .claude/ 目录）→ 正确做法：grep 验收必须覆盖 .claude/ 目录 （来源: session-2026-05-06-014200.md）
