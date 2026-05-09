@@ -60,18 +60,19 @@ flowchart LR
 ## 快速开始
 
 ```bash
-# 1. 安装
-claude plugin add /path/to/diwu-flow
+# 1. 安装（添加 marketplace + 安装插件）
+claude plugin marketplace add ssdiwu/diwu-flow
+claude plugin install diwu-flow@ssdiwu
 
-# 2. 初始化项目
+# 2. 初始化项目骨架
 /dinit
 
-# 3. 开始干活
-/didea create --title "我的想法"    # 有想法先挂住
-/dpth                               # 不确定方向就判断
-/dtask "实现用户登录"                # 拆成任务（带 GWT 验收标准）
-/drun                               # 执行一个任务
-# 或 /dloop --max-tasks 5           # 连续执行
+# 3. 开始干活（以下是人类说的话，agent 自动选择对应 skill 执行）
+"我有一个想法，帮我挂住，后续再判断"     # → /didea
+"帮我判断这个方向值不值得做"             # → /dpth
+"把用户登录功能拆成任务"                 # → /dtask
+"开始执行"                              # → /drun
+"连续执行所有未完成任务"                 # → /dloop
 
 # 4. 看看进度
 /dstat
@@ -79,7 +80,7 @@ claude plugin add /path/to/diwu-flow
 
 | 平台 | 安装命令 |
 |------|---------|
-| Claude Code | `claude plugin add <path>` |
+| Claude Code | `claude plugin marketplace add ssdiwu/diwu-flow` + `claude plugin install diwu-flow@ssdiwu` |
 | Codex CLI | `./install.sh --platform codex` |
 | OpenCode | `./install.sh --platform opencode` |
 | 卸载 | `./install.sh --uninstall [--dry-run]` |
@@ -101,7 +102,7 @@ claude plugin add /path/to/diwu-flow
 | | `ddoc` | `/ddoc` | 产品文档——正向（需求→文档）/ 逆向（代码→文档） |
 | 任务闭环 | `dtask` | `/dtask` | 任务管理——GWT 验收 + 状态机 + blocked_by 依赖图 |
 | | `drun` | `/drun` | 单任务执行器——Preflight 5 步 → 实施 → 验证 → 记录。支持双入口（dtask 来源 + direct request） |
-| 连续执行 | `dloop` | `/dloop` `/dstop` | session/cron 双模式循环——手动启动或定时调度，自动续跑直到完成 |
+| 连续执行 | `dloop` | `/dloop` `/dstop` | 连续循环——启动后自动续跑每个任务直到完成，支持 session 内循环或 cron 定时触发 |
 | 观察纠偏 | `dstat` | `/dstat` | 项目状态快照——任务进度 / Session / Git 一键查看 |
 | | `dcorr` | `/dcorr` | 纠偏恢复——退化信号检测 + 五步纠偏协议 |
 | | `drec` | `/drec` | Session 记录——踩坑四段式记录 + 原子 commit |
