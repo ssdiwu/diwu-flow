@@ -612,15 +612,23 @@ def decide_cron_mode(tasks, settings, data, task_json_path, loop_state, cwd,
         loop_state["stopped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         loop_state["stop_reason"] = stop_reason
         report = _generate_phase_report(loop_state, stop_reason, tasks)
+        cron_job_id = loop_state.get("cron_job_id")
         clear_loop_state(runtime_state)
         save_runtime_state(cwd, runtime_state, remove_legacy=True)
         _verify_dloop_cleared(cwd)
         print(report, file=sys.stderr)
-        print(
-            "[STOP_HINT] dloop cron 模式已停止。请执行 /dstop 清理资源（含 CronDelete）。",
-            file=sys.stderr,
-        )
-        return False, {}
+        if cron_job_id:
+            print(
+                f"[STOP_HINT] dloop cron 模式已终止（{stop_reason}）。"
+                f"自动输出清理指令：CronDelete({cron_job_id}）",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "[STOP_HINT] dloop cron 模式已停止。请执行 /dstop 清理资源。",
+                file=sys.stderr,
+            )
+        return False, {"cron_action": "delete", "cron_job_id": cron_job_id}
 
     # 未终止 → session 自然结束，等下次 Cron 触发
     _cron_completed = len(loop_state.get("completed_task_ids", []))

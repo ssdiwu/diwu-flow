@@ -636,6 +636,7 @@ class TestCronModeStopDecision(_PendingRecordingTestBase):
             "completed_task_ids": [],
             "current_iteration": 0,
             "max_tasks": 0,
+            "cron_job_id": "test-cron-job-id",
         }
         base.update(overrides)
         return base
@@ -683,7 +684,8 @@ class TestCronModeStopDecision(_PendingRecordingTestBase):
             runtime_state=runtime,
         )
         self.assertFalse(should_continue)
-        self.assertEqual(output, {})
+        self.assertEqual(output.get("cron_action"), "delete")
+        self.assertEqual(output.get("cron_job_id"), "test-cron-job-id")
         # 验证 dloop 已清理
         state_file = os.path.join(self.cwd, ".diwu", "dtask-state.json")
         if os.path.exists(state_file):
@@ -760,6 +762,36 @@ class TestCronModeStopDecision(_PendingRecordingTestBase):
         # decide_cron_mode 不检查 PENDING_REC（只做停止条件判断）
         # 但即使检查，当前 session_id ≠ previous-cron-sid → 静默
         self.assertFalse(should_continue)
+
+    def test_cron_mode_terminal_outputs_delete_instruction(self):
+        """cron 模式终止时 stdout 输出 cron_action: delete + cron_job_id。
+
+        Agent 读取后可自动执行 CronDelete，无需人工 /dstop。"""
+        tasks = [{"id": 1, "title": "CT", "status": "Done", "blocked_by": [],
+                  "acceptance": [], "steps": [], "description": ""}]
+        _make_dtask_for_test(tasks, Path(self.cwd))
+        _make_dsettings_for_test(Path(self.cwd))
+        # max_tasks=1, completed=[1] → 命中终止条件
+        _make_runtime_state_for_test(
+            Path(self.cwd),
+            dloop=self._cron_loop_state(
+                session_id="cron-sid",
+                completed_task_ids=[1],
+                current_iteration=1,
+                max_tasks=1,
+            ),
+        )
+
+        result = _run_stop_decision_for_test(Path(self.cwd), cwd=self.cwd)
+        assert result.returncode == 0
+        # stdout 应包含 cron_action: delete 指令
+        assert result.stdout.strip(), "终止时应输出 JSON 指令"
+        output = json.loads(result.stdout)
+        assert output.get("cron_action") == "delete"
+        assert output.get("cron_job_id") == "test-cron-job-id"
+        # stderr 应含自动清理提示（非手动 /dstop 提示）
+        assert "CronDelete" in result.stderr
+        assert "自动输出清理指令" in result.stderr
 
 
 def test_stop_decision_cron_mode_dispatch(tmp_path):
