@@ -21,6 +21,56 @@
   - 极简/空项目（< 500 行）：提示跳过逆向模式，说明门槛和替代路径
 - ddoc 本身不改动，仅 dinit 末尾增加衔接提示
 
+### Changed — Skills 全量刷新（Issue #40）
+
+- **11 个 SKILL.md frontmatter 清理**：删除 `type`/`triggers`/`keywords` 字段，description CSO 改写
+- **ddoc 8 类型文档路由**（`skills/ddoc/SKILL.md` + `references/doc-types.md`）：从四层模型切换到 T1-T8 文档类型驱动，新增 doc-types.md 完整定义
+- **ddoc completeness.md 重写**：第一层结构检查从 4 层（数据层/接口层/业务逻辑层/产品层）改为按 8 类文档类型逐类检查项
+- **didea 5 动作精炼**：SOP→启发式重写，352→192 行
+- **思考型 Skill 精炼**（dprd/dpth/dref）：SOP→启发式重写
+- **执行型 Skill 去重**（drun/dloop/drec）：删除冗余流程描述
+- **demo.md 删除**：旧四层模型示范已废弃
+
+### Changed — Rules 精简审计（Issue #30）
+
+- **删除 workflow.md ×3 + judgments.md ×3**：三副本同步清除
+- **task.md 瘦身**：176 行精简
+- **templates.md 去重**：删除 task.json 模板（不属于 ddoc）
+- **session.md 清洗**：3-Strike 冷却窗口、Checkpoint 记录机制
+- **mindset.md 新增用户意图→Skill 路由表**
+- **constraints.md 删除 [仅插件开发] 残留**
+- **file-layout.md rules/ 目录树精简**：14 行展开压缩为 README.md 引用
+
+### Fixed — Hooks 修复（Issue #28）
+
+- **stop_decision.py 重写**：A 组删除 ~250 行冗余逻辑
+- **pre_compact.py / drift_detect_pre.py / context_monitor.py**：去 task 级反查，简化为纯 hook 触发检测
+- **4 个脚本逐函数重写**：降低复杂度，消除跨模块耦合
+
+### Changed — dsettings TOML 迁移（Issue #31）
+
+- **JSON → TOML 全量迁移**：`.diwu/dsettings.json` → `.diwu/dsettings.toml`
+- **9 键名重命名**（Issue #31 D3）：全部对齐契约——`task_archive_limit`/`recording_file_limit`/`recording_keep_days`/`dloop_review_cap`/`ctxmon_warn_at`/`ctxmon_checkpoint_at`/`ctxmon_checkpoint_delay`/`drift_enabled`/`reminder_on_taskdone`
+- **7 个死设置项清理**：error_injection/snapshot_dedup/pitfalls.archive/subagent_*/continuous_mode
+- **18 个文件适配**：消费者脚本全部改用 tomllib
+- **迁移器**（`scripts/dinit.py`）：`_convert_dsettings_json_to_toml()` 支持旧项目自动转换（Issue #45）
+- **session.md 三副本**：`dsettings.json` 残留引用全部修正为 `dsettings.toml`
+
+### Added — 任务 ID 机制（Issue #32）
+
+- **allocate_task_id()**：独立计数器替代全局扫描
+- **`.diwu/next-task-id` 种子文件**：初始化时从 archive+dtask 扫描 max_id 做种子（值 134）
+
+### Fixed — dinit 修复（Issue #37）
+
+- **manifest 更新**：12 个文件精确化
+- **fallback 降级**：全目录复制兜底
+- **ensure_dir crash 修复**
+
+### Deleted — 不再需要的文件
+
+- `workflow.md`×3, `judgments.md`×3, `dsettings.json.template`, `didea_github.py`, `test_didea_github.py`, `skills/ddoc/references/demo.md`
+
 ---
 
 ## [v0.1.0] - 2026-05-09
