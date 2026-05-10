@@ -30,6 +30,10 @@
 - Push 前：`pytest tests/` 全量回归通过
 - 修改 rules/ 后额外检查：三副本 diff 一致 + `test_doc_consistency` 通过
 
+### GitHub 操作
+
+- **Issue 标签必须先查后用**：`gh issue edit --add-label` 前必须先执行 `gh label list --repo <repo>` 查看已有标签，从中选择或复用。禁止直接 `gh label create` 创建可能重复的标签。仓库当前标签清单见 `gh label list --repo ssdiwu/diwu-flow-dev`
+
 ---
 
 ## 按需参考 — 碰到对应场景时回来查

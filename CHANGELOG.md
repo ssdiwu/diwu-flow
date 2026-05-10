@@ -1,5 +1,13 @@
 ## [v0.1.1] - 2026-05-10
 
+### Fixed — 零 git 子进程迁移（Issue #47）
+
+- **新增 `_fs_snapshot.py` 共享模块**（`hooks/scripts/_fs_snapshot.py`）：用 `.git/HEAD`、`.git/index`、`logs/HEAD` 与文件系统扫描替代 git 子进程，统一提供 worktree 变更和 git 元数据
+- **`stop_decision.py` 完全去 git**：slow path 不再调用 `git status/diff/ls-files`，改为 `_fs_snapshot` + fast-path/slow-path 分流
+- **`pre_compact.py` 完全去 git**：删除 `git diff --stat` / `git diff --cached --stat`，只保留 `[auto-compact]` 标记写入
+- **`dstat.py` 完全去 git**：分支、最近提交、工作区状态、deep 模式详情全部改为 `_fs_snapshot` 直读 `.git` 与文件系统
+- **性能结果**：`stop_decision.py` ≈ 45ms，`dstat.py` ≈ 48ms，本地全量测试 `389 passed`
+
 ### Fixed — Stop hook 性能瓶颈（Issue #47）
 
 - **消除重复 git 子进程调用**（`hooks/scripts/stop_decision.py`）：`git status` 从 2 次降为 1 次，`git ls-files` 从 2 次降为 1 次，总计从 5 次降为 3 次

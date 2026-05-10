@@ -37,13 +37,18 @@ RD_TOOLS = {"Read", "Grep", "Glob", "LSP", "WebSearch", "WebFetch"}
 WR_TOOLS = {"Edit", "Write", "Bash"}
 
 
-def _cfg():
+def _settings_path(cwd="."):
+    return os.path.join(cwd, SETTINGS)
+
+
+def _cfg(cwd="."):
     """Load context monitor settings from dsettings.toml with defaults."""
     defaults = DEFAULTS.copy()
-    if not os.path.exists(SETTINGS):
+    settings_path = _settings_path(cwd)
+    if not os.path.exists(settings_path):
         return defaults
     try:
-        with open(SETTINGS, "rb") as f:
+        with open(settings_path, "rb") as f:
             data = tomllib.load(f)
         return {
             "warning": data.get(_TOML_KEYS["warning"], defaults["warning"]),
@@ -54,15 +59,15 @@ def _cfg():
         return defaults
 
 
-def _cache_path(session_id=""):
-    """Return session-scoped cache file path."""
+def _cache_path(session_id="", cwd="."):
+    """Return session-scoped cache file path rooted at project cwd."""
     sid = session_id or "unknown"
-    return CACHE_TEMPLATE.format(sid=sid)
+    return os.path.join(cwd, CACHE_TEMPLATE.format(sid=sid))
 
 
-def _load_cache(session_id=""):
+def _load_cache(session_id="", cwd="."):
     """Load or initialize the session-scoped usage cache."""
-    cp = _cache_path(session_id)
+    cp = _cache_path(session_id, cwd)
     if os.path.exists(cp):
         try:
             with open(cp, encoding="utf-8") as f:
@@ -72,9 +77,9 @@ def _load_cache(session_id=""):
     return {"rd_count": 0, "wr_count": 0, "checkpoint_written": False}
 
 
-def _save_cache(cache, session_id=""):
+def _save_cache(cache, session_id="", cwd="."):
     """Persist session-scoped usage cache."""
-    cp = _cache_path(session_id)
+    cp = _cache_path(session_id, cwd)
     os.makedirs(os.path.dirname(cp) or ".", exist_ok=True)
     with open(cp, "w", encoding="utf-8") as f:
         json.dump(cache, f)
@@ -115,11 +120,12 @@ def checkpoint(cwd="."):
 
 def main():
     """Main entry point — called by PreToolUse hook on every Bash tool use."""
-    cfg = _cfg()
     event = _load_event()
+    cwd = event.get("cwd") or os.getcwd()
+    cfg = _cfg(cwd)
     session_id = event.get("session_id") or event.get("sessionId") or ""
 
-    cache = _load_cache(session_id)
+    cache = _load_cache(session_id, cwd)
 
     tool_type = _classify_tool(event)
     if tool_type is None:
@@ -131,7 +137,6 @@ def main():
     delay = cfg["delay"]
 
     if wr_count >= critical + delay and not cache.get("checkpoint_written"):
-        cwd = event.get("cwd") or os.getcwd()
         cp_path = checkpoint(cwd=cwd)
         cache["checkpoint_written"] = True
 
@@ -153,7 +158,7 @@ def main():
         }
         print(json.dumps(result, ensure_ascii=False))
 
-    _save_cache(cache, session_id)
+    _save_cache(cache, session_id, cwd)
     sys.exit(0)
 
 

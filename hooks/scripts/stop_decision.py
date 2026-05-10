@@ -5,8 +5,7 @@
   stop_decision.py   (Stop 事件)            → 读 completed_task_ids + iteration 递增
 两个 hook 由 CC 框架在不同事件上触发，执行顺序不确定。
 
-性能优化：所有 git 子进程调用在 __main__ 入口处统一执行一次，
-解析结果通过参数传递给下游检查函数，避免重复调用。
+性能优化：所有 git 子进程调用已彻底消除，使用 _fs_snapshot 纯文件系统操作。
 """
 
 from __future__ import annotations
@@ -16,8 +15,6 @@ import os
 import subprocess
 import sys
 import time
-import tomllib
-from dataclasses import dataclass, field
 
 import platform
 
@@ -25,6 +22,7 @@ from _shared import setup_sys_path, load_json_fallback, load_stdin_event  # noqa
 
 setup_sys_path()
 
+from _fs_snapshot import get_worktree_changes, WorktreeChanges  # noqa: E402
 from dloop_state import get_terminal_stop_reason  # noqa: E402
 from session_scope import read_scoped_session_id  # noqa: E402
 
@@ -37,94 +35,7 @@ from dtask_state import (  # noqa: E402
 )
 
 
-# ── Git 结果缓存（入口处填充一次，下游只读）─────────────────
-
-
-@dataclass(frozen=True)
-class _GitInfo:
-    """Parsed results from a single round of git subprocess calls."""
-    status_lines: list[str] = field(default_factory=list)
-    diff_files: list[str] = field(default_factory=list)
-    untracked_files: list[str] = field(default_factory=list)
-
-    @property
-    def has_code_changes(self) -> bool:
-        return any(not p.startswith(".diwu/") for p in self.status_lines if len(p.split(None, 1)) == 2)
-
-    @property
-    def code_change_paths(self) -> list[str]:
-        out = []
-        for line in self.status_lines:
-            parts = line.split(None, 1)
-            if len(parts) == 2:
-                path = parts[1]
-                if path and not path.startswith(".diwu/"):
-                    out.append(path)
-        return out
-
-    @property
-    def all_changed_files(self) -> list[str]:
-        files = list(self.diff_files)
-        for f in self.untracked_files:
-            f = f.strip()
-            if f and f not in files:
-                files.append(f)
-        return files
-
-    @property
-    def diu_dirty_files(self) -> list[str]:
-        prefixes = (".diwu/dtask.json", ".diwu/dtask-state.json", ".diwu/recording/")
-        dirty = []
-        for line in self.status_lines:
-            parts = line.split(None, 1)
-            if len(parts) == 2:
-                path = parts[1]
-                if any(path.startswith(p) or path == p for p in prefixes):
-                    dirty.append(path)
-        for uf in self.untracked_files:
-            uf = uf.strip()
-            if any(uf.startswith(p) or uf == p for p in prefixes):
-                dirty.append(uf)
-        return dirty
-
-
-def _run_git_checks(cwd: str, timeout: int = 10) -> _GitInfo:
-    """Run git status / diff / ls-files exactly once. Returns parsed _GitInfo."""
-    status_lines: list[str] = []
-    diff_files: list[str] = []
-    untracked: list[str] = []
-
-    try:
-        r = subprocess.run(
-            ["git", "status", "--short"],
-            cwd=cwd, capture_output=True, text=True, timeout=timeout,
-        )
-        status_lines = r.stdout.splitlines() if r.stdout.strip() else []
-    except (OSError, subprocess.TimeoutExpired):
-        pass
-
-    try:
-        r = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD"],
-            cwd=cwd, capture_output=True, text=True, timeout=timeout,
-        )
-        diff_files = [f for f in r.stdout.strip().split("\n") if f.strip()] if r.stdout.strip() else []
-    except (OSError, subprocess.TimeoutExpired):
-        pass
-
-    try:
-        r = subprocess.run(
-            ["git", "ls-files", "--others", "--exclude-standard"],
-            cwd=cwd, capture_output=True, text=True, timeout=timeout,
-        )
-        untracked = [f for f in r.stdout.strip().split("\n") if f.strip()] if r.stdout.strip() else []
-    except (OSError, subprocess.TimeoutExpired):
-        pass
-
-    return _GitInfo(status_lines=status_lines, diff_files=diff_files, untracked_files=untracked)
-
-
-# ── Recording 目录扫描（入口处扫一次）───────────────────────
+# ── Recording 目录扫描 ─────────────────────────────────────
 
 
 def _scan_recording_files(cwd: str) -> list[str]:
@@ -141,7 +52,7 @@ def _scan_recording_files(cwd: str) -> list[str]:
     )
 
 
-# ── 通知（无变更）──────────────────────────────────────────
+# ── 通知 ────────────────────────────────────────────────────
 
 
 def notify(msg):
@@ -203,7 +114,7 @@ def _prompt_suffix(additional_prompts):
     return extra
 
 
-# ── B 组检查函数（接受预计算结果，不再自行调用 git）─────────
+# ── B 组检查函数（_fs_snapshot 数据驱动，零 git）───────────
 
 
 def _check_decision_reminder(cwd, recording_files=None):
@@ -239,20 +150,18 @@ def _check_decision_reminder(cwd, recording_files=None):
     return ""
 
 
-def _check_recording_reminder(cwd, git_info=None, recording_files=None):
+def _check_recording_reminder(cwd, wc=None, recording_files=None):
     """If working directory has code changes but .diwu/recording/ has no recent session,
     return an info-level reminder suggesting /drec. Non-blocking.
 
-    短路：无代码变更时直接返回空串，跳过文件时间戳比对。"""
+    零 git：使用 _fs_snapshot 的 WorktreeChanges。"""
     if not cwd:
         return ""
 
-    gi = git_info
-    if gi is None:
-        gi = _run_git_checks(cwd)
+    if wc is None:
+        wc = get_worktree_changes(cwd)
 
-    code_changes = gi.code_change_paths
-    if not code_changes:
+    if not wc.has_code_changes:
         return ""
 
     sessions = recording_files
@@ -268,7 +177,7 @@ def _check_recording_reminder(cwd, git_info=None, recording_files=None):
 
     latest_recording_mtime = os.path.getmtime(sessions[0])
 
-    changed_files = gi.all_changed_files
+    changed_files = wc.all_changed_files
     latest_code_mtime = 0
     for f in changed_files:
         f = f.strip()
@@ -292,20 +201,17 @@ def _check_recording_reminder(cwd, git_info=None, recording_files=None):
     return ""
 
 
-def _check_diu_dirty(cwd, git_info=None) -> tuple[bool, list[str]]:
+def _check_diu_dirty(cwd, wc=None) -> tuple[bool, list[str]]:
     """检测 .diwu/ 内部状态文件是否有未提交变更。"""
-    gi = git_info
-    if gi is None:
-        gi = _run_git_checks(cwd)
-
-    dirty = gi.diu_dirty_files
-    return len(dirty) > 0, dirty
+    if wc is None:
+        wc = get_worktree_changes(cwd)
+    return len(wc.diu_dirty) > 0, wc.diu_dirty
 
 
 _STALE_THRESHOLD_SECS = 30 * 60  # 30 分钟
 
 
-def _check_pending_recording_gate(cwd, current_session_id="", git_info=None):
+def _check_pending_recording_gate(cwd, current_session_id="", wc=None):
     """检测 pending_recording 标记 + .diwu/ dirty → 强制门控提示。"""
     if not cwd:
         return "", ""
@@ -331,7 +237,7 @@ def _check_pending_recording_gate(cwd, current_session_id="", git_info=None):
 
     is_stale = age_secs > _STALE_THRESHOLD_SECS
 
-    has_diu_dirty, _ = _check_diu_dirty(cwd, git_info=git_info)
+    has_diu_dirty, _ = _check_diu_dirty(cwd, wc=wc)
 
     task_id = pr.get("task_id", "?")
     target_status = pr.get("target_status", "?")
@@ -367,13 +273,13 @@ def _check_pending_recording_gate(cwd, current_session_id="", git_info=None):
         ))
 
 
-_FRESH_RECORDING_SECS = 300  # 5 分钟内有过 recording → 跳过 git 检查
+_FRESH_RECORDING_SECS = 300  # 5 分钟内有过 recording → 跳过变更检测
 
 
-def _needs_git_for_recording(recording_files, cwd):
-    """Fast heuristic: if latest recording is fresh, skip git for recording reminder."""
+def _needs_fs_check(recording_files):
+    """Fast heuristic: if latest recording is fresh, skip worktree change detection."""
     if not recording_files:
-        return True  # No recordings at all → need to check
+        return True
     try:
         age = time.time() - os.path.getmtime(recording_files[0])
         return age > _FRESH_RECORDING_SECS
@@ -400,45 +306,33 @@ if __name__ == "__main__":
     event_session_id = hook_session_id(stdin_data)
     session_id = _resolve_stop_session_id(event_session_id, cwd)
 
-    # ── Phase 1: 零 git 快速路径 ────────────────────────
-    # 大多数 Stop hook 调用是"干净"场景：无 pending_recording、decisions.md 已有内容、
-    # 最近有新鲜 recording。这种情况下完全不需要任何 git 子进程。
+    # ── Phase 1: 零 I/O 快速路径 ────────────────────────
     recording_files = _scan_recording_files(cwd)
 
-    # 1a. pending_recording 门控（只需读 dtask-state.json，无需 git）
-    pr_level, pr_hint = _check_pending_recording_gate(cwd, session_id, git_info=None)
+    # 1a. pending_recording 门控（只需读 dtask-state.json）
+    pr_level, pr_hint = _check_pending_recording_gate(cwd, session_id, wc=None)
 
-    # 1b. block 级别必须知道 .diwu/ dirty 状态 → 需要进入 slow path
-    needs_git = pr_level == "block"
-
-    # 1c. decision reminder（只需读 decisions.md + recording 文件头）
+    # 1b. decision reminder（只需读文件头）
     decision_hint = _check_decision_reminder(cwd, recording_files=recording_files)
     if decision_hint:
         print(f"\n{decision_hint}", file=sys.stderr)
 
-    # 1d. recording reminder 快速判断：最近 5 分钟内有 recording → 跳过
-    if not _needs_git_for_recording(recording_files, cwd):
-        # Fast path 命中：输出已有的非 git 提示后直接退出
-        if pr_level == "warn":
-            print(pr_hint, file=sys.stderr)
+    # 1c. fast path: recording 新鲜 → 跳过文件系统检查
+    if not _needs_fs_check(recording_files) and pr_level != "block":
         sys.exit(0)
 
-    # ── Phase 2: 按需 git 慢速路径 ────────────────────────
-    # 只有以下情况才到达这里：
-    #   - pending_recording 为 block 级别（需检查 .diwu/ dirty）
-    #   - 或 recording 不够新鲜（需检查是否有未记录的代码变更）
-    needs_git = True
-    git_info = _run_git_checks(cwd)
+    # ── Phase 2: 纯文件系统操作（零 git 子进程）───────────────
+    wc = get_worktree_changes(cwd)
 
-    # 重新评估 pending_recording（这次带 git_info 可准确判断 dirty）
+    # Re-evaluate pending_recording with accurate dirty info
     if pr_level == "block":
-        pr_level, pr_hint = _check_pending_recording_gate(cwd, session_id, git_info=git_info)
+        pr_level, pr_hint = _check_pending_recording_gate(cwd, session_id, wc=wc)
 
-    recording_hint = _check_recording_reminder(cwd, git_info=git_info, recording_files=recording_files)
+    recording_hint = _check_recording_reminder(cwd, wc=wc, recording_files=recording_files)
     if recording_hint:
         print(recording_hint, file=sys.stderr)
 
-    # B group: archive check (轻量 I/O，不涉及 git)
+    # B group: archive check (lightweight, no git)
     additional_prompts = []
     try:
         import stop_archive

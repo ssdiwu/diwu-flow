@@ -128,5 +128,34 @@ class TestReadonlyToolSets(unittest.TestCase):
         self.assertEqual(overlap, set(), f'RD and WR tools should be disjoint, got: {overlap}')
 
 
+class TestCwdScopedPaths(unittest.TestCase):
+    def test_cache_path_roots_at_project_cwd(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            cp = cm._cache_path('sess-123', tmpdir)
+            self.assertTrue(cp.startswith(tmpdir))
+            self.assertTrue(cp.endswith('.diwu/.context_monitor_cache_sess-123.json'))
+        finally:
+            import shutil
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_save_cache_does_not_write_under_process_cwd(self):
+        project_root = tempfile.mkdtemp()
+        rogue_cwd = tempfile.mkdtemp()
+        orig_cwd = os.getcwd()
+        try:
+            os.chdir(rogue_cwd)
+            cm._save_cache({'rd_count': 1, 'wr_count': 2, 'checkpoint_written': False}, 'sess-x', project_root)
+            expected = os.path.join(project_root, '.diwu', '.context_monitor_cache_sess-x.json')
+            misplaced = os.path.join(rogue_cwd, '.diwu', '.context_monitor_cache_sess-x.json')
+            self.assertTrue(os.path.exists(expected))
+            self.assertFalse(os.path.exists(misplaced))
+        finally:
+            os.chdir(orig_cwd)
+            import shutil
+            shutil.rmtree(project_root, ignore_errors=True)
+            shutil.rmtree(rogue_cwd, ignore_errors=True)
+
+
 if __name__ == '__main__':
     unittest.main()

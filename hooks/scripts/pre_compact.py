@@ -1,11 +1,10 @@
 import os
-import subprocess
 import sys
+import time
 
 from _shared import setup_sys_path, load_stdin_event  # noqa: E402
 
 setup_sys_path()
-
 
 RECORDING_DIR = ".diwu/recording"
 
@@ -22,24 +21,10 @@ recording_dir = os.path.join(cwd, RECORDING_DIR)
 if not os.path.isdir(os.path.dirname(recording_dir)):
     sys.exit(0)
 
-try:
-    diff = subprocess.check_output(
-        ["git", "diff", "--stat"], cwd=cwd, stderr=subprocess.DEVNULL
-    ).decode().strip()
-    cached = subprocess.check_output(
-        ["git", "diff", "--cached", "--stat"], cwd=cwd, stderr=subprocess.DEVNULL
-    ).decode().strip()
-    stat = "\n".join(filter(None, [diff, cached]))
-except (subprocess.CalledProcessError, OSError, FileNotFoundError):
-    stat = ""
-
-now = subprocess.check_output(["date", "+%Y-%m-%d %H:%M:%S"]).decode().strip()
+# Use Python time instead of subprocess to avoid fork/exec overhead
+now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 filename = now.replace(" ", "-").replace(":", "")
-entry = (
-    "## [auto-compact] 进度快照 " + now + "\n\n"
-)
-if stat:
-    entry += "\n```\n" + stat + "\n```\n"
+entry = f"## [auto-compact] 进度快照 {now}\n\n"
 
 os.makedirs(recording_dir, exist_ok=True)
 session_file = os.path.join(recording_dir, f"session-{filename}.md")

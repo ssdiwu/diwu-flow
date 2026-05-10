@@ -4,9 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blue)](https://github.com/ssdiwu/diwu-flow)
 
-利用 **11 个 Skill + 5 个 Agent + 13 个 Command + 状态机**，为 AI 编程代理提供完整开发方法论体系。让 AI 学会：**挂住想法 → 判断方向 → 拆解任务 → 执行验证 → 记录归档**，而不是漫无目的地写代码。（v0.1.0）
+利用 **11 个 Skill + 5 个 Agent + 13 个 Command + 状态机**，为 AI 编程代理提供完整开发方法论体系。让 AI 学会：**挂住想法 → 判断方向 → 拆解任务 → 执行验证 → 记录归档**，而不是漫无目的地写代码。（v0.1.1）
 
-### v0.1.0 — 六层架构全局落地
+### v0.1.1 — 多视角审议 + 架构精简
 
 五个 PR 协同完成了从入口到执行的完整链路：
 
@@ -18,7 +18,7 @@
 - **L5 表层能力** — `drun` 双入口、持久化四策略、`dloop` cron 驱动
 - **横切增强** — `rules/testing.md` 测试分层策略
 
-> 全量 409 tests passed。完整架构图与层间关系见 `.doc/架构规范.md`，完整变更见 CHANGELOG.md。
+> 全量 389 tests passed。完整架构图与层间关系见 `.doc/架构规范.md`，完整变更见 CHANGELOG.md。
 
 ---
 
@@ -76,6 +76,9 @@ claude plugin install diwu-flow@ssdiwu
 
 # 4. 看看进度
 /dstat
+
+# 5. 升级插件后（每次版本升级执行一次即可）
+/dinit          # 自动检测并迁移旧格式：dsettings JSON→TOML、ideas 归档、rules 覆盖
 ```
 
 | 平台 | 安装命令 |
@@ -96,8 +99,8 @@ claude plugin install diwu-flow@ssdiwu
 | 分组 | Skill | Command | 做什么 |
 |------|-------|---------|--------|
 | 入口容器 | `didea` | `/didea` | 想法捕获——5 个动作（create/list/show/refine/archive），本地持久化 |
-| 判断收束 | `dpth` | `/dpth` | 产品思维——三模式判断（诊断/创始人/构建者），灵魂三问门控 |
-| | `dref` | `/dref` | 需求细化——先判真伪 → 场景收敛 → 可执行检查清单 |
+| 判断收束 | `dpth` | `/dpth` | 产品思维——Passive/Active 双模：默认单代理三模式判断；高不确定性时 Active 多视角审议（3×explorer + verifier） |
+| | `dref` | `/dref` | 需求细化——方向确认门控（真伪由 dpth 承担）→ 场景收敛 → 可执行检查清单 |
 | | `dprd` | `/dprd` | 产品论证——门控 + JTBD/故事思维/MVP 减法按需取用 → PRD 文档 |
 | | `ddoc` | `/ddoc` | 产品文档——正向（需求→文档）/ 逆向（代码→文档） |
 | 任务闭环 | `dtask` | `/dtask` | 任务管理——GWT 验收 + 状态机 + blocked_by 依赖图 |
@@ -115,7 +118,7 @@ Agent 是 Skills 派发的执行单元，默认路径自动发现。故障时退
 
 | Agent | 触发条件 | 约束 |
 |-------|---------|------|
-| **explorer** | 首次接触代码库、追踪依赖、架构分析 | 只读，不修改文件 |
+| **explorer** | 代码库调查、架构分析、多视角审议角色（diag/founder/builder） | 只读；4 步流程+L1-L5 证据等级+噪声抑制 |
 | **implementer** | 明确实现路径后的代码修改 | 先读后写，JSON indent=2 |
 | **verifier** | 实施完成后独立验收 | 不信任 implementer 自述，从 acceptance 反推验证 |
 | **architect** | ≥3 步任务 / API 变更 / 新增模块 | 不改代码，只审 dtask 定义域 |
@@ -207,7 +210,7 @@ diwu-flow/
 ├── scripts/                # 共享脚本库
 ├── rules/                  # 14 个运行规则（/dinit 同步到目标项目）
 ├── assets/dinit/           # /dinit 初始化模板
-├── tests/                  # 三级测试（409 passed）
+├── tests/                  # 三级测试（389 passed）
 ├── .doc/                   # 设计文档真相源
 ├── .claude-plugin/         # CC 插件声明
 ├── install.sh              # 多平台安装脚本
@@ -230,7 +233,7 @@ diwu-flow/
 
 ## Version
 
-v0.1.0 — 六层架构全局落地：rules 真相源重构 → architect/debugger 接入 → dpth/dref/dprd 产品思维层 → didea 入口容器 → 说明层重写 + dloop cron 模式。全量 409 tests passed。详见 CHANGELOG.md。
+v0.1.1 — 多视角审议架构落地（#25）：dpth Passive/Active 双模 + dref §2 精简 + explorer 协议增强 + debugger L1-L5 统一。基于 v0.1.0 六层架构，全量 389 tests passed。详见 CHANGELOG.md。
 
 ## License
 

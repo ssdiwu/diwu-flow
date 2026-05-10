@@ -1,37 +1,25 @@
 #!/usr/bin/env python3
 """diwu-flow dstat: 项目状态只读聚合。
 
-纯读取：dtask.json / recording/ / decisions.md / git / archive/
+纯读取：dtask.json / recording/ / decisions.md / .git / archive/
 不修改任何文件，优雅降级（I5: 缺失数据源输出 null/warning 而非报错退出）。
 CLI 入口：python3 scripts/dstat.py [--deep] --cwd <proj>
 """
 
 import argparse
 import json
-import os
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-# 将 scripts/ 加入路径以导入 common
-sys.path.insert(0, str(Path(__file__).parent))
+# 将 scripts/ 和 hooks/scripts/ 加入路径以导入 common / _fs_snapshot
+SCRIPTS_DIR = Path(__file__).parent
+HOOKS_SCRIPTS_DIR = SCRIPTS_DIR.parent / "hooks" / "scripts"
+sys.path.insert(0, str(SCRIPTS_DIR))
+sys.path.insert(0, str(HOOKS_SCRIPTS_DIR))
+
+from _fs_snapshot import get_git_metadata, get_worktree_changes  # noqa: E402
 from common import DIWU_DIR, DTASK_JSON, DECISIONS_FILE, RECORDING_DIR, ARCHIVE_DIR, load_json_or_empty, rel_time  # noqa: E402
-
-
-def _run_git(cwd: Path, *args) -> str:
-    """执行 git 命令，返回 stdout；非 git 目录返回空字符串（I5 graceful degrade）。"""
-    try:
-        r = subprocess.run(
-            ["git"] + list(args),
-            cwd=str(cwd),
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        return r.stdout.strip() if r.returncode == 0 else ""
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return ""
 
 
 def _read_recent_lines(path: Path, n: int = 20) -> str:
@@ -98,18 +86,39 @@ def get_recent_decisions(decisions_path: Path, max_n: int = 3) -> list:
 
 
 def get_git_status(cwd: Path) -> dict:
-    """获取 git 状态信息。I5: 非 git 目录返回 null 字段。"""
-    branch = _run_git(cwd, "rev-parse", "--abbrev-ref", "HEAD")
-    if not branch:
-        return {"branch": None, "clean": None, "recent_commit": None, "not_git": True}
-    status_short = _run_git(cwd, "status", "--short")
-    clean = len(status_short) == 0
-    recent = _run_git(cwd, "log", "--oneline", "-1")
+    """获取 git 状态信息，零 git 子进程。"""
+    meta = get_git_metadata(cwd)
+    if not meta.is_git_repo:
+        return {
+            "branch": None,
+            "clean": None,
+            "recent_commit": None,
+            "recent_commits": [],
+            "diff_stat_lines": [],
+            "dirty_files": None,
+            "not_git": True,
+        }
+
+    changes = get_worktree_changes(cwd)
+    clean = changes.is_clean
+    recent = None
+    if meta.recent_commits:
+        rc = meta.recent_commits[0]
+        recent = f"{rc['hash']} {rc['subject']}"
+
+    diff_stat_lines = []
+    for path in changes.modified[:20]:
+        diff_stat_lines.append(f"M {path}")
+    for path in changes.untracked[:20 - len(diff_stat_lines)]:
+        diff_stat_lines.append(f"?? {path}")
+
     return {
-        "branch": branch,
+        "branch": meta.branch,
         "clean": clean,
-        "dirty_files": 0 if clean else len(status_short.split("\n")),
+        "dirty_files": len(changes.all_changed_files),
         "recent_commit": recent,
+        "recent_commits": meta.recent_commits,
+        "diff_stat_lines": diff_stat_lines,
         "not_git": False,
     }
 
@@ -180,15 +189,15 @@ def format_output(summary: dict, sessions: list, decisions: list,
         if deep:
             lines.append("")
             lines.append("**Git 详细信息**:")
-            log = _run_git(Path.cwd(), "log", "--oneline", "-10")
-            if log:
-                for l in log.split("\n")[:10]:
-                    lines.append(f"  {l}")
-            diff_stat = _run_git(Path.cwd(), "diff", "--stat")
-            if diff_stat:
+            recent_commits = git_info.get("recent_commits", [])
+            if recent_commits:
+                for item in recent_commits[:10]:
+                    lines.append(f"  {item['hash']} {item['subject']}")
+            diff_stat_lines = git_info.get("diff_stat_lines", [])
+            if diff_stat_lines:
                 lines.append("")
                 lines.append("  **未提交变更**:")
-                for dl in diff_stat.split("\n")[:20]:
+                for dl in diff_stat_lines[:20]:
                     lines.append(f"  {dl}")
     lines.append("")
 

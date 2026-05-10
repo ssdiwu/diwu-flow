@@ -171,6 +171,45 @@ class TestDinitMigrateLegacy:
         assert data["ok"] is True
         assert data["status"] == "no_migration_needed"
 
+    def test_migrate_ideas_archived_status(self, tmp_project_dir):
+        """v0.1.0 的 status: archived 想法文件应被物理移动到 ideas/archived/。"""
+        ideas_dir = Path(tmp_project_dir) / ".diwu" / "ideas"
+        ideas_dir.mkdir(parents=True, exist_ok=True)
+
+        # 创建含 status: archived 的旧格式想法文件
+        old_idea = ideas_dir / "old-archived-idea.md"
+        old_idea.write_text(
+            "---\nid: 1\nstatus: archived\ncreated_at: 2026-01-01T00:00:00+00:00\n---\n"
+            "这是一个已归档的想法\n",
+            encoding="utf-8",
+        )
+
+        # 创建正常想法文件（不应被迁移）
+        active_idea = ideas_dir / "active-idea.md"
+        active_idea.write_text(
+            "---\nid: 2\ncreated_at: 2026-05-10T00:00:00+00:00\n---\n"
+            "这是一个活跃的想法\n",
+            encoding="utf-8",
+        )
+
+        rc, out, _ = run_script("dinit.py", "migrate-legacy", "--cwd", str(tmp_project_dir))
+        assert rc == 0
+        data = json.loads(out)
+        assert data["ok"] is True
+
+        # 已归档文件应被移动
+        archive_dir = ideas_dir / "archived"
+        assert (archive_dir / "old-archived-idea.md").exists()
+        assert not old_idea.exists()
+
+        # 活跃文件不应受影响
+        assert active_idea.exists()
+
+        # actions 中应包含迁移记录
+        actions = data.get("data", {}).get("actions", [])
+        assert any("归档想法" in a for a in actions)
+        assert data["data"]["ideas_migrated"] == 1
+
 
 class TestDinitValidate:
     def test_validate_fresh_project(self, tmp_project_dir):

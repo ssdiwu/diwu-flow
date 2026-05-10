@@ -486,7 +486,40 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
             has_old_runtime = True
             break
 
-    if not is_legacy and not has_old_runtime:
+    actions = []
+
+    # 迁移旧版 ideas archive（v0.1.0 的 status: archived → v0.1.1 物理移动）
+    # 始终执行，不依赖其他旧版标志检测
+    ideas_dir = cwd / ".diwu" / "ideas"
+    ideas_archive_dir = ideas_dir / "archived"
+    ideas_migrated = 0
+    if ideas_dir.is_dir():
+        for idea_file in sorted(ideas_dir.glob("*.md")):
+            try:
+                content = idea_file.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if not content.startswith("---"):
+                continue
+            parts = content.split("---", 2)
+            if len(parts) < 3:
+                continue
+            fm_block = parts[1]
+            for line in fm_block.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("status:") and "archived" in stripped.split(":", 1)[-1].strip().lower():
+                    ensure_dir(ideas_archive_dir)
+                    dest = ideas_archive_dir / idea_file.name
+                    if not dest.exists():
+                        shutil.move(str(idea_file), str(dest))
+                        ideas_migrated += 1
+                        actions.append(f"迁移归档想法: {idea_file.name} → ideas/archived/")
+                    break
+
+    if ideas_migrated:
+        actions.insert(0, f"ideas 归档迁移: {ideas_migrated} 个文件（status: archived → 物理移动）")
+
+    if not is_legacy and not has_old_runtime and not actions:
         return {
             "ok": True,
             "status": "no_migration_needed",
@@ -494,8 +527,6 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
             "message": "未检测到旧版格式或旧运行时文件，无需迁移",
             "formatted_text": "✅ 无需迁移（非旧版且无旧运行时文件）",
         }
-
-    actions = []
 
     if is_legacy:
         # 备份 states.md
@@ -551,12 +582,14 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
             "has_old_runtime": has_old_runtime,
             "actions": actions,
             "migrated_count": migrated_count,
+            "ideas_migrated": ideas_migrated,
         },
         "formatted_text": (
             f"🔄 迁移完成\n"
             f"   旧版: {'是' if is_legacy else '否'} | "
             f"旧运行时文件: {'是' if has_old_runtime else '否'}\n"
             f"   迁移操作数: {len(actions)}"
+            + (f"\n   ideas 归档迁移: {ideas_migrated} 个文件" if ideas_migrated else "")
         ),
     }
 
