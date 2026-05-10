@@ -28,9 +28,7 @@
     ├── mindset.md                 # 上位心智层（独立注入，非自动加载）
     ├── handoff.md                 # 子代理交接协议
     ├── testing.md                 # 测试分层策略
-    ├── judgments.md               # 判断锚点
     ├── task.md                    # 任务状态机、acceptance、dtask 结构
-    ├── workflow.md                # 阶段流转（P-J-A + 入口门控 + 跨阶段回退）
     ├── session.md                 # Session 结束规范、3-Strike、Checkpoint
     ├── verification.md            # 证据优先级体系（L1-L5）
     ├── pitfalls.md                # 误判防护：项目高频表 / 接口预留
@@ -57,21 +55,7 @@ tests/
 
 ## 规则文件说明
 
-| 路径 | 用途 | 读写方 |
-|------|------|--------|
-| `rules/mindset.md` | 上位心智层：三唯一框架、P-J-A 骨架、不确定性门控 | Agent 读（hook 独立注入） |
-| `rules/handoff.md` | 子代理交接协议：启动仪式、回交模型、Agent 设计约束、Plan→Dtask 门控 | Agent 读 |
-| `rules/testing.md` | 测试分层策略：幅度→验证方式映射、补测试触发条件 | Agent 读 |
-| `rules/judgments.md` | 全部判断锚点：按阶段索引（启动/实施/验收/纠偏/handoff） | Agent 读 |
-| `rules/task.md` | 任务状态机、GWT acceptance 格式、dtask 结构、blocked_by、提交规范 | Agent 读写 |
-| `rules/workflow.md` | 阶段流转：层级路线图、入口门控、跨阶段回退 | Agent 读 |
-| `rules/session.md` | Session 结束规范：时间戳+踩坑+Stop hook 正则、3-Strike、Checkpoint | Agent 读 |
-| `rules/verification.md` | 证据优先级体系：L1-L5、Done 判定门槛、无法验证处理 | Agent 读 |
-| `rules/pitfalls.md` | 误判防护：Layer 2 项目高频表机制 / Layer 3 接口预留 | Agent 读 |
-| `rules/exceptions.md` | 异常处理与 BLOCKED 判定、阻塞恢复流程 | Agent 读 |
-| `rules/templates.md` | 格式模板：BLOCKED/REVIEW/DECISION TRACE/Session/Checkpoint/Handoff Report | Agent 读 |
-| `rules/constraints.md` | 架构约束：六维约束+命名约束+规则回写约束+版本号判定 | Agent 读 |
-| `rules/README.md` | 规则导航页：问题导向导航 + 分层全局地图 | Agent 读 |
+完整规则清单与导航见 `rules/README.md`。
 
 ## 运行时文件说明
 
