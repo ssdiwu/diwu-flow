@@ -33,7 +33,7 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 3. **归档检查**：Done/Cancelled 任务数超阈值（默认 20）时触发归档
 4. **任务选择**：
    - 优先恢复 owner 匹配的 InProgress 任务
-   - 否则选第一个无 blocked_by 阻塞的 InSpec 任务（允许超前实施至 review_limit 上限，详见 `rules/judgments.md` §任务选择与超前实施）
+   - 否则选第一个无 blocked_by 阻塞的 InSpec 任务（允许超前实施至 review_limit 上限，详见 `rules/task.md` §blocked_by 规范）
    - 禁止选择 InDraft 任务
    - 必须通过 `dtask_transition.py claim` 显式完成 InSpec→InProgress
 5. **环境初始化**（可选）：运行 init.sh / 基线测试
