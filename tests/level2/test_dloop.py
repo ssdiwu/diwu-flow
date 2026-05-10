@@ -167,10 +167,6 @@ def test_stop_decision_max_tasks_stops_with_report(tmp_path):
     assert result.returncode == 0
     runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
     assert runtime_state["dloop"] is None
-    # Phase report should be in stderr
-    assert "DLOOP 阶段报告" in result.stderr
-    assert "达到任务上限" in result.stderr
-
 
 def test_task_guard_allows_loop_state_write(tmp_path):
     """task_entry_guard should allow writes to .diwu/dtask-state.json."""
@@ -215,8 +211,7 @@ def test_stop_decision_no_tasks_stops_with_report(tmp_path):
     assert result.returncode == 0
     runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
     assert runtime_state["dloop"] is None
-    assert "DLOOP 阶段报告" in result.stderr
-    assert "无可执行任务" in result.stderr
+    assert result.stderr == ""
 
 
 def test_stop_decision_only_inreview_stops(tmp_path):
@@ -242,8 +237,7 @@ def test_stop_decision_only_inreview_stops(tmp_path):
     assert result.returncode == 0
     runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
     assert runtime_state["dloop"] is None
-    assert "DLOOP 阶段报告" in result.stderr
-    assert "无可执行任务" in result.stderr
+    assert result.stderr == ""
 
 
 def test_loop_completion_reports_completed_tasks(tmp_path):
@@ -269,11 +263,7 @@ def test_loop_completion_reports_completed_tasks(tmp_path):
     )
 
     assert result.returncode == 0
-    # Report should mention completed tasks by name
-    assert "Fix bug A" in result.stderr
-    assert "Refactor B" in result.stderr
-    # Report should mention remaining tasks
-    assert "Pending C" in result.stderr
+    assert result.stderr == ""
 
 
 def test_stop_decision_pending_review_stops_with_report(tmp_path):
@@ -301,7 +291,7 @@ def test_stop_decision_pending_review_stops_with_report(tmp_path):
     assert result.returncode == 0
     runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
     assert runtime_state["dloop"] is None
-    assert "PENDING REVIEW" in result.stderr
+    assert result.stderr == ""
 
 
 # ── Cron mode tests ──────────────────────────────────────────────

@@ -690,9 +690,8 @@ class TestCronModeStopDecision(_PendingRecordingTestBase):
         if result.stdout.strip():
             output = json.loads(result.stdout)
             assert "cron_action" not in output, "内部指令不应泄漏到 hook stdout"
-        # stderr 含 /dstop 文本提示 + CronJob ID
-        assert "/dstop" in result.stderr
-        assert "test-cron-job-id" in result.stderr
+        # stderr 为空（已移除 stderr 输出）
+        assert result.stderr == ""
 
 
 def test_stop_decision_cron_mode_dispatch(tmp_path):
