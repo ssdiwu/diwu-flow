@@ -109,7 +109,7 @@ CONTINUOUS MODE COMPLETE - 所有可执行任务已完成
 ```
 
 > 退化信号与止损动作见 `skills/dcorr/SKILL.md` §Step 1 触发条件。
-> 可调参数见 `assets/dinit/assets/dsettings.json.template`（唯一真实来源）。
+> 可调参数见 `assets/dinit/assets/dsettings.toml.template`（唯一真实来源）。
 
 ## Handoff Report 模板
 

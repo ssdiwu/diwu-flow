@@ -95,7 +95,7 @@ claude plugin install diwu-flow@ssdiwu
 
 | 分组 | Skill | Command | 做什么 |
 |------|-------|---------|--------|
-| 入口容器 | `didea` | `/didea` | 想法捕获——6 个动作（create/list/show/refine/archive/push），本地持久化，可选 GitHub issue 同步 |
+| 入口容器 | `didea` | `/didea` | 想法捕获——5 个动作（create/list/show/refine/archive），本地持久化 |
 | 判断收束 | `dpth` | `/dpth` | 产品思维——三模式判断（诊断/创始人/构建者），灵魂三问门控 |
 | | `dref` | `/dref` | 需求细化——先判真伪 → 场景收敛 → 可执行检查清单 |
 | | `dprd` | `/dprd` | 产品论证——门控 + JTBD/故事思维/MVP 减法按需取用 → PRD 文档 |
