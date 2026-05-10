@@ -427,16 +427,18 @@ def _convert_dsettings_json_to_toml(json_path: Path, toml_path: Path) -> dict:
         return {"ok": False, "reason": "json_parse_failed"}
 
     result = {}
-    # 顶层键直接映射
+    # 顶层键映射
     key_map = {
         "task_archive_threshold": "task_archive_limit",
         "recording_archive_threshold": "recording_file_limit",
         "review_limit": "dloop_review_cap",
+        "context_monitor_warning": "ctxmon_warning_threshold",
+        "context_monitor_critical": "ctxmon_critical_threshold",
+        "context_monitor_delay": "ctxmon_check_interval",
     }
     passthrough = {
-        "recording_retention_days", "context_monitor_warning",
-        "context_monitor_critical", "context_monitor_delay",
-        "dloop_max_consecutive", "error_tracking_enabled",
+        "recording_retention_days", "dloop_max_consecutive",
+        "error_tracking_enabled",
     }
     for old_key, new_key in key_map.items():
         if old_key in data:
@@ -445,10 +447,11 @@ def _convert_dsettings_json_to_toml(json_path: Path, toml_path: Path) -> dict:
         if key in data:
             result[key] = data[key]
 
-    # 嵌套 table 保留
-    for section in ("drift_detection", "recording_reminder"):
-        if section in data and isinstance(data[section], dict):
-            result[section] = data[section]
+    # 嵌套 table → 摊平顶层
+    if "drift_detection" in data and isinstance(data["drift_detection"], dict):
+        result["drift_enabled"] = data["drift_detection"].get("enabled", True)
+    if "recording_reminder" in data and isinstance(data["recording_reminder"], dict):
+        result["reminder_on_taskdone"] = data["recording_reminder"].get("enabled", True)
 
     if not result:
         return {"ok": False, "reason": "no_mappable_keys"}
