@@ -1,6 +1,35 @@
 {
   "version": 1,
   "task_sessions": {},
-  "dloop": null,
+  "dloop": {
+    "active": true,
+    "started_at": "2026-05-10T10:27:54.071704+00:00",
+    "completed_task_ids": [],
+    "initial_done_ids": [
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122
+    ],
+    "current_iteration": 0,
+    "max_tasks": 0,
+    "stopped_at": null,
+    "stop_reason": null,
+    "mode": "cron",
+    "cron_job_id": null
+  },
   "pending_recording": null
 }

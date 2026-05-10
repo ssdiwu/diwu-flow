@@ -573,6 +573,402 @@
       ],
       "category": "refactor",
       "status": "Done"
+    },
+    {
+      "id": 123,
+      "title": "Step01/G1-a: frontmatter 批量清理 + 测试适配",
+      "description": "对 skills/ 下 11 个 SKILL.md 的 YAML frontmatter 执行批量机械操作：(1) 删除 type 字段 (Issue #26 D1)；(2) description 改为 CSO 式触发条件描述 (Issue #26 D2)；(3) 每个 skill 正文新增「不可协商规则」段落，使用纯 markdown 负向约束措辞 (Issue #26 D5+D6，禁止使用 XML tag)。同步适配 test_didea_layout_consistency.py 中 type/triggers 断言。完成后 pytest tests/ 全绿。",
+      "acceptance": [
+        "Given skills/ 下 11 个 SKILL.md When yaml.safe_load 解析 frontmatter Then 所有文件无 type 键，name/description/version 字段齐全，无 triggers/keywords 字段残留",
+        "Given 11 个 description When 检查内容 Then 不含「流程」「步骤」「工作流」「→」「模式」等 SOP 词汇，改为触发条件式表述",
+        "Given 11 个 SKILL.md 正文 When 检查结构 Then 每个文件均含「不可协商规则」段落，使用「必须」「禁止」「不得」「建议」「推荐」「可」等中文措辞，无 XML tag 或 [R]/[S] 标记",
+        "Given tests/level3/test_didea_layout_consistency.py When 运行 Then 不再断言 type 字段存在，不再断言 triggers 字段非空",
+        "Given pytest tests/ 全量运行 When 执行 Then 所有用例 PASS，无新增 FAILURE"
+      ],
+      "steps": [
+        "1. [锁定] 逐一读取 11 个 SKILL.md frontmatter：dcorr/ddoc/didea/dloop/dprd/dpth/drec/dref/drun/dstat/dtask，标记需删除的 type/triggers/keywords 字段位置",
+        "2. [锁定] 对每个 SKILL.md 的 description 改写为 CSO 触发条件式：删除工作流总结（如「正向/逆向两种模式」「SOP→启发式」等），只保留触发场景关键词",
+        "3. [锁定] 对每个 SKILL.md 正文新增「不可协商规则」段落：从当前 SKILL.md 的工作流步骤中提取硬性约束（禁止/必须/不得），用纯 markdown list 呈现，不加 XML tag",
+        "4. [锁定] 编辑 tests/level3/test_didea_layout_consistency.py：删除 test_required_fields 中 type 断言；删除或修改 test_triggers_nonempty 为验证 triggers 不存在或已移除",
+        "5. [锁定] 运行 python3 -m pytest tests/ -q 全量回归确认通过"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dcorr/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/didea/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dprd/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dref/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dstat/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dtask/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_didea_layout_consistency.py"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "InSpec"
+    },
+    {
+      "id": 124,
+      "title": "Step02/G1-b-A6: ddoc 输出模型重写（8 类型 + references 5 文件）",
+      "description": "认知密度最高的单步。将 ddoc SKILL.md 从 SOP 式正向6步/逆向5步工作流重写为启发式决策树，输出模型改为文档类型驱动。Issue #24 已锁定全部 7 个讨论点：(1) 8 类核心文档最终清单（产品需求/设计规范/页面规格/数据模型/API契约/变更记录/运维手册/知识问答）；(2)-(7) 各类型的模板/示例/完整性标准。需同步创建/更新 skills/ddoc/references/ 下 5 个文件（当前已有 forward-mode/reverse-mode/templates/completeness/demo 5 个，需对齐 8 类型）。",
+      "acceptance": [
+        "Given skills/ddoc/SKILL.md When 读取正文 Then 无正/逆向步骤编号（Step1-6/Step1-5），改为启发式决策树：用户意图识别（生成/重构/增量更新）→ 文档类型选择（8 类路由表）→ 各类型的高判别问题 + 红旗信号",
+        "Given skills/ddoc/SKILL.md When 检查输出模型 Then 含 8 类文档类型路由表：每类含「何时用」「关键要素」「模板路径」「完整性检查」，且 references/ 文件路径与表一致",
+        "Given skills/ddoc/references/ 目录 When 检查文件 Then 5 个 references 文件覆盖 8 类文档类型：forward-mode.md(正向生成4类)、reverse-mode.md(反向提取3类)、templates.md(模板规范)、completeness.md(完整性检查矩阵)、doc-types.md(新:8类型完整清单，替换 demo.md)",
+        "Given skills/ddoc/SKILL.md When 检查 references 引用 Then 所有路径指向 skills/ddoc/references/ 下对应文件，无外部绝对路径",
+        "Given skills/ddoc/SKILL.md When 检查「不可协商规则」段落 Then 含 ≥5 条硬性约束（如类型选择不准跳过/正向模式必须先确认分支/模板不准缩水等）"
+      ],
+      "steps": [
+        "1. [锁定] 读取当前 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md 和 5 个 references 文件，完整理解当前正向6步/逆向5步结构",
+        "2. [锁定] 参考 Issue #24 已锁定的 7 个决策点：https://github.com/ssdiwu/diwu-flow-dev/issues/24",
+        "3. [锁定] 重写 SKILL.md 正文核心逻辑：SOP 步骤序列 → 启发式决策树（意图识别→类型路由→高判别问题→输出导向）；「不可协商规则」段落提取硬性约束",
+        "4. [锁定] 新建 skills/ddoc/references/doc-types.md：8 类文档类型完整清单，每类含定义/适用场景/关键要素/模板引用",
+        "5. [锁定] 更新 skills/ddoc/references/forward-mode.md：对齐 4 类正向生成类型的模板（产品需求/设计规范/页面规格/数据模型）",
+        "6. [锁定] 更新 skills/ddoc/references/reverse-mode.md：对齐 3 类反向提取类型的模板（API契约/变更记录/运维手册，知识问答在模板规范中覆盖）",
+        "7. [锁定] 更新 skills/ddoc/references/templates.md 和 completeness.md：对齐 8 类型新增的模板和完整性标准",
+        "8. [建议] 删除 skills/ddoc/references/demo.md（内容被 doc-types.md 取代）或融入 doc-types.md 的示例部分"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/references/doc-types.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/references/forward-mode.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/references/reverse-mode.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/references/templates.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/references/completeness.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        123
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 125,
+      "title": "Step03/G3: manifest 更新 + dinit.py fallback 降级复制",
+      "description": "轻松域换脑操作。G2 完成后 rules/ 最终文件列表确定（删 workflow.md + judgments.md），需更新 assets/dinit/assets/rules-manifest.json 移除这两个文件的条目。同时修改 scripts/dinit.py 的 cmd_sync_rules()：manifest 缺失时从当前报错改为降级全目录复制（与 Issue #37 对齐）。manifest 保持 JSON 格式（不迁移 YAML）。注意：manifest 更新工作本身不依赖 G2 先完成——manifest 最终正确性由 Step 10 的三副本同步确保。",
+      "acceptance": [
+        "Given assets/dinit/assets/rules-manifest.json When 解析 JSON Then files 数组不含 workflow.md 和 judgments.md，与 rules/ 目录实际文件列表一致",
+        "Given scripts/dinit.py 的 cmd_sync_rules() When MANIFEST_PATH.exists() 为 False Then 不报错，降级为遍历 RULES_SRC/*.md 全目录复制（替代当前 return error）",
+        "Given dinit.py fallback 行为 When 执行 Then 输出警告信息告知用户「manifest 缺失，降级为全目录复制」",
+        "Given pytest tests/ 全量运行 When 执行 Then 所有用例 PASS，无新增 FAILURE"
+      ],
+      "steps": [
+        "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules-manifest.json 当前内容",
+        "2. [锁定] 编辑 rules-manifest.json：从 files 数组中移除 workflow.md 和 judgments.md",
+        "3. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py 中 cmd_sync_rules() 的实现",
+        "4. [锁定] 修改 cmd_sync_rules()：当 MANIFEST_PATH 不存在时，遍历 RULES_SRC 目录下所有 *.md 文件全量复制到目标，输出警告而非报错退出",
+        "5. [锁定] 运行 python3 -m pytest tests/ -q 全量回归确认通过"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules-manifest.json",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dinit.py"
+      ],
+      "category": "infra",
+      "blocked_by": [],
+      "status": "InSpec"
+    },
+    {
+      "id": 126,
+      "title": "Step04/G1-b-A4-1: 思考型启发式重写（dprd/dpth/dref）",
+      "description": "将 dprd、dpth、dref 三个思考型 skill 从 SOP 步骤编号重写为启发式提问 + 红旗信号模式。Issue #35 SOP 审计已量化各行数和目标行数。核心原则：每章节 ≤50 行，>80 行必须拆分或外移 references/。三个 skill 均不新增 references 文件——dpth 已有 7 个框架文件体系（Task#107 完成），dprd 和 dref 在上轮已重写过一次（Task#108/109），本轮在此基础上按 A4 标准进一步精炼。",
+      "acceptance": [
+        "Given skills/dprd/SKILL.md When 读取正文 Then 调研步骤序列已压缩为启发式提问（竞品分析仍保留核心方法论但不作为步骤编号）；灵魂三问门控、JTBD/MVP/逆向思维框架内化保持完整（Task#109 产物不丢失）",
+        "Given skills/dpth/SKILL.md When 读取正文 Then 三模式提问规则精炼：每模式保留高判别问题 ≥4 个 + 红旗 ≥3 个；框架映射表保留；references/ 路径仍正确指向 7 个框架文件",
+        "Given skills/dref/SKILL.md When 读取正文 Then 场景收敛保留（触发清晰度检查+收窄到1-2优先场景）；问题发现内化保留（四维判断+红旗+停步）；步骤序列已转为启发式引导；清单模板保持简化形式（Task#108 产物不丢失）",
+        "Given 三个 SKILL.md When 检查正文 Then 无步骤编号（如 Step1/2/3 或 1./2./3. 序列）；每章节 ≤50 行；>80 行的章节已拆分或外移"
+      ],
+      "steps": [
+        "1. [锁定] 读取当前 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dprd/SKILL.md（已达 Task#109 Done 状态），精炼调研步骤→启发式提问，保留所有框架内化模块不变",
+        "2. [锁定] 读取当前 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/SKILL.md（已达 Task#106 Done 状态），精炼三模式提问规则，每个模式压缩 ≤50 行",
+        "3. [锁定] 读取当前 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dref/SKILL.md（已达 Task#108 Done 状态），精炼工作流阶段→启发式引导，保留问题发现+场景收敛核心",
+        "4. [建议] 三个 skill 的修改各自独立（无交叉引用），可并行实施"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dprd/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dpth/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dref/SKILL.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        123
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 127,
+      "title": "Step05/G4-α: Hooks TOML 迁移（5 文件合写）",
+      "description": "属于不同域换手感操作。5 个 hook 脚本（context_monitor.py/drift_detect_pre.py/task_completed.py/pre_compact.py/stop_archive.py）每个文件合并 #28 功能性修复 + #31 TOML 迁移，一次编辑完成双 Issue 变更。Issue #28 修复：缓存 session 隔离(C1-1)/stdin→env 传参+tmp 清理(C1-2)/原子写入(C2-1)/session 校验+原子写入(C2-2)。Issue #31 迁移：json.load→tomllib.load，路径 .json→.toml。pre_compact.py 和 stop_archive.py 各自只有单 Issue 变更。",
+      "acceptance": [
+        "Given hooks/scripts/context_monitor.py When 检查缓存文件名 Then 含 session_id（如 .context_monitor_cache_{sid}.json），多窗口计数器独立；读 dsettings 使用 tomllib",
+        "Given hooks/scripts/drift_detect_pre.py When 检查传参方式 Then _get_sid() 通过环境变量获取 session_id（不重复读 stdin）；启动时清理过期 /tmp/diwu_ctx_* 文件；读 dsettings 使用 tomllib",
+        "Given hooks/scripts/task_completed.py When 检查写入方式 Then 使用 atomic write（write to tmp + rename）操作 dtask-state.json；读 dsettings 使用 tomllib",
+        "Given hooks/scripts/pre_compact.py When 检查逻辑 Then 含 session_id 校验（非当前 session 拒绝写入）；使用 atomic write；不读 dsettings（无 #31 变更）",
+        "Given hooks/scripts/stop_archive.py When 检查读配置 Then json.load → tomllib.load，路径 .json → .toml",
+        "Given pytest tests/ 全量运行 When 执行 Then 所有用例 PASS，hook 相关测试全部通过"
+      ],
+      "steps": [
+        "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/context_monitor.py，合并实施：缓存文件名加 session_id + tomllib 读 dsettings",
+        "2. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/drift_detect_pre.py，合并实施：stdin→env 传参 + tmp 文件清理 + tomllib 读 dsettings",
+        "3. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py，合并实施：atomic write + tomllib 读 dsettings",
+        "4. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/pre_compact.py，实施：session_id 校验 + atomic write（不读 dsettings）",
+        "5. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_archive.py，实施：tomllib 读 dsettings（无 #28 变更）",
+        "6. [建议] 5 个 hook 文件修改各自独立，可各自独立 commit；准备 push 前统一跑 pytest 全绿"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/context_monitor.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/drift_detect_pre.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/pre_compact.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/hooks/scripts/stop_archive.py"
+      ],
+      "category": "refactor",
+      "blocked_by": [],
+      "status": "InSpec"
+    },
+    {
+      "id": 128,
+      "title": "Step06/G1-b-A4-2: 思考型启发式重写（ddoc/dcorr）",
+      "description": "剩余 2 个思考型 skill 的启发式重写。ddoc 已在 Step 02 完成输出模型重写，本步只做正文精炼（确认无步骤编号残留/章节行数合规/启发式提问完整）。dcorr 是纠偏工具，Issue #35 审计评分相对健康（四列表格保留），只需微调节奏：确认四列现象→判断→动作完整、退化信号更新、误判排查表对齐当前 pitfalls.md Layer 1 六类泛化。",
+      "acceptance": [
+        "Given skills/ddoc/SKILL.md When 读取正文 Then 与 Step 02 产物一致：决策树完整、无 SOP 步骤编号、每章节 ≤50 行",
+        "Given skills/dcorr/SKILL.md When 读取正文 Then 四列现象→判断→动作表格完整；退化信号更新为当前 session.md 3-Strike 协议对齐；六类泛化误判排查表与 pitfalls.md 一致；无步骤编号残留",
+        "Given skills/dcorr/SKILL.md When 检查行数 Then ≤180 行（含表格），超过部分外移或精简"
+      ],
+      "steps": [
+        "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md（Step 02 已写入），确认正文无 SOP 残留，精炼启发式提问措辞",
+        "2. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dcorr/SKILL.md，微调四列表格完整度、退化信号描述、误判排查表对齐",
+        "3. [建议] ddoc 修改范围极小（可能只改 5-10 行措辞）；dcorr 修改范围中等（~30-50 行调整）"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/ddoc/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dcorr/SKILL.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        123
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 129,
+      "title": "Step07/G1-b-A7: didea D1-D8 存储落地",
+      "description": "didea SKILL.md 核心逻辑落地。Issue #29 D1-D8 已全部锁定：(D1) 双入口模型(软入口自然识别+硬入口显式操作)、(D2) 动作门控三条硬规则(本地确认+外部二次确认)、(D3) 六个硬入口动作(create/list/show/archive/push/refine)、(D4) 下游接口契约(dpth/dref/dprd/dtask)、(D5) 容器结构(.diwu/ideas/ 目录+frontmatter字段+文件命名)、(D6) 反模式清单≥5条、(D7) 存储格式选择(YAML frontmatter+markdown)、(D8) 门控框架三步追问(已于 main 分支合入)。main 分支的 didea SKILL.md 已有门控框架（Step 02 的 A6 不涉及此），本步在现有门控框架基础上补全 D1-D8 全部决策落地规则。",
+      "acceptance": [
+        "Given skills/didea/SKILL.md When 解析 frontmatter Then name=didea, description 覆盖想法捕获容器定位",
+        "Given 双入口模型（D1）When 检查内容 Then 软入口识别信号 ≥4 种对话模式 + 提议话术模板；硬入口六个动作均有输入/行为/输出/前置定义",
+        "Given 动作门控（D2）When 检查三条硬规则 Then 规则1「识别可自然发生」+ 规则2「本地写入必须用户确认」+ 规则3「外部同步必须二次确认」，每条以 P-J-A 判定锚点展开",
+        "Given 下游接口契约（D4）When 检查 push 动作 Then dpth/dref/dprd/dtask 四个下游各自定义触发条件/传递数据/调用方式/预期产物",
+        "Given 容器结构（D5）When 检查内容 Then .diwu/ideas/ 目录规范、文件命名({title}.md)、frontmatter 完整字段(id/status/created_at/updated_at/source_session/tags)、正文三区块模板",
+        "Given 反模式清单（D6）When 检查数量 Then ≥5 条（如替代 dpth 判断/自动落盘/外部同步主路径/drun 执行混入/rules 真相源修改），每条附正确做法"
+      ],
+      "steps": [
+        "1. [锁定] 读取当前 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/didea/SKILL.md（已有门控框架），理解当前正文结构",
+        "2. [锁定] 参考 Issue #29 D1-D8 全部决策：https://github.com/ssdiwu/diwu-flow-dev/issues/29",
+        "3. [锁定] 补全双入口模型（D1）：软入口识别信号清单 + 硬入口六个动作定义",
+        "4. [锁定] 补全动作门控（D2）：三条硬规则各以 P-J-A 判定锚点表格展开（正例/反例/边界例）",
+        "5. [锁定] 补全下游接口契约（D4）：dpth/dref/dprd/dtask 四个下游的完整接口定义",
+        "6. [锁定] 补全容器结构（D5）：.diwu/ideas/ 目录规范+frontmatter 字段+正文模板",
+        "7. [锁定] 补全反模式清单（D6）：≥5 条，与已有门控框架的反模式合并去重",
+        "8. [建议] 目标行数 ~150 行（Issue #35 A4 目标），D1-D8 内容补全后对照精简"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/didea/SKILL.md"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        123
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 130,
+      "title": "Step08/G1-b-A5: 执行型去重（drun/dloop/drec）",
+      "description": "3 个执行型 skill 的精简：删除 SKILL.md 中与 scripts/agents/rules/ 重复的内容。Issue #35 B 类诊断已量化 SOP 评分和具体动作：(drun 4/10) Session 启动步骤压缩为口述约束、子代理委托只留决策矩阵+退化路径、验证表格删除重复引用 rules/verification.md；(dloop 5/10) 职责边界改为1-2句、生命周期流程图改为三段约束、平台机制细节外移；(drec 3/10) 执行步骤改职责边界+关键约束、格式规范表格删除（rules/已注入）、标记清除语义只写约束条件不写分支树。",
+      "acceptance": [
+        "Given skills/drun/SKILL.md When 读取正文 Then Session 启动步骤已压缩为口述约束(确认三唯一+恢复上下文+选任务)；子代理委托保留决策矩阵+退化路径(指向 agents/)；无验证表格逐字重复(改为引用 rules/verification.md)",
+        "Given skills/dloop/SKILL.md When 读取正文 Then 职责边界1-2句；启动/停止/委托三段约束；平台机制细节已外移至 .doc/ 或 assets/；适用场景改为判断锚点格式",
+        "Given skills/drec/SKILL.md When 读取正文 Then 职责边界+关键约束替代执行步骤；格式规范表格已删除(引用 rules/)；标记清除语义为约束条件格式(非分支树)；调用契约参数表简化为调用链描述",
+        "Given 三个 SKILL.md When 搜索重复内容 Then 无 scripts/ 脚本名硬编码、无 agents/ 内部实现细节、无 rules/ 文件逐字复制",
+        "Given 三个 SKILL.md When 检查行数 Then drun ≤180/dloop ≤130/drec ≤140"
+      ],
+      "steps": [
+        "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md，对照 scripts/drun 相关实现和 agents/ 定义，标记重复段落→删除或改为引用",
+        "2. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md，对照 scripts/dloop.py 和 dloop_state.py，标记重复→精简",
+        "3. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md，对照 scripts/drec_archive.py 和 rules/templates.md §Session 格式，标记重复→精简",
+        "4. [锁定] 三个 skill 均需对照 rules/ 下对应文件（verification/session/templates/task），确认无逐字复制",
+        "5. [建议] 三个 skill 修改各自独立，可并行实施"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drun/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/dloop/SKILL.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/skills/drec/SKILL.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        123
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 131,
+      "title": "Step09/G2-α: Rules 改写（8 文件）+ mindset 路由收口",
+      "description": "最危险操作。对 rules/ 下 8 个文件执行 #30 P0+P1 改写：(1) task.md 三拆——只留 schema+状态机+blocked_by(≤70行)，commit 格式+checkpoint 迁入 templates.md；(2) templates.md 去重——Handoff Report/Checkpoint 重复全文改为一行引用；(3) session.md 清洗——删 Python 正则代码/3-Strike 实现细节/内部脚本名硬编码；(4) handoff.md §六§七循环引用修复——删「从 mindset.md 迁入」标注；(5) constraints.md 插件专属迁移——Command/Skill ≤5 字符命名约束迁入 CLAUDE.md；(6) file-layout.md 精简——rules/ 内部结构详细表格大幅简化；(7) README.md 导航更新——删 workflow/judgments 条目；(8) mindset.md 加 ~20 行路由段——基于 G1 完成后的 skills 终态，写用户意图→skill 的路由表（#40 A8）。本步骤只改写 rules/ 主副本，不执行三副本同步（留给 Step 10）。",
+      "acceptance": [
+        "Given rules/task.md When 读取内容 Then 只含 schema 定义(id/status/转移表/blocked_by)≤70行；commit 格式和 checkpoint 触发条件已迁入 templates.md",
+        "Given rules/templates.md When 读取内容 Then Handoff Report 和 Checkpoint 均为一行引用指向源文件(handoff.md/task.md)，无重复全文",
+        "Given rules/session.md When 读取内容 Then 无 Python 代码块/正则表达式/hook 脚本名硬编码；无 /tmp/diwu_ctx_* 路径；3-Strike 保留行为约束删实现细节",
+        "Given rules/handoff.md When 读取内容 Then §六§七无「从 mindset.md 迁入」标注残留；内容保留原创部分",
+        "Given rules/constraints.md When 读取内容 Then Command/Skill ≤5 字符命名约束已迁移至 .claude/CLAUDE.md；rules/ 副本不保留",
+        "Given rules/file-layout.md When 读取内容 Then rules/ 内部结构详细表格已大幅简化或移除；保留 .diwu/ 目录结构定义",
+        "Given rules/README.md When 读取内容 Then 导航已移除 workflow.md/judgments.md 条目；文件列表更新为 12 个",
+        "Given rules/mindset.md When 读取内容 Then 含 ~20 行路由段：用户意图→skill 的路由表，基于 G1 完成后 11 个 skill 的终态内容编写"
+      ],
+      "steps": [
+        "1. [锁定] 读取所有 8 个目标 rules/ 文件当前内容，理解各文件改写范围",
+        "2. [锁定] 参考 Issue #30 P0+P1 完整审计：https://github.com/ssdiwu/diwu-flow-dev/issues/30",
+        "3. [锁定] task.md 瘦身：保留 status 定义/转移表/blocked_by schema；commit 格式结构+checkpoint 触发→templates.md",
+        "4. [锁定] templates.md 去重：Handoff Report 完整模板→一行引用 rules/handoff.md；Checkpoint 格式→一行引用 rules/task.md",
+        "5. [锁定] session.md 清洗：删 Python 代码(re.compile...)、删内部脚本名(post_tool_use_failure.py/session_start.py/inject_errors_decisions.py)、删 /tmp/diwu_ctx_* 路径；保留行为约束语言",
+        "6. [锁定] handoff.md §六§七：删「从 mindset.md 迁入」标注，保留原创内容",
+        "7. [锁定] constraints.md：Command/Skill ≤5 字符命名约束迁入 .claude/CLAUDE.md 开发铁律段",
+        "8. [锁定] file-layout.md：rules/ 内部结构表格大幅简化(只保留引用指向 rules/README.md)；.diwu/ 结构定义保留",
+        "9. [锁定] README.md：导航表删 workflow.md/judgments.md 行；文件列表更新；全局地图图更新",
+        "10. [锁定] mindset.md：新增 ~20 行路由段——用户意图→skill 路由表(didea/dpth/dref/dprd/ddoc/dtask/drun/drec/dcorr/dstat/dloop 共 11 条目)"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/task.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/templates.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/session.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/handoff.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/constraints.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/file-layout.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/README.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/mindset.md",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/CLAUDE.md"
+      ],
+      "category": "refactor",
+      "blocked_by": [
+        124,
+        126,
+        128,
+        130
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 132,
+      "title": "Step10/G2-β: 三副本同步 + 删除 workflow/judgments + rules 测试适配",
+      "description": "紧接 Step 09 的机械收尾操作。(1) 将 rules/ 下所有 12 个文件（删 workflow.md + judgments.md 后）同步到 .claude/rules/ 和 assets/dinit/assets/rules/ 两处副本；(2) 从三处删除 workflow.md 和 judgments.md；(3) 适配 tests/level3/test_doc_consistency.py（规则文件数 14→12、workflow/judgments 断言移除或更新）；(4) 适配 tests/level3/test_task_166_dinit_diwu_paths.py（manifest 内容变化）。本步是机械操作，注意力不够集中时也能做。",
+      "acceptance": [
+        "Given rules/ + .claude/rules/ + assets/dinit/assets/rules/ When diff 三目录 Then 每个同名文件内容完全一致，文件列表一致（均为 12 个文件）",
+        "Given 三目录 When 检查文件列表 Then 不含 workflow.md 和 judgments.md（已从三处删除）",
+        "Given tests/level3/test_doc_consistency.py When 运行 Then 期望规则列表已更新为 12 个文件，不再断言 workflow.md/judgments.md 存在",
+        "Given tests/level3/test_task_166_dinit_diwu_paths.py When 运行 Then manifest 相关断言适配新内容",
+        "Given pytest tests/ 全量运行 When 执行 Then 全绿，无残留 workflow/judgments 引用"
+      ],
+      "steps": [
+        "1. [锁定] 从 rules/ 目录删除 workflow.md 和 judgments.md",
+        "2. [锁定] 从 .claude/rules/ 目录删除 workflow.md 和 judgments.md",
+        "3. [锁定] 从 assets/dinit/assets/rules/ 目录删除 workflow.md 和 judgments.md",
+        "4. [锁定] 将 rules/ 下所有 .md 文件复制到 .claude/rules/（覆盖同名文件）",
+        "5. [锁定] 将 rules/ 下所有 .md 文件复制到 assets/dinit/assets/rules/（覆盖同名文件）",
+        "6. [锁定] 编辑 tests/level3/test_doc_consistency.py：更新期望规则列表（14→12），移除或更新 workflow.md/judgments.md 相关断言",
+        "7. [锁定] 编辑 tests/level3/test_task_166_dinit_diwu_paths.py：适配 manifest 内容变化",
+        "8. [锁定] 运行 python3 -m pytest tests/ -q 全量回归确认通过"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/rules/",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/.claude/rules/",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/rules/",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_doc_consistency.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_task_166_dinit_diwu_paths.py"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        131
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 133,
+      "title": "Step11/G4-β: common.py allocate_task_id() + Scripts TOML + template 重命名",
+      "description": "合并三项变更到 scripts 层。(1) Issue #32: common.py 新增 allocate_task_id(cwd) 函数——读/写 .diwu/next-task-id 纯文本文件，单调递增不重复；新增 --allocate-task-id CLI 入口输出 JSON；max_task_id() 保留向后兼容。(2) Issue #31 D4 消费者适配: common.py 常量 DSETTINGS_JSON→DSETTINGS_TOML = .diwu/dsettings.toml；dloop.py 和 drec_archive.py 的 dsettings 读写改 tomllib/toml 写。(3) Issue #31 D1: assets/dinit/assets/dsettings.json.template 重命名并改内容为 TOML 格式。",
+      "acceptance": [
+        "Given scripts/common.py When 调用 allocate_task_id(cwd) 连续 100 次 Then 返回 1..100 无重复无跳号；文件不存在时从 1 开始",
+        "Given scripts/common.py When 执行 --allocate-task-id --cwd <proj> Then 输出 JSON {\"ok\":true,\"task_id\":N}",
+        "Given scripts/common.py When 调用 max_task_id(cwd) Then 仍可调用返回 max_id（向后兼容）",
+        "Given scripts/common.py When 检查常量 Then DSETTINGS_TOML = \".diwu/dsettings.toml\" 存在，DSETTINGS_JSON 已移除或重命名",
+        "Given scripts/dloop.py 和 scripts/drec_archive.py When 读取 dsettings Then 使用 tomllib 读取 .toml 文件，无 json 残留",
+        "Given assets/dinit/assets/dsettings.json.template When 检查 Then 文件已重命名为 dsettings.toml.template 且内容为合法 TOML 格式",
+        "Given pytest tests/ 全量运行 When 执行 Then 全绿"
+      ],
+      "steps": [
+        "1. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/common.py，新增 allocate_task_id(cwd) 函数：读写 .diwu/next-task-id 纯文本文件，单调递增",
+        "2. [锁定] common.py 新增 --allocate-task-id CLI 入口：argparse 子命令，输出 {\"ok\":true,\"task_id\":N} JSON",
+        "3. [锁定] common.py 修改常量：DSETTINGS_JSON → DSETTINGS_TOML = \".diwu/dsettings.toml\"（保留旧常量一阶段后删）",
+        "4. [锁定] 参考 Issue #32 设计合同：https://github.com/ssdiwu/diwu-flow-dev/issues/32",
+        "5. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py，改 dsettings 读写为 tomllib/toml 写，键名 review_limit→dloop_review_cap",
+        "6. [锁定] 读取 /Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/drec_archive.py，改 dsettings 读写为 tomllib",
+        "7. [锁定] 读取 assets/dinit/assets/dsettings.json.template，改内容为 TOML 格式，键名对齐 Issue #31 D3 重命名，重命名为 dsettings.toml.template"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/common.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/scripts/drec_archive.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/assets/dinit/assets/dsettings.toml.template"
+      ],
+      "category": "functional",
+      "blocked_by": [
+        127
+      ],
+      "status": "InSpec"
+    },
+    {
+      "id": 134,
+      "title": "Step12/G4-γ: 全部剩余测试适配（~11 文件）",
+      "description": "最后一步：所有生产代码稳定后，批量适配 ~11 个测试文件。变更涉及：(1) TOML 迁移导致的 fixture 格式变更——test_context_monitor_dict/test_dloop/test_stop_archive/test_stop_decision/test_task_completed/test_dloop_crud/test_drec_archive 等 8 个文件改 dsettings fixture 为 TOML；(2) allocate_task_id 测试——test_common.py 新增 TestAllocateTaskId 类（100 次连续调用无重复）；(3) dsettings 路径断言——test_task_165_hook_paths_to_diwu.py 和 test_task_167_self_runtime_migration.py 断言 .toml 存在；(4) 最终全量回归验证。此步骤不依赖 Step 10 的 rules 测试适配（已独立完成），只等 Step 11 的 scripts TOML 完成。",
+      "acceptance": [
+        "Given tests/level2/test_context_monitor_dict.py When 运行 Then fixture 改 TOML 格式，所有用例 PASS",
+        "Given tests/level2/test_dloop.py When 运行 Then _make_dsettings() 改 TOML fixture，所有用例 PASS",
+        "Given tests/level2/test_stop_archive.py When 运行 Then TestLoadSettings 改 TOML，所有用例 PASS",
+        "Given tests/level2/test_stop_decision.py When 运行 Then _make_dsettings_for_test() 改 TOML，所有用例 PASS",
+        "Given tests/level2/test_task_completed.py When 运行 Then fixture 改 TOML，所有用例 PASS",
+        "Given tests/level2_scripts/test_dloop_crud.py When 运行 Then dsettings 写入改 TOML，所有用例 PASS",
+        "Given tests/level2_scripts/test_drec_archive.py When 运行 Then dsettings 读写改 TOML，所有用例 PASS",
+        "Given tests/level2_scripts/test_common.py When 运行 Then 新增 TestAllocateTaskId 类：100 次连续 allocate 无重复；文件不存在时从 1 开始",
+        "Given tests/level3/test_task_165_hook_paths_to_diwu.py When 运行 Then 断言 .toml 存在（非 .json）",
+        "Given tests/level3/test_task_167_self_runtime_migration.py When 运行 Then 断言 .toml 存在（非 .json）",
+        "Given pytest tests/ 全量运行 When 执行 Then 413+ 通过，无残留 dsettings.json 引用，exit code 0"
+      ],
+      "steps": [
+        "1. [锁定] 逐一读取 10 个需修改的测试文件，理解当前 fixture/setup 模式",
+        "2. [锁定] 对 7 个 level2 测试文件：将 dsettings fixture 从 JSON 格式改为 TOML 格式字符串/临时文件",
+        "3. [锁定] tests/level2_scripts/test_common.py：新增 TestAllocateTaskId 类，用 tmpdir fixture 创建临时 .diwu/next-task-id 文件，验证 100 次连续调用无重复",
+        "4. [锁定] tests/level3/test_task_165_hook_paths_to_diwu.py：将 dsettings 存在性断言从 .json 改为 .toml",
+        "5. [锁定] tests/level3/test_task_167_self_runtime_migration.py：将 dsettings 存在性断言从 .json 改为 .toml",
+        "6. [锁定] 运行 python3 -m pytest tests/ -q 全量回归确认通过，grep 确认无残留 'dsettings.json' 引用"
+      ],
+      "files_modified": [
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_context_monitor_dict.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_dloop.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_archive.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_stop_decision.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2/test_task_completed.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_dloop_crud.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_drec_archive.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level2_scripts/test_common.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_task_165_hook_paths_to_diwu.py",
+        "/Users/diwu/Documents/codes/Githubs/diwu-flow/tests/level3/test_task_167_self_runtime_migration.py"
+      ],
+      "category": "infra",
+      "blocked_by": [
+        132,
+        133
+      ],
+      "status": "InSpec"
     }
   ]
 }
