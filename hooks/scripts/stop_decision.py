@@ -367,6 +367,20 @@ def _check_pending_recording_gate(cwd, current_session_id="", git_info=None):
         ))
 
 
+_FRESH_RECORDING_SECS = 300  # 5 分钟内有过 recording → 跳过 git 检查
+
+
+def _needs_git_for_recording(recording_files, cwd):
+    """Fast heuristic: if latest recording is fresh, skip git for recording reminder."""
+    if not recording_files:
+        return True  # No recordings at all → need to check
+    try:
+        age = time.time() - os.path.getmtime(recording_files[0])
+        return age > _FRESH_RECORDING_SECS
+    except OSError:
+        return True
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -386,11 +400,45 @@ if __name__ == "__main__":
     event_session_id = hook_session_id(stdin_data)
     session_id = _resolve_stop_session_id(event_session_id, cwd)
 
-    # ── 性能关键路径：所有 I/O 在此处执行一次 ────────────
-    git_info = _run_git_checks(cwd)
+    # ── Phase 1: 零 git 快速路径 ────────────────────────
+    # 大多数 Stop hook 调用是"干净"场景：无 pending_recording、decisions.md 已有内容、
+    # 最近有新鲜 recording。这种情况下完全不需要任何 git 子进程。
     recording_files = _scan_recording_files(cwd)
 
-    # B group checks: soft reminders and pending_recording gate
+    # 1a. pending_recording 门控（只需读 dtask-state.json，无需 git）
+    pr_level, pr_hint = _check_pending_recording_gate(cwd, session_id, git_info=None)
+
+    # 1b. block 级别必须知道 .diwu/ dirty 状态 → 需要进入 slow path
+    needs_git = pr_level == "block"
+
+    # 1c. decision reminder（只需读 decisions.md + recording 文件头）
+    decision_hint = _check_decision_reminder(cwd, recording_files=recording_files)
+    if decision_hint:
+        print(f"\n{decision_hint}", file=sys.stderr)
+
+    # 1d. recording reminder 快速判断：最近 5 分钟内有 recording → 跳过
+    if not _needs_git_for_recording(recording_files, cwd):
+        # Fast path 命中：输出已有的非 git 提示后直接退出
+        if pr_level == "warn":
+            print(pr_hint, file=sys.stderr)
+        sys.exit(0)
+
+    # ── Phase 2: 按需 git 慢速路径 ────────────────────────
+    # 只有以下情况才到达这里：
+    #   - pending_recording 为 block 级别（需检查 .diwu/ dirty）
+    #   - 或 recording 不够新鲜（需检查是否有未记录的代码变更）
+    needs_git = True
+    git_info = _run_git_checks(cwd)
+
+    # 重新评估 pending_recording（这次带 git_info 可准确判断 dirty）
+    if pr_level == "block":
+        pr_level, pr_hint = _check_pending_recording_gate(cwd, session_id, git_info=git_info)
+
+    recording_hint = _check_recording_reminder(cwd, git_info=git_info, recording_files=recording_files)
+    if recording_hint:
+        print(recording_hint, file=sys.stderr)
+
+    # B group: archive check (轻量 I/O，不涉及 git)
     additional_prompts = []
     try:
         import stop_archive
@@ -400,15 +448,6 @@ if __name__ == "__main__":
 
     extra = _prompt_suffix(additional_prompts)
 
-    decision_hint = _check_decision_reminder(cwd, recording_files=recording_files)
-    if decision_hint:
-        print(f"\n{decision_hint}", file=sys.stderr)
-
-    recording_hint = _check_recording_reminder(cwd, git_info=git_info, recording_files=recording_files)
-    if recording_hint:
-        print(recording_hint, file=sys.stderr)
-
-    pr_level, pr_hint = _check_pending_recording_gate(cwd, session_id, git_info=git_info)
     if pr_level == "block":
         output = {"decision": "block", "reason": pr_hint + extra}
         print(json.dumps(output, ensure_ascii=False))
