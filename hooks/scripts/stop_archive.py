@@ -25,7 +25,7 @@ except (ImportError, ModuleNotFoundError):
             return {}
 
 SETTINGS_PATH = ".diwu/dsettings.toml"
-TASK_JSON_PATH = ".diwu/dtask.json"
+TASK_JSON_PATH = ".diwu/dtask.toml"
 RECORDING_DIR = ".diwu/recording"
 
 DEFAULTS = {
@@ -57,15 +57,15 @@ def _load_settings():
 
 
 def _load_tasks():
-    """Load tasks from dtask.json, returning empty list on failure."""
+    """Load tasks from dtask.toml, returning empty list on failure."""
     full = _resolve(TASK_JSON_PATH)
     if not os.path.exists(full):
         return []
     try:
-        with open(full, encoding="utf-8") as f:
-            data = json.load(f)
+        with open(full, "rb") as f:
+            data = tomllib.load(f)
         return data.get("tasks", [])
-    except (json.JSONDecodeError, OSError):
+    except (tomllib.TOMLDecodeError, OSError):
         return []
 
 

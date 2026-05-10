@@ -13,7 +13,7 @@ argument-hint: "[功能描述] [category] [blocked_by]"
 ## 不可协商规则
 
 - Session 启动必须按 Preflight→上下文恢复→归档检查→任务选择顺序串行执行，Preflight 失败则停止
-- 任务状态变更必须通过 `dtask_transition.py` claim/release 显式完成，禁止直接手改 dtask.json.status
+- 任务状态变更必须通过 `dtask_transition.py` claim/release 显式完成，禁止直接手改 dtask.toml.status
 - closeout 顺序铁律：整理摘要 → decisions → verifier → release → /drec，不可跳序
 - drun 是单任务执行器，执行完毕后停止；批量连续执行必须使用 `/dloop`
 - stop hook 注入 InSpec 任务信息时必须暂停等待用户明确指示，禁止假设沉默=授权而自动执行
@@ -52,7 +52,7 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 4. **release**：`dtask_transition.py release` 切到 Done 或 InReview
 5. **调用 `/drec`**：写入 recording + 原子 commit（详见 drec SKILL.md）
 
-> **pending_recording 兜底**：release 自动写入 pending_recording 标记。忘记调 /drec 时 Stop Hook 强制拦截。commit 前必须 Read dtask-state.json 确认无 dloop 残留。
+> **pending_recording 兜底**：release 自动写入 pending_recording 标记。忘记调 /drec 时 Stop Hook 强制拦截。commit 前必须 Read dtask-state.toml 确认无 dloop 残留。
 
 ### 完成前四问
 
@@ -66,7 +66,7 @@ Session 生命周期管理：从启动到结束的完整协议，含执行验证
 
 ## 执行验证循环
 
-每轮执行前明确：当前任务（dtask title+description）、这轮怎么做（steps[i]）、怎么判断做成（acceptance + L1-L3 证据等级，见 `rules/verification.md`）、结果更新到哪（dtask.json status + recording Checkpoint）。
+每轮执行前明确：当前任务（dtask title+description）、这轮怎么做（steps[i]）、怎么判断做成（acceptance + L1-L3 证据等级，见 `rules/verification.md`）、结果更新到哪（dtask.toml status + recording Checkpoint）。
 
 **调用顺序**：dtask(实施/验证) → dcorr(纠偏)
 

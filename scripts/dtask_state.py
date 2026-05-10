@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared runtime state helper for dtask-state.json."""
+"""Shared runtime state helper for dtask-state.toml."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from common import save_json
+from common import save_json, save_toml
 
-RUNTIME_STATE_PATH = ".diwu/dtask-state.json"
+RUNTIME_STATE_PATH = ".diwu/dtask-state.toml"
 LEGACY_DLOOP_STATE_PATH = ".diwu/dloop-state.json"
 RUNTIME_STATE_VERSION = 1
 ACTIVE_TASK_STATUSES = ("InProgress",)
@@ -61,18 +61,26 @@ def default_runtime_state() -> dict:
 
 
 def _read_json(path: Path) -> tuple[dict | None, str | None]:
+    """Read state file (TOML or legacy JSON). Keep function name for compatibility."""
     if not path.exists():
         return None, None
     try:
-        raw = path.read_text(encoding="utf-8")
+        raw = path.read_bytes()
     except OSError as exc:
         return None, f"读取失败: {exc}"
     if not raw.strip():
         return None, "空文件"
+    text = raw.decode("utf-8")
+    # Try TOML first (canonical format), fall back to JSON (legacy)
     try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        return None, f"JSON 损坏: {exc}"
+        import tomllib
+        data = tomllib.loads(text)
+    except Exception:
+        try:
+            import json
+            data = json.loads(text)
+        except Exception as exc:
+            return None, f"状态文件损坏: {exc}"
     if not isinstance(data, dict):
         return None, "根结构必须是对象"
     return data, None
@@ -280,16 +288,25 @@ def load_runtime_state(cwd: Path | str) -> RuntimeStateSyncResult:
     path = runtime_state_path(cwd)
     raw, err = _read_json(path)
     if err:
-        return RuntimeStateSyncResult(False, default_runtime_state(), reason=f"dtask-state.json {err}")
+        return RuntimeStateSyncResult(False, default_runtime_state(), reason=f"dtask-state.toml {err}")
     normalized, changed, norm_err = normalize_runtime_state(raw)
     if norm_err:
         return RuntimeStateSyncResult(False, default_runtime_state(), reason=norm_err)
     return RuntimeStateSyncResult(True, normalized or default_runtime_state(), changed=changed)
 
 
+def _remove_none(obj):
+    """Recursively remove None values from dict (tomli_w rejects None)."""
+    if isinstance(obj, dict):
+        return {k: _remove_none(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [_remove_none(v) for v in obj if v is not None]
+    return obj
+
+
 def save_runtime_state(cwd: Path | str, state: dict, *, remove_legacy: bool = False) -> None:
     path = runtime_state_path(cwd)
-    save_json(state, path)
+    save_toml(_remove_none(state), path)
     if remove_legacy:
         delete_legacy_dloop_state(cwd)
 
@@ -475,7 +492,7 @@ def resolve_session_inprogress_task(
         return SessionTaskResolution(
             "missing_owner",
             task=task,
-            reason=f"Task#{task.get('id')} 为 InProgress，但 dtask-state.json 中缺少 owner 记录",
+            reason=f"Task#{task.get('id')} 为 InProgress，但 dtask-state.toml 中缺少 owner 记录",
         )
 
     if not session_id:

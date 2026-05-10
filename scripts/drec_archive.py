@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import DIWU_DIR, ARCHIVE_DIR, DTASK_JSON, DSETTINGS_TOML, RECORDING_DIR, PITFALLS_FILE, load_toml_optional, save_json  # noqa: E402
+from common import DIWU_DIR, ARCHIVE_DIR, DTASK_TOML, DSETTINGS_TOML, RECORDING_DIR, PITFALLS_FILE, load_toml_optional, load_toml_or_empty, save_json, save_toml  # noqa: E402
 
 # ── 本文件特有常量（不在 common.py 中） ──────────
 LAST_SUMMARY = ".last_archive_summary.json"
@@ -73,11 +73,11 @@ def _current_month() -> str:
 def archive_tasks(cwd: Path, tasks: list, settings: dict) -> int:
     """将 Done/Cancelled 任务追加到 archive/task_archive_YYYY-MM.json。
 
-    按 id 去重（幂等安全），写入后从 dtask.json 移除已归档任务。
+    按 id 去重（幂等安全），写入后从 dtask.toml 移除已归档任务。
 
     Args:
         cwd: 项目根目录。
-        tasks: dtask.json 中的完整任务列表。
+        tasks: dtask.toml 中的完整任务列表。
         settings: 阈值配置字典。
 
     Returns:
@@ -120,19 +120,19 @@ def archive_tasks(cwd: Path, tasks: list, settings: dict) -> int:
     # 始终写标准 dict 格式，保持与四月归档一致
     archive_payload = {
         "archived_at": _now_iso(),
-        "source": str(DTASK_JSON),
+        "source": str(DTASK_TOML),
         "tasks": merged,
         "count": len(merged),
     }
     save_json(archive_payload, archive_file)
 
-    # 从 dtask.json 移除已归档任务
-    task_path = _p(cwd, DTASK_JSON)
-    data = _load_json(task_path) or {"tasks": []}
+    # 从 dtask.toml 移除已归档任务
+    task_path = _p(cwd, DTASK_TOML)
+    data = load_toml_or_empty(task_path)
     archived_ids = {t["id"] for t in new_tasks}
     remaining = [t for t in data.get("tasks", []) if t.get("id") not in archived_ids]
     data["tasks"] = remaining
-    save_json(data, task_path)
+    save_toml(data, task_path)
 
     return len(new_tasks)
 
@@ -388,8 +388,8 @@ def run(cwd: str = ".") -> dict:
     settings = _load_settings(root)
 
     # 加载任务
-    task_path = _p(root, DTASK_JSON)
-    task_data = _load_json(task_path) or {"tasks": []}
+    task_path = _p(root, DTASK_TOML)
+    task_data = load_toml_or_empty(task_path)
     tasks = task_data.get("tasks", [])
 
     results = {

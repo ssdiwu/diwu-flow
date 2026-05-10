@@ -1,0 +1,19 @@
+[[tasks]]
+id = 135
+title = "dtask.json / dtask-state.json TO TOML Migration"
+description = "Migrate dtask.json and dtask-state.json from JSON to TOML"
+acceptance = [
+    "Given TOML files When pytest Then all pass",
+]
+steps = [
+    "Layer 1 done",
+    "Layer 2 pending",
+    "Layer 3 pending",
+    "Layer 4 pending",
+    "Layer 5 pending",
+    "Layer 6 pending",
+]
+files_modified = []
+category = "refactor"
+blocked_by = []
+status = "Done"

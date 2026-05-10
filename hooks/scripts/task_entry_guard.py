@@ -10,7 +10,7 @@ import os
 import sys
 
 try:
-    from _shared import load_stdin_event  # noqa: E402
+    from _shared import load_stdin_event, load_toml_fallback  # noqa: E402
 except (ImportError, ModuleNotFoundError):
     def load_stdin_event(*, check_tty=False):
         try:
@@ -23,11 +23,21 @@ except (ImportError, ModuleNotFoundError):
         except (json.JSONDecodeError, ValueError):
             return {}
 
+    def load_toml_fallback(path):
+        import tomllib
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path, "rb") as f:
+                return tomllib.load(f)
+        except Exception:
+            return {}
+
 
 ACTIVE_STATUSES = {"InSpec", "InProgress", "InReview"}
 WORKFLOW_DECISIONS = ".diwu/decisions.md"
-WORKFLOW_DTASK = ".diwu/dtask.json"
-WORKFLOW_DTASK_STATE = ".diwu/dtask-state.json"
+WORKFLOW_DTASK = ".diwu/dtask.toml"
+WORKFLOW_DTASK_STATE = ".diwu/dtask-state.toml"
 WORKFLOW_RECORDING = ".diwu/recording"
 WORKFLOW_DLOOP_STATE = ".diwu/dloop-state.json"
 # Plan mode writes plan files to ~/.claude/plans/ — always allow
@@ -36,14 +46,14 @@ _PLAN_LINE_THRESHOLD = 20  # 行数超过此阈值视为“>=3 步方案”
 _PLAN_GUARD_MARKER = os.path.join(".claude", ".plan-active")
 _BLOCK_HARD_MESSAGE = (
     "[diwu-plan-guard] 🛑 HARD BLOCK：检测到未落地的 >=3 步实施方案。\n\n"
-    "存在已批准但尚未落地的 plan marker（行数 >= {threshold}），但 .diwu/dtask.json 中无对应的\n"
+    "存在已批准但尚未落地的 plan marker（行数 >= {threshold}），但 .diwu/dtask.toml 中无对应的\n"
     "落地任务（无 InSpec/InProgress/InReview 状态任务）。\n\n"
     "请先执行 /dtask 将方案派生为任务条目（含 GWT acceptance），再进行代码实施。\n"
     "完整规则见 rules/mindset.md §Plan→Dtask 门控\n"
 )
 BLOCK_SOFT_MESSAGE = (
     "[diwu-task-guard] ⛔ 检测到文件写入操作，但未发现可执行的 dtask 任务。\n"
-    "请先运行 /dtask 将计划派生为任务条目（含 GWT acceptance），或确认 .diwu/dtask.json "
+    "请先运行 /dtask 将计划派生为任务条目（含 GWT acceptance），或确认 .diwu/dtask.toml "
     "中存在 InSpec/InProgress/InReview 状态的任务。"
 )
 
@@ -103,14 +113,8 @@ def _is_doc_file(target_path):
 
 
 def _has_active_task(task_json_path):
-    """Return True when task.json exists and contains executable tasks."""
-    if not os.path.exists(task_json_path):
-        return False
-    try:
-        with open(task_json_path, encoding="utf-8") as f:
-            data = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return False
+    """Return True when task.toml exists and contains executable tasks."""
+    data = load_toml_fallback(task_json_path)
 
     for task in data.get("tasks", []):
         if task.get("status") in ACTIVE_STATUSES:
@@ -123,23 +127,17 @@ def _should_block_dloop(state_path, session_id=""):
 
     Cron 模式：每个 iteration 是独立合法 session，始终放行。
     """
-    if not os.path.exists(state_path):
+    state = load_toml_fallback(state_path)
+    dloop = state.get("dloop")
+    if not isinstance(dloop, dict) or dloop.get("active") is not True:
         return False
-    try:
-        with open(state_path, encoding="utf-8") as f:
-            state = json.load(f)
-        dloop = state.get("dloop")
-        if not isinstance(dloop, dict) or dloop.get("active") is not True:
-            return False
-        # cron 模式：每个 iteration 是独立合法 session，直接放行
-        return False
-    except (json.JSONDecodeError, OSError):
-        return False
+    # cron 模式：每个 iteration 是独立合法 session，直接放行
+    return False
 
 
 def _has_unlanded_plan(cwd, session_id=""):
     """Return (True, line_count) when a valid plan marker says an approved large plan
-    exists but dtask.json has no active tasks — meaning plan was never /dtask'd.
+    exists but dtask.toml has no active tasks — meaning plan was never /dtask'd.
 
     This is the hard block condition: >=3 step plan exists but nothing landed.
     """
@@ -221,7 +219,7 @@ def main():
     event_session_id = event.get("session_id") or event.get("sessionId", "")
     if _should_block_dloop(os.path.join(cwd, WORKFLOW_DTASK_STATE), session_id=event_session_id):
         print(
-            "[diwu-dloop-guard] 🛑 BLOCK：检测到活跃的 dloop 运行时（dtask-state.json.dloop.active=true）。\n\n"
+            "[diwu-dloop-guard] 🛑 BLOCK：检测到活跃的 dloop 运行时（dtask-state.toml.dloop.active=true）。\n\n"
             "当前 session 非 dloop owner，Edit/Write 可能污染运行态快照。\n"
             "请先执行 /dstop 停止循环，或使用 dloop owner session 继续执行。",
             file=sys.stderr,

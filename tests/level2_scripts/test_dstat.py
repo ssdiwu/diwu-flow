@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import assert_rel_time_shape, run_script  # noqa: E402
+from conftest import assert_rel_time_shape, run_script, write_dtask_toml  # noqa: E402
 
 
 class TestDstatEmptyProject:
@@ -42,11 +42,7 @@ class TestDstatEmptyProject:
 
 class TestDstatWithTasks:
     def _write_dtask(self, root: Path, tasks_data: dict):
-        diwu = root / ".diwu"
-        diwu.mkdir(exist_ok=True)
-        dtask = diwu / "dtask.json"
-        import json as j
-        dtask.write_text(j.dumps(tasks_data, ensure_ascii=False, indent=2))
+        write_dtask_toml(root, tasks_data.get("tasks", []))
 
     def test_task_summary_counts(self, tmp_project_dir):
         self._write_dtask(tmp_project_dir, {

@@ -70,7 +70,7 @@ def test_templates_use_diwu_for_runtime_paths():
         RULES_DIR / "verification.md",
     ]
     joined = "\n".join(path.read_text(encoding="utf-8") for path in targets)
-    assert ".diwu/dtask.json" in joined
+    assert ".diwu/dtask.toml" in joined
     assert ".diwu/recording/" in joined
     assert ".diwu/project-pitfalls.md" in joined
     assert ".diwu/" in joined

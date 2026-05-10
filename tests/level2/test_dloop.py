@@ -4,12 +4,14 @@ import json
 import os
 import subprocess
 import sys
+import tomli_w
+import tomllib
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 STOP_DECISION_SCRIPT = PROJECT_ROOT / "hooks" / "scripts" / "stop_decision.py"
 TASK_GUARD_SCRIPT = PROJECT_ROOT / "hooks" / "scripts" / "task_entry_guard.py"
-RUNTIME_STATE_NAME = ".diwu/dtask-state.json"
+RUNTIME_STATE_NAME = ".diwu/dtask-state.toml"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
@@ -18,7 +20,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 def _run_stop_decision(tmp_path, env_overrides=None, **kwargs):
     """Run stop_decision.py with given tmp_path and optional stdin data."""
-    cmd = [sys.executable, str(STOP_DECISION_SCRIPT), "--task-json", str(tmp_path / ".diwu" / "dtask.json")]
+    cmd = [sys.executable, str(STOP_DECISION_SCRIPT), "--task-json", str(tmp_path / ".diwu" / "dtask.toml")]
     stdin_data = json.dumps(kwargs) if kwargs else ""
     env = os.environ.copy()
     env["DIWU_SILENT"] = "1"
@@ -37,12 +39,12 @@ def _run_stop_decision(tmp_path, env_overrides=None, **kwargs):
 
 
 def _make_dtask(tasks, tmp_path, **extra):
-    """Write dtask.json to tmp_path/.diwu/."""
+    """Write dtask.toml to tmp_path/.diwu/."""
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
     payload = {"tasks": tasks}
     payload.update(extra)
-    (diwu / "dtask.json").write_text(json.dumps(payload), encoding="utf-8")
+    (diwu / "dtask.toml").write_bytes(tomli_w.dumps(payload).encode("utf-8"))
 
 
 def _make_dsettings(tmp_path, **overrides):
@@ -84,13 +86,21 @@ def _make_runtime_state(tmp_path, *, dloop=None, task_sessions=None):
         "task_sessions": task_sessions or {},
         "dloop": dloop,
     }
-    (tmp_path / RUNTIME_STATE_NAME).write_text(json.dumps(state), encoding="utf-8")
+    # Remove None values for tomli_w compatibility
+    def _remove_none(obj):
+        if isinstance(obj, dict):
+            return {k: _remove_none(v) for k, v in obj.items() if v is not None}
+        if isinstance(obj, list):
+            return [_remove_none(v) for v in obj]
+        return obj
+    cleaned = _remove_none(state)
+    (tmp_path / RUNTIME_STATE_NAME).write_bytes(tomli_w.dumps(cleaned).encode("utf-8"))
 
 
 def _make_dloop_state(tmp_path, **overrides):
     existing = {"task_sessions": {}}
     if (tmp_path / RUNTIME_STATE_NAME).exists():
-        existing = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+        existing = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
     dloop = {
         "active": True,
         "session_id": "test-session-123",
@@ -106,9 +116,9 @@ def _make_dloop_state(tmp_path, **overrides):
 
 
 def test_dloop_state_file_creation(tmp_path):
-    """Verify dtask-state.json carries dloop structure."""
+    """Verify dtask-state.toml carries dloop structure."""
     _make_dloop_state(tmp_path, session_id="test-abc")
-    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    state = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
     assert state["version"] == 1
     assert state["dloop"]["active"] is True
     assert state["dloop"]["session_id"] == "test-abc"
@@ -150,7 +160,7 @@ def test_stop_decision_max_tasks_stops_with_report(tmp_path):
     pass
 
 def test_task_guard_allows_loop_state_write(tmp_path):
-    """task_entry_guard should allow writes to .diwu/dtask-state.json."""
+    """task_entry_guard should allow writes to .diwu/dtask-state.toml."""
     payload = {
         "hook_event_name": "PreToolUse",
         "tool_name": "Write",
@@ -182,7 +192,7 @@ def test_stop_decision_only_inreview_stops(tmp_path):
 
 
 def test_loop_completion_reports_completed_tasks(tmp_path):
-    """Phase report includes completed task details from dtask.json."""
+    """Phase report includes completed task details from dtask.toml."""
     tasks = [
         {"id": 1, "title": "Fix bug A", "status": "Done"},
         {"id": 2, "title": "Refactor B", "status": "Done"},
@@ -261,7 +271,7 @@ def test_dloop_cron_mode_start_creates_state_with_mode(tmp_path):
     assert result["data"].get("cron_action") == "create"
 
     # 验证 state 文件
-    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    state = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
     assert state["dloop"]["mode"] == "cron"
     assert state["dloop"]["active"] is True
 
@@ -279,14 +289,14 @@ def test_dloop_cron_mode_start_with_job_id(tmp_path):
     assert result["data"]["cron_job_id"] == "existing-job-456"
     assert "cron_action" not in result["data"]
 
-    state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
+    state = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
     assert state["dloop"]["cron_job_id"] == "existing-job-456"
 
 
 def test_dloop_status_shows_cron_mode(tmp_path):
     """cmd_status() 输出包含 mode 和 cron_job_id。"""
     tasks = [{"id": 1, "title": "Status T", "status": "InSpec"}]
-    _make_dtask(tasks, tmp_path)  # 需要 dtask.json 防止 stale 判定
+    _make_dtask(tasks, tmp_path)  # 需要 dtask.toml 防止 stale 判定
     _make_cron_dloop_state(tmp_path)
 
     from dloop import cmd_status

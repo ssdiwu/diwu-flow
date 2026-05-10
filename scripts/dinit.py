@@ -13,6 +13,7 @@ import re
 import shutil
 import stat
 import sys
+import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -300,7 +301,7 @@ def cmd_sync_skills(cwd: Path) -> dict:
 
 def cmd_create_config(cwd: Path, project_info_file: str | None = None,
                       scan_result_file: str | None = None) -> dict:
-    """从模板创建项目配置文件（CLAUDE.md、dtask.json、runtime dirs）。
+    """从模板创建项目配置文件（CLAUDE.md、dtask.toml、runtime dirs）。
 
     T13: 通过 --project-info-file 和 --scan-result-file 传入数据。
     """
@@ -350,15 +351,16 @@ def cmd_create_config(cwd: Path, project_info_file: str | None = None,
     else:
         _record(str(claude_md.relative_to(cwd)), "ERROR_NO_TEMPLATE")
 
-    # 4.2 dtask.json
+    # 4.2 dtask.toml
     ensure_dir(diwu_dir)
-    dtask = diwu_dir / "dtask.json"
-    dtask_template = ASSETS_DIR / "task.json.template"
+    dtask = diwu_dir / "dtask.toml"
+    dtask_template = ASSETS_DIR / "task.toml.template"
     if not dtask.exists():
         if dtask_template.exists():
             shutil.copy2(str(dtask_template), str(dtask))
         else:
-            dtask.write_text(json.dumps({"tasks": []}, indent=2, ensure_ascii=False) + "\n")
+            from common import save_toml
+            save_toml({"tasks": []}, dtask)
         _record(str(dtask.relative_to(cwd)), "CREATED")
     else:
         _record(str(dtask.relative_to(cwd)), "SKIPPED")
@@ -614,8 +616,8 @@ def cmd_validate(cwd: Path) -> dict:
         check("CLAUDE.md 无 @rules/ 引用", "@rules/" not in content)
         check("CLAUDE.md ≤200 行", len(content.splitlines()) <= 200, f"{len(content.splitlines())} 行")
 
-    dtask = cwd / ".diwu" / "dtask.json"
-    check("dtask.json 合法 JSON", _is_valid_json(dtask))
+    dtask = cwd / ".diwu" / "dtask.toml"
+    check("dtask.toml 合法 TOML", _is_valid_toml(dtask))
 
     # Rules
     rules_dir = cwd / ".claude" / "rules"
@@ -692,6 +694,18 @@ def _is_valid_json(path: Path) -> bool:
         json.loads(path.read_text(encoding="utf-8"))
         return True
     except (json.JSONDecodeError, OSError):
+        return False
+
+
+def _is_valid_toml(path: Path) -> bool:
+    """检查是否为合法 TOML。"""
+    if not path.exists():
+        return False
+    try:
+        with open(path, "rb") as f:
+            tomllib.load(f)
+        return True
+    except Exception:
         return False
 
 

@@ -9,8 +9,8 @@
 .diwu/
 ├── CLAUDE.md                      # 全局 Agent 配置入口
 ├── dsettings.toml                 # 可调参数配置
-├── dtask.json                     # 当前任务列表（status 真相源）
-├── dtask-state.json               # runtime owner / dloop 元数据真相源
+├── dtask.toml                     # 当前任务列表（status 真相源）
+├── dtask-state.toml               # runtime owner / dloop 元数据真相源
 ├── recording/                     # Session 进度记录目录
 │   └── session-YYYY-MM-DD-HHMMSS.md
 ├── decisions.md                   # 设计决策记录（可选）
@@ -51,8 +51,8 @@ tests/
 |------|------|--------|
 | `.diwu/CLAUDE.md` | 全局配置、个人偏好、规则索引 | 共同维护 |
 | `.diwu/dsettings.toml` | 可调参数配置 | 人工设置，Agent 读取 |
-| `.diwu/dtask.json` | 任务定义与 `status` 的真相源 | Agent 读写 |
-| `.diwu/dtask-state.json` | runtime owner / dloop 元数据真相源；不重复保存 task status | Agent 读写 |
+| `.diwu/dtask.toml` | 任务定义与 `status` 的真相源 | Agent 读写 |
+| `.diwu/dtask-state.toml` | runtime owner / dloop 元数据真相源；不重复保存 task status | Agent 读写 |
 | `.diwu/recording/` | Session 进度记录，每个 session 一个文件 | Agent 写 |
 | `.diwu/decisions.md` | 重大设计决策记录（影响范围 ≥2 模块） | Agent 写 |
 | `.diwu/archive/` | 归档目录（tasks + recordings + summary） | Agent 写 |
@@ -68,6 +68,6 @@ tests/
 
 | 数据 | Source of Truth | 说明 |
 |------|----------------|------|
-| 任务定义与状态 | `.diwu/dtask.json` | `title/description/acceptance/steps/status` 真相源 |
-| runtime owner / dloop | `.diwu/dtask-state.json` | 运行时元数据，不重复保存 task status |
+| 任务定义与状态 | `.diwu/dtask.toml` | `title/description/acceptance/steps/status` 真相源 |
+| runtime owner / dloop | `.diwu/dtask-state.toml` | 运行时元数据，不重复保存 task status |
 | 模板文件 | 项目模板目录（因项目而异） | 初始化时复制到用户项目 |

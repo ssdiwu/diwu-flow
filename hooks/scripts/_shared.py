@@ -53,3 +53,15 @@ def load_stdin_event(*, check_tty=False):
         return json.loads(raw)
     except (json.JSONDecodeError, ValueError):
         return {}
+
+
+def load_toml_fallback(path):
+    """Load a TOML file; return {} if missing or corrupt."""
+    import tomllib
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    except Exception:
+        return {}

@@ -13,7 +13,7 @@
 
 ### 提交原子性铁律
 
-**dtask.json 状态变更必须与对应代码变更同一 commit**。禁止将 status 更新（如 InSpec→Done）单独成 commit。
+**dtask.toml 状态变更必须与对应代码变更同一 commit**。禁止将 status 更新（如 InSpec→Done）单独成 commit。
 
 **recording 与代码变更的 commit 必须通过记录命令统一完成**——记录命令是项目状态存档的唯一入口，负责写入 recording 文件后执行 `git add -A`（全量变更：代码+.diwu/ 状态文件）+ 原子 `git commit`。调用方（执行引擎等）不得自行 commit 包含 recording 或 .diwu/ 状态文件。正确顺序：实施完成 → 标记 Done → 调用记录命令（传入 session 摘要）→ 写入 recording + 全量 commit。
 

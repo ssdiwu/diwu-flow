@@ -96,3 +96,45 @@ def run_script(script_name: str, *args, cwd=None, env=None):
         env=base_env,
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
+
+
+def write_dtask_toml(root: Path, tasks: list) -> None:
+    """Write dtask.toml to a project root directory."""
+    import tomli_w
+    diwu = root / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    data = {"tasks": tasks}
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump(data, f)
+
+
+def write_runtime_toml(root: Path, state: dict) -> None:
+    """Write dtask-state.toml to a project root directory. Removes None values for tomli_w compatibility."""
+    import tomli_w
+    diwu = root / ".diwu"
+    diwu.mkdir(exist_ok=True)
+
+    def _remove_none(obj):
+        if isinstance(obj, dict):
+            return {k: _remove_none(v) for k, v in obj.items() if v is not None}
+        if isinstance(obj, list):
+            return [_remove_none(v) for v in obj]
+        return obj
+
+    cleaned = _remove_none(state)
+    with open(diwu / "dtask-state.toml", "wb") as f:
+        tomli_w.dump(cleaned, f)
+
+
+def read_runtime_toml(root: Path) -> dict:
+    """Read dtask-state.toml from a project root directory."""
+    import tomllib
+    with open(root / ".diwu" / "dtask-state.toml", "rb") as f:
+        return tomllib.load(f)
+
+
+def read_dtask_toml(root: Path) -> dict:
+    """Read dtask.toml from a project root directory."""
+    import tomllib
+    with open(root / ".diwu" / "dtask.toml", "rb") as f:
+        return tomllib.load(f)

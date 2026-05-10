@@ -5,6 +5,48 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
 
+def write_dtask_toml(root: Path, tasks: list) -> None:
+    """Write dtask.toml to a project root directory."""
+    diwu = root / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    data = {"tasks": tasks}
+    import tomli_w
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump(data, f)
+
+
+def read_dtask_toml(root: Path) -> dict:
+    """Read dtask.toml from a project root directory."""
+    import tomllib
+    with open(root / ".diwu" / "dtask.toml", "rb") as f:
+        return tomllib.load(f)
+
+
+def write_runtime_toml(root: Path, state: dict) -> None:
+    """Write dtask-state.toml to a project root directory. Removes None values for tomli_w compatibility."""
+    diwu = root / ".diwu"
+    diwu.mkdir(exist_ok=True)
+
+    def _remove_none(obj):
+        if isinstance(obj, dict):
+            return {k: _remove_none(v) for k, v in obj.items() if v is not None}
+        if isinstance(obj, list):
+            return [_remove_none(v) for v in obj]
+        return obj
+
+    cleaned = _remove_none(state)
+    import tomli_w
+    with open(diwu / "dtask-state.toml", "wb") as f:
+        tomli_w.dump(cleaned, f)
+
+
+def read_runtime_toml(root: Path) -> dict:
+    """Read dtask-state.toml from a project root directory."""
+    import tomllib
+    with open(root / ".diwu" / "dtask-state.toml", "rb") as f:
+        return tomllib.load(f)
+
+
 @pytest.fixture
 def project_root():
     return PROJECT_ROOT
@@ -29,9 +71,10 @@ def tmp_project_dir(tmp_path):
 
 
 @pytest.fixture
-def sample_task_json(tmp_path):
-    """生成示例 dtask.json"""
-    task_file = tmp_path / "dtask.json"
+def sample_task_toml(tmp_path):
+    """生成示例 dtask.toml"""
+    import tomli_w
+    task_file = tmp_path / "dtask.toml"
     data = {
         "tasks": [
             {
@@ -45,5 +88,5 @@ def sample_task_json(tmp_path):
             }
         ]
     }
-    task_file.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    task_file.write_bytes(tomli_w.dumps(data).encode('utf-8'))
     return task_file

@@ -24,13 +24,12 @@ def _run_script(script_path, payload, cwd):
 
 
 def _setup_dtask(tmp_path, status="InSpec", task_id=1):
-    """创建含指定状态任务的 dtask.json。"""
+    """创建含指定状态任务的 dtask.toml。"""
+    import tomli_w
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(
-        json.dumps({"tasks": [{"id": task_id, "title": f"T{task_id}", "status": status}]}),
-        encoding="utf-8",
-    )
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump({"tasks": [{"id": task_id, "title": f"T{task_id}", "status": status}]}, f)
 
 
 
@@ -80,14 +79,13 @@ def test_task_entry_guard_allows_md_without_dtask(tmp_path):
 def test_task_entry_guard_allows_when_active_task_exists(tmp_path):
     diwu = tmp_path / ".diwu"
     diwu.mkdir()
-    (diwu / "dtask.json").write_text(
-        json.dumps({
+    import tomli_w
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump({
             "tasks": [
                 {"id": 1, "title": "x", "status": "InSpec"},
             ]
-        }),
-        encoding="utf-8",
-    )
+        }, f)
     payload = {
         "hook_event_name": "PreToolUse",
         "tool_name": "Edit",
@@ -121,7 +119,7 @@ def test_task_entry_guard_allows_runtime_state_write(tmp_path):
         "hook_event_name": "PreToolUse",
         "tool_name": "Write",
         "cwd": str(tmp_path),
-        "tool_input": {"file_path": str(tmp_path / ".diwu" / "dtask-state.json")},
+        "tool_input": {"file_path": str(tmp_path / ".diwu" / "dtask-state.toml")},
     }
     result = _run_script(TASK_GUARD_SCRIPT, payload, tmp_path)
 
@@ -199,7 +197,9 @@ def test_marker_with_big_plan_triggers_hard_block(tmp_path):
     # 无活跃任务的 dtask
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+    import tomli_w
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump({"tasks": []}, f)
 
     result = _run_guard(tmp_path)
     assert result.returncode == 2, f"应 hard block (exit 2) 但 got {result.returncode}"
@@ -217,7 +217,9 @@ def test_stale_plan_no_block(tmp_path):
     # 无活跃任务的 dtask
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+    import tomli_w
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump({"tasks": []}, f)
 
     result = _run_guard(tmp_path)
     assert result.returncode == 0, f"stale plan 不应 hard block，got {result.returncode}"
@@ -233,7 +235,9 @@ def test_stale_marker_empty_no_block(tmp_path):
 
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+    import tomli_w
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump({"tasks": []}, f)
 
     result = _run_guard(tmp_path)
     assert result.returncode == 0, f"空 marker 不应 hard block，got {result.returncode}"
@@ -250,7 +254,9 @@ def test_legacy_path_marker_with_big_plan_still_blocks(tmp_path):
 
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+    import tomli_w
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump({"tasks": []}, f)
 
     result = _run_guard(tmp_path)
     assert result.returncode == 2, f"legacy path marker 应继续 hard block，got {result.returncode}"
@@ -268,7 +274,9 @@ def test_marker_from_other_session_is_cleaned(tmp_path):
 
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+    import tomli_w
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump({"tasks": []}, f)
 
     result = _run_guard(tmp_path, event_overrides={"session_id": "new-session"})
     assert result.returncode == 0, f"旧 session marker 不应 hard block，got {result.returncode}"
@@ -282,9 +290,9 @@ def test_active_task_bypasses_hard_block(tmp_path):
 
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(
-        json.dumps({"tasks": [{"id": 1, "status": "InSpec", "title": "T"}]})
-    )
+    import tomli_w
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump({"tasks": [{"id": 1, "status": "InSpec", "title": "T"}]}, f)
 
     result = _run_guard(tmp_path)
     assert result.returncode == 0, "有活跃任务不应 hard block"
@@ -300,9 +308,9 @@ def test_mark_inspec_cleans_marker(tmp_path):
 
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(
-        json.dumps({"tasks": [{"id": 1, "title": "T", "status": "InDraft"}]})
-    )
+    import tomli_w
+    with open(diwu / "dtask.toml", "wb") as f:
+        tomli_w.dump({"tasks": [{"id": 1, "title": "T", "status": "InDraft"}]}, f)
 
     # 执行 mark-inspec
     result = subprocess.run(
@@ -337,7 +345,8 @@ class TestCronModeGuard:
     """cron 模式下 task_entry_guard 应放行所有 Edit/Write。"""
 
     def _setup_cron_dloop(self, tmp_path, session_id="cron-real-sid"):
-        state_path = tmp_path / ".diwu" / "dtask-state.json"
+        import tomli_w
+        state_path = tmp_path / ".diwu" / "dtask-state.toml"
         state_path.parent.mkdir(exist_ok=True)
         dloop = {
             "active": True,
@@ -347,11 +356,11 @@ class TestCronModeGuard:
             "completed_task_ids": [],
             "current_iteration": 0,
             "max_tasks": 0,
-            "stopped_at": None,
-            "stop_reason": None,
             "cron_job_id": "cron-job-test",
         }
-        state_path.write_text(json.dumps({"dloop": dloop}), encoding="utf-8")
+        # TOML 不支持 null，stopped_at/stop_reason 省略（None 语义）
+        with open(state_path, "wb") as f:
+            tomli_w.dump({"dloop": dloop}, f)
 
     def test_cron_mode_allows_edit_with_real_sid(self, tmp_path):
         """cron 模式 + 真实 SID + 任意 session_id → 放行（不检查 ownership）。"""

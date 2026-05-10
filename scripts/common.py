@@ -30,8 +30,11 @@ except ImportError:
 
 # ── 路径常量（集中管理，消除跨文件硬编码） ──
 DIWU_DIR = ".diwu"
-DTASK_JSON = ".diwu/dtask.json"
-DTASK_STATE_JSON = ".diwu/dtask-state.json"
+DTASK_TOML = ".diwu/dtask.toml"
+DTASK_STATE_TOML = ".diwu/dtask-state.toml"
+# 向后兼容别名（过渡期）
+DTASK_JSON = DTASK_TOML
+DTASK_STATE_JSON = DTASK_STATE_TOML
 DSETTINGS_TOML = ".diwu/dsettings.toml"
 # 向后兼容别名（一阶段过渡期）
 DSETTINGS_JSON = DSETTINGS_TOML
@@ -139,10 +142,10 @@ _NEXT_TASK_ID_FILE = ".diwu/next-task-id"
 
 
 def _fallback_max_id(cwd: Path) -> int:
-    """fallback 扫描 dtask.json 和 archive 取最大 task id。
+    """fallback 扫描 dtask.toml 和 archive 取最大 task id。
 
     next-task-id 文件不存在或损坏时调用。
-    连 dtask.json 都不存在时返回 0（从 1 开始分配）。
+    连 dtask.toml 都不存在时返回 0（从 1 开始分配）。
     """
     result = max_task_id(cwd)
     if result.get("ok"):
@@ -154,8 +157,8 @@ def allocate_task_id(cwd: Path) -> dict:
     """分配下一个单调递增任务 ID。
 
     通过 .diwu/next-task-id 纯文本文件实现：
-    - 文件不存在时从 dtask.json/archive 最大 id + 1 开始
-    - 连 dtask.json 也不存在时从 1 开始
+    - 文件不存在时从 dtask.toml/archive 最大 id + 1 开始
+    - 连 dtask.toml 也不存在时从 1 开始
     - 连续调用返回 1,2,3,... 无重复无跳号
     - 使用 os.open + O_EXCL 保证并发安全
 
@@ -173,7 +176,7 @@ def allocate_task_id(cwd: Path) -> dict:
         except (ValueError, OSError):
             current = _fallback_max_id(cwd)
     else:
-        # 文件不存在：fallback 扫描 dtask.json 取最大 id
+        # 文件不存在：fallback 扫描 dtask.toml 取最大 id
         current = _fallback_max_id(cwd)
 
     next_id = current + 1
@@ -253,29 +256,27 @@ def error_exit(message: str):
 # ─── CLI 入口 ──────────────────────────────────────────────
 
 def max_task_id(cwd: Path) -> dict:
-    """扫描 dtask.json 和 archive/ 返回最大任务 ID。
+    """扫描 dtask.toml 和 archive/ 返回最大任务 ID。
 
     T8 输出格式：
-    {"ok": true, "max_id": N, "source": "dtask.json|archive|empty"}
+    {"ok": true, "max_id": N, "source": "dtask.toml|archive|empty"}
     """
     cwd = Path(cwd)
-    dtask_path = cwd / ".diwu" / "dtask.json"
+    dtask_path = cwd / ".diwu" / "dtask.toml"
     archive_dir = cwd / ".diwu" / "archive"
 
     max_id = 0
     source = "empty"
 
-    # 1. 读 dtask.json
-    data, err = _read_json(dtask_path)
-    if err:
-        return {"ok": False, "error": f"dtask.json 损坏: {err}"}
-    if data and isinstance(data, dict):
+    # 1. 读 dtask.toml
+    data = load_toml_optional(dtask_path)
+    if data:
         tasks = data.get("tasks", [])
         if tasks:
             ids = [t.get("id", 0) for t in tasks if isinstance(t, dict)]
             if ids:
                 max_id = max(max_id, max(ids))
-                source = "dtask.json"
+                source = "dtask.toml"
 
     # 2. 扫描归档
     if archive_dir.is_dir():

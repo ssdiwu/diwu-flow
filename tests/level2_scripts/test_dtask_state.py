@@ -1,5 +1,6 @@
 import json
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -7,28 +8,28 @@ import pytest
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
+from conftest import write_runtime_toml, read_runtime_toml  # noqa: E402
 from dtask_state import runtime_state_path, sync_runtime_state  # noqa: E402
 
 
-def _write_json(path: Path, payload: dict):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+def _read_state(path: Path) -> dict:
+    with open(path, "rb") as f:
+        return tomllib.load(f)
 
 
 def test_sync_creates_standard_runtime_state(tmp_project_dir):
     dtask = {"tasks": []}
     result = sync_runtime_state(tmp_project_dir, dtask, persist=True, ensure_exists=True)
     assert result.ok is True
-    state = json.loads(runtime_state_path(tmp_project_dir).read_text(encoding="utf-8"))
+    state = _read_state(runtime_state_path(tmp_project_dir))
     assert state["version"] == 1
     assert state["task_sessions"] == {}
-    assert state["dloop"] is None
+    # TOML 不支持 null，_remove_none 过滤掉 None 值后 dloop key 不存在
+    assert state.get("dloop") is None
 
 
 def test_sync_cleans_stale_owner(tmp_project_dir):
-    _write_json(
-        runtime_state_path(tmp_project_dir),
-        {
+    write_runtime_toml(tmp_project_dir, {
             "version": 1,
             "task_sessions": {
                 "1": {"session_id": "sid-1", "started_at": "2026-04-30T12:00:00Z"}
@@ -40,14 +41,12 @@ def test_sync_cleans_stale_owner(tmp_project_dir):
     result = sync_runtime_state(tmp_project_dir, dtask, persist=True, ensure_exists=True)
     assert result.ok is True
     assert result.cleaned_task_ids == [1]
-    state = json.loads(runtime_state_path(tmp_project_dir).read_text(encoding="utf-8"))
+    state = _read_state(runtime_state_path(tmp_project_dir))
     assert state["task_sessions"] == {}
 
 
 def test_sync_rejects_multiple_tasks_for_same_session(tmp_project_dir):
-    _write_json(
-        runtime_state_path(tmp_project_dir),
-        {
+    write_runtime_toml(tmp_project_dir, {
             "version": 1,
             "task_sessions": {
                 "1": {"session_id": "same-session", "started_at": "2026-04-30T12:00:00Z"},
@@ -68,9 +67,7 @@ def test_sync_rejects_multiple_tasks_for_same_session(tmp_project_dir):
 
 
 def test_sync_rejects_status_field_in_task_sessions(tmp_project_dir):
-    _write_json(
-        runtime_state_path(tmp_project_dir),
-        {
+    write_runtime_toml(tmp_project_dir, {
             "version": 1,
             "task_sessions": {
                 "1": {
@@ -87,28 +84,30 @@ def test_sync_rejects_status_field_in_task_sessions(tmp_project_dir):
     assert "status" in result.reason
 
 
-def test_sync_migrates_legacy_dloop_state(tmp_project_dir):
+def test_sync_migrates_legacy_loop_state(tmp_project_dir):
+    """Legacy dloop-state.json (session mode) → dtask-state.toml (cron mode)."""
+    import tomli_w
     legacy = tmp_project_dir / ".diwu" / "dloop-state.json"
-    _write_json(
-        legacy,
-        {
-            "active": True,
-            "session_id": "loop-session",
-            "started_at": "2026-04-30T12:00:00Z",
-            "completed_task_ids": [1],
-            "current_iteration": 1,
-            "max_tasks": 3,
-            "stopped_at": None,
-            "stop_reason": None,
-        },
-    )
+    legacy.parent.mkdir(exist_ok=True)
+    legacy.write_text(json.dumps({
+        "active": True,
+        "session_id": "loop-session",
+        "started_at": "2026-04-30T12:00:00Z",
+        "completed_task_ids": [1],
+        "current_iteration": 1,
+        "max_tasks": 3,
+        "stopped_at": None,
+        "stop_reason": None,
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
     result = sync_runtime_state(tmp_project_dir, {"tasks": []}, persist=True, ensure_exists=True)
     assert result.ok is True
     assert result.migrated_legacy_loop is True
-    state = json.loads(runtime_state_path(tmp_project_dir).read_text(encoding="utf-8"))
+    state = _read_state(runtime_state_path(tmp_project_dir))
     # session 模式已移除，迁移后不再保留 session_id，mode 默认为 cron
-    assert state["dloop"].get("session_id") is None
-    assert state["dloop"]["mode"] == "cron"
+    dloop = state.get("dloop")
+    assert dloop is not None, "迁移后 dloop 应存在"
+    assert dloop.get("session_id") is None
+    assert dloop["mode"] == "cron"
     assert not legacy.exists()
 
 
@@ -178,10 +177,10 @@ def test_sync_self_heal_clears_deleted_task_marker(tmp_project_dir):
             "session_id": "sid-stale",
         },
     }
-    _write_json(runtime_state_path(tmp_project_dir), state_with_stale)
+    write_runtime_toml(tmp_project_dir, state_with_stale)
     result = sync_runtime_state(tmp_project_dir, dtask, persist=True)
     assert result.ok is True
-    final = json.loads(runtime_state_path(tmp_project_dir).read_text(encoding="utf-8"))
+    final = tomllib.loads(runtime_state_path(tmp_project_dir).read_bytes().decode())
     assert final.get("pending_recording") is None
 
 
@@ -199,10 +198,10 @@ def test_sync_self_heal_clears_status_mismatch_marker(tmp_project_dir):
             "session_id": "sid-x",
         },
     }
-    _write_json(runtime_state_path(tmp_project_dir), state_with_mismatch)
+    write_runtime_toml(tmp_project_dir, state_with_mismatch)
     result = sync_runtime_state(tmp_project_dir, dtask, persist=True)
     assert result.ok is True
-    final = json.loads(runtime_state_path(tmp_project_dir).read_text(encoding="utf-8"))
+    final = tomllib.loads(runtime_state_path(tmp_project_dir).read_bytes().decode())
     assert final.get("pending_recording") is None
 
 
@@ -299,7 +298,7 @@ def test_normalize_loop_preserves_cron_fields_in_sync(tmp_project_dir):
             mode="cron", cron_job_id="sync-job-abc"
         ),
     }
-    _write_json(runtime_state_path(tmp_project_dir), state_with_cron)
+    write_runtime_toml(tmp_project_dir, state_with_cron)
     result = sync_runtime_state(tmp_project_dir, {"tasks": []}, persist=False)
     assert result.ok is True
     dloop = result.state.get("dloop")

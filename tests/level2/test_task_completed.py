@@ -4,11 +4,12 @@ import json
 import os
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 TASK_COMPLETED_SCRIPT = PROJECT_ROOT / "hooks" / "scripts" / "task_completed.py"
-RUNTIME_STATE_NAME = ".diwu/dtask-state.json"
+RUNTIME_STATE_NAME = ".diwu/dtask-state.toml"
 
 
 def _run_task_completed(tmp_path, event_data):
@@ -27,14 +28,16 @@ def _run_task_completed(tmp_path, event_data):
 
 
 def _make_dtask(tmp_path, tasks):
+    import tomli_w
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(
-        json.dumps({"tasks": tasks}, ensure_ascii=False, indent=2)
+    (diwu / "dtask.toml").write_bytes(
+        tomli_w.dumps({"tasks": tasks}).encode('utf-8')
     )
 
 
 def _make_runtime_state(tmp_path, dloop=None, task_sessions=None):
+    import tomli_w
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
     state = {
@@ -42,7 +45,16 @@ def _make_runtime_state(tmp_path, dloop=None, task_sessions=None):
         "task_sessions": task_sessions or {},
         "dloop": dloop,
     }
-    (diwu / "dtask-state.json").write_text(json.dumps(state, ensure_ascii=False, indent=2))
+
+    def _strip_none(obj):
+        if isinstance(obj, dict):
+            return {k: _strip_none(v) for k, v in obj.items() if v is not None}
+        if isinstance(obj, list):
+            return [_strip_none(item) for item in obj]
+        return obj
+
+    with open(diwu / "dtask-state.toml", "wb") as f:
+        tomli_w.dump(_strip_none(state), f)
 
 
 class TestTaskCompletedLoopTracking:
@@ -73,7 +85,7 @@ class TestTaskCompletedLoopTracking:
 
         # 脚本本身始终 exit 0
         assert result.returncode == 0
-        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        state = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
         assert state["dloop"]["completed_task_ids"] == [1, 2, 5]
 
     def test_missing_event_task_no_append(self, tmp_path):
@@ -98,7 +110,7 @@ class TestTaskCompletedLoopTracking:
         })
 
         assert result.returncode == 0
-        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        state = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
         assert state["dloop"]["completed_task_ids"] == [1]
 
     def test_duplicate_done_no_double_append(self, tmp_path):
@@ -123,7 +135,7 @@ class TestTaskCompletedLoopTracking:
         })
 
         assert result.returncode == 0
-        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        state = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
         assert state["dloop"]["completed_task_ids"] == [1, 5]
 
     def test_reminder_off_still_counts(self, tmp_path):
@@ -158,7 +170,7 @@ class TestTaskCompletedLoopTracking:
         })
 
         assert result.returncode == 0
-        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        state = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
         assert state["dloop"]["completed_task_ids"] == [1, 5]  # 仍然计数！
 
     def test_unconfirmed_done_no_append(self, tmp_path):
@@ -187,7 +199,7 @@ class TestTaskCompletedLoopTracking:
         })
 
         assert result.returncode == 0
-        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        state = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
         assert state["dloop"]["completed_task_ids"] == [1]  # owner 清理失败，不应追加
 
     def test_inprogress_task_no_append(self, tmp_path):
@@ -212,5 +224,5 @@ class TestTaskCompletedLoopTracking:
         })
 
         assert result.returncode == 0
-        state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text())
+        state = tomllib.loads((tmp_path / RUNTIME_STATE_NAME).read_bytes().decode())
         assert state["dloop"]["completed_task_ids"] == [1]  # 不应追加 5

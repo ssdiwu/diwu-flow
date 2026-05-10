@@ -71,7 +71,7 @@ Blocked: N | Cancelled: N
 
 | 序号 | 数据源 | 读取方式 | 容错 |
 |------|--------|---------|------|
-| 1 | `.diwu/dtask.json` | JSON 解析 | 不存在则输出"无任务数据" |
+| 1 | `.diwu/dtask.toml` | TOML 解析 | 不存在则输出"无任务数据" |
 | 2a | `.diwu/recording/` | 列目录取最新 1-2 个 .md（用于「最近 Session」展示） | 不存在则输出"无 session 记录" |
 | 2b | `.diwu/recording/` | 统计全部 .md 文件数（用于「归档状态」计数） | 同上 |
 | 3 | `.diwu/decisions.md` | 读最后 20 行 | 不存在则跳过 |

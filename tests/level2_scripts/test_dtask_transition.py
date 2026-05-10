@@ -1,5 +1,6 @@
 import json
 import sys
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -17,18 +18,36 @@ from session_scope import scoped_session_file  # noqa: E402
 def _write_dtask(root: Path, tasks):
     diwu = root / ".diwu"
     diwu.mkdir(exist_ok=True)
-    (diwu / "dtask.json").write_text(
-        json.dumps({"tasks": tasks}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    data = {"tasks": tasks}
+    with open(diwu / "dtask.toml", "wb") as f:
+        import tomli_w
+        tomli_w.dump(data, f)
 
 
 def _read_dtask(root: Path) -> dict:
-    return json.loads((root / ".diwu" / "dtask.json").read_text(encoding="utf-8"))
+    with open(root / ".diwu" / "dtask.toml", "rb") as f:
+        return tomllib.load(f)
+
+
+def _write_runtime(root: Path, state: dict):
+    diwu = root / ".diwu"
+    diwu.mkdir(exist_ok=True)
+    # tomli_w 不支持 None 值，递归移除
+    def _remove_none(obj):
+        if isinstance(obj, dict):
+            return {k: _remove_none(v) for k, v in obj.items() if v is not None}
+        if isinstance(obj, list):
+            return [_remove_none(v) for v in obj]
+        return obj
+    cleaned = _remove_none(state)
+    with open(diwu / "dtask-state.toml", "wb") as f:
+        import tomli_w
+        tomli_w.dump(cleaned, f)
 
 
 def _read_runtime(root: Path) -> dict:
-    return json.loads((root / ".diwu" / "dtask-state.json").read_text(encoding="utf-8"))
+    with open(root / ".diwu" / "dtask-state.toml", "rb") as f:
+        return tomllib.load(f)
 
 
 def test_mark_inspec_updates_status_only(tmp_project_dir):
@@ -74,7 +93,7 @@ def test_release_requires_owner_match(tmp_project_dir):
         },
         "dloop": None,
     }
-    (tmp_project_dir / ".diwu" / "dtask-state.json").write_text(json.dumps(runtime, ensure_ascii=False, indent=2))
+    _write_runtime(tmp_project_dir, runtime)
     rc, out, _ = run_script(
         "dtask_transition.py",
         "release",
@@ -100,7 +119,7 @@ def test_adopt_then_release_succeeds(tmp_project_dir):
         },
         "dloop": None,
     }
-    (tmp_project_dir / ".diwu" / "dtask-state.json").write_text(json.dumps(runtime, ensure_ascii=False, indent=2))
+    _write_runtime(tmp_project_dir, runtime)
 
     rc_adopt, out_adopt, _ = run_script(
         "dtask_transition.py",
@@ -138,7 +157,7 @@ def test_claim_rejects_second_inprogress_for_same_session(tmp_project_dir):
         },
         "dloop": None,
     }
-    (tmp_project_dir / ".diwu" / "dtask-state.json").write_text(json.dumps(runtime, ensure_ascii=False, indent=2))
+    _write_runtime(tmp_project_dir, runtime)
     rc, out, _ = run_script(
         "dtask_transition.py",
         "claim",
@@ -169,7 +188,7 @@ def test_claim_rejects_stale_owner_from_other_session(tmp_project_dir):
         },
         "dloop": None,
     }
-    (tmp_project_dir / ".diwu" / "dtask-state.json").write_text(json.dumps(runtime, ensure_ascii=False, indent=2))
+    _write_runtime(tmp_project_dir, runtime)
 
     # Task#7 有其他 session 的 stale owner → claim 应拒绝
     rc, out, _ = run_script(
@@ -249,8 +268,8 @@ class TestAutoSessionIdResolution(unittest.TestCase):
         assert rc == 0
         payload = json.loads(out)
         assert payload["status"] == "claimed"
-        # 验证 dtask-state.json 中写入了真实 SID
-        state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
+        # 验证 dtask-state.toml 中写入了真实 SID
+        state = _read_runtime(self.tmp_dir)
         sid = state["task_sessions"]["1"]["session_id"]
         assert sid == "real-session-abc-123"
 
@@ -260,7 +279,7 @@ class TestAutoSessionIdResolution(unittest.TestCase):
         rc, out, _ = self._run(["--session-id", "auto"], env={"CLAUDE_SESSION_ID": "env-sid-xyz"})
         assert rc == 0
         payload = json.loads(out)
-        state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
+        state = _read_runtime(self.tmp_dir)
         assert state["task_sessions"]["1"]["session_id"] == "env-sid-xyz"
 
     def test_auto_falls_back_to_date_when_neither_file_nor_env(self):
@@ -269,7 +288,7 @@ class TestAutoSessionIdResolution(unittest.TestCase):
         rc, out, err = self._run(["--session-id", "auto"], env={})
         assert rc == 0
         payload = json.loads(out)
-        state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
+        state = _read_runtime(self.tmp_dir)
         sid = state["task_sessions"]["1"]["session_id"]
         assert sid.startswith("drun-")  # fallback 格式
         assert "[SESSION_ID]" in err  # 应有警告输出
@@ -280,7 +299,7 @@ class TestAutoSessionIdResolution(unittest.TestCase):
         scoped_session_file(self.tmp_dir).write_text("file-sid-should-ignore\n", encoding="utf-8")
         rc, out, _ = self._run(["--session-id", "explicit-sid-999"])
         assert rc == 0
-        state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
+        state = _read_runtime(self.tmp_dir)
         assert state["task_sessions"]["1"]["session_id"] == "explicit-sid-999"
 
     def test_env_overrides_file_when_both_exist(self):
@@ -289,7 +308,7 @@ class TestAutoSessionIdResolution(unittest.TestCase):
         scoped_session_file(self.tmp_dir).write_text("other-session-from-file\n", encoding="utf-8")
         rc, out, _ = self._run(["--session-id", "auto"], env={"CLAUDE_SESSION_ID": "current-session-env"})
         assert rc == 0
-        state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
+        state = _read_runtime(self.tmp_dir)
         assert state["task_sessions"]["1"]["session_id"] == "current-session-env"
 
     def test_adopt_also_supports_auto(self):
@@ -301,7 +320,7 @@ class TestAutoSessionIdResolution(unittest.TestCase):
         # adopt 用 auto → 应读取文件
         rc, out, _ = self._run_script("adopt", ["--session-id", "auto"])
         assert rc == 0
-        state = json.load(open(self.tmp_dir / ".diwu" / "dtask-state.json"))
+        state = _read_runtime(self.tmp_dir)
         assert state["task_sessions"]["1"]["session_id"] == "adopt-sid-file"
 
     def _run_script(self, command, extra_args=None, env=None):
@@ -317,7 +336,7 @@ class TestAutoSessionIdResolution(unittest.TestCase):
 
 
 def test_release_writes_pending_recording(tmp_project_dir):
-    """release done 后 dtask-state.json 含 pending_recording 标记。"""
+    """release done 后 dtask-state.toml 含 pending_recording 标记。"""
     _write_dtask(tmp_project_dir, [{"id": 1, "title": "a", "status": "InSpec"}])
     rc, out, _ = run_script(
         "dtask_transition.py",
@@ -378,9 +397,7 @@ def test_release_failure_does_not_write_mark(tmp_project_dir):
         },
         "dloop": None,
     }
-    (tmp_project_dir / ".diwu" / "dtask-state.json").write_text(
-        json.dumps(runtime, ensure_ascii=False, indent=2)
-    )
+    _write_runtime(tmp_project_dir, runtime)
     rc, out, _ = run_script(
         "dtask_transition.py",
         "release", "--task-id", "1", "--to", "done",
@@ -509,9 +526,7 @@ def test_show_pending_triggers_self_heal(tmp_project_dir):
             "session_id": "sid-stale",
         },
     }
-    (tmp_project_dir / ".diwu" / "dtask-state.json").write_text(
-        json.dumps(stale_state, ensure_ascii=False, indent=2)
-    )
+    _write_runtime(tmp_project_dir, stale_state)
     rc, out, _ = run_script(
         "dtask_transition.py",
         "show-pending", "--cwd", str(tmp_project_dir),

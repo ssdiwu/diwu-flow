@@ -18,7 +18,7 @@ import time
 
 import platform
 
-from _shared import setup_sys_path, load_json_fallback, load_stdin_event  # noqa: E402
+from _shared import setup_sys_path, load_stdin_event  # noqa: E402
 
 setup_sys_path()
 
@@ -216,11 +216,12 @@ def _check_pending_recording_gate(cwd, current_session_id="", wc=None):
     if not cwd:
         return "", ""
 
-    state_path = os.path.join(cwd, ".diwu", "dtask-state.json")
+    state_path = os.path.join(cwd, ".diwu", "dtask-state.toml")
     try:
-        with open(state_path, "r", encoding="utf-8") as f:
-            state = json.load(f)
-    except (OSError, json.JSONDecodeError):
+        with open(state_path, "rb") as f:
+            import tomllib
+            state = tomllib.load(f)
+    except (OSError, Exception):
         return "", ""
 
     pr = state.get("pending_recording")
@@ -291,7 +292,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Stop hook: B group checks")
-    parser.add_argument("--task-json", default=".diwu/dtask.json", help="Path to dtask.json")
+    parser.add_argument("--task-json", default=".diwu/dtask.toml", help="Path to dtask.toml")
     parser.add_argument("--settings-toml", default=".diwu/dsettings.toml", help="Path to dsettings.toml")
     args = parser.parse_args()
 
@@ -309,7 +310,7 @@ if __name__ == "__main__":
     # ── Phase 1: 零 I/O 快速路径 ────────────────────────
     recording_files = _scan_recording_files(cwd)
 
-    # 1a. pending_recording 门控（只需读 dtask-state.json）
+    # 1a. pending_recording 门控（只需读 dtask-state.toml）
     pr_level, pr_hint = _check_pending_recording_gate(cwd, session_id, wc=None)
 
     # 1b. decision reminder（只需读文件头）

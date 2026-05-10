@@ -25,7 +25,7 @@ effort: high
 | `scan-repo` | 扫描目录结构/技术栈/关键文件 → 输出 JSON |
 | `sync-rules` | 按 manifest 同步 rules 到 `.claude/rules/` |
 | `sync-skills` | 创建 `.agents/skills/` 下 symlink 指向 skills/ |
-| `create-config [--project-info-file X] [--scan-result-file Y]` | 创建 CLAUDE.md/dtask.json/runtime dirs |
+| `create-config [--project-info-file X] [--scan-result-file Y]` | 创建 CLAUDE.md/dtask.toml/runtime dirs |
 | `migrate-legacy` | 检测旧版 v0.x 并迁移运行时文件 |
 | `validate` | 运行验证清单 → PASS/FAIL 报告 |
 

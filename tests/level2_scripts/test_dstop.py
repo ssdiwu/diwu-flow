@@ -5,12 +5,13 @@ I2: CLI-first subprocess 调用。
 """
 
 import json
+import tomllib
 from pathlib import Path
 
 import pytest
-from conftest import run_script  # noqa: E402
+from conftest import run_script, write_runtime_toml, read_runtime_toml  # noqa: E402
 
-RUNTIME_STATE_NAME = "dtask-state.json"
+RUNTIME_STATE_NAME = "dtask-state.toml"
 
 
 class TestDstopNoState:
@@ -25,9 +26,6 @@ class TestDstopNoState:
 
 class TestDstopCancel:
     def _write_state(self, root: Path, **overrides):
-        diwu = root / ".diwu"
-        diwu.mkdir(exist_ok=True)
-        state = diwu / RUNTIME_STATE_NAME
         default = {
             "version": 1,
             "task_sessions": {},
@@ -43,7 +41,7 @@ class TestDstopCancel:
             },
         }
         default["dloop"].update(overrides)
-        state.write_text(json.dumps(default, ensure_ascii=False, indent=2))
+        write_runtime_toml(root, default)
 
     def test_cancel_with_tasks(self, tmp_project_dir):
         self._write_state(tmp_project_dir, completed_task_ids=[1, 2], current_iteration=3)
@@ -59,8 +57,9 @@ class TestDstopCancel:
         assert data["completed_count"] == 2
         assert data["iteration"] == 3
 
-        runtime_state = json.loads(state_file.read_text())
-        assert runtime_state["dloop"] is None
+        runtime_state = tomllib.loads(state_file.read_bytes().decode())
+        # TOML 不支持 null，clear_loop_state 后 dloop key 被移除
+        assert runtime_state.get("dloop") is None
 
     def test_cancel_many_tasks(self, tmp_project_dir):
         self._write_state(tmp_project_dir, completed_task_ids=list(range(1, 11)), current_iteration=8)

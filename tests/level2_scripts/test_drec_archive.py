@@ -11,18 +11,14 @@ from pathlib import Path
 
 import pytest
 
-from conftest import run_script  # noqa: E402
+from conftest import run_script, write_dtask_toml, read_dtask_toml  # noqa: E402
 
 
 class TestArchiveTasks:
-    """Task 轨道归档测试：Done/Cancelled 任务追加到 archive/ 并从 dtask.json 移除。"""
+    """Task 轨道归档测试：Done/Cancelled 任务追加到 archive/ 并从 dtask.toml 移除。"""
 
     def _write_dtask(self, root: Path, tasks: list):
-        diwu = root / ".diwu"
-        diwu.mkdir(exist_ok=True)
-        (diwu / "dtask.json").write_text(
-            json.dumps({"tasks": tasks}, ensure_ascii=False, indent=2)
-        )
+        write_dtask_toml(root, tasks)
 
     def _write_settings(self, root: Path, overrides: dict = None):
         diwu = root / ".diwu"
@@ -45,7 +41,7 @@ class TestArchiveTasks:
         (diwu / "dsettings.toml").write_text("\n".join(lines) + "\n")
 
     def test_archive_tasks_basic(self, tmp_project_dir):
-        """25 个 Done 任务 → 归档到 task_archive_YYYY-MM.json，dtask.json 清空。"""
+        """25 个 Done 任务 → 归档到 task_archive_YYYY-MM.json，dtask.toml 清空。"""
         self._write_settings(tmp_project_dir, {"task_archive_limit": 20})
         tasks = [
             {"id": i, "title": f"task-{i}", "status": "Done", "description": f"desc {i}"}
@@ -70,8 +66,8 @@ class TestArchiveTasks:
         archived_ids = {t["id"] for t in archived_tasks}
         assert archived_ids == set(range(1, 26))
 
-        # 验证 dtask.json 已移除已归档任务
-        remaining = json.loads((tmp_project_dir / ".diwu" / "dtask.json").read_text())
+        # 验证 dtask.toml 已移除已归档任务
+        remaining = read_dtask_toml(tmp_project_dir)
         assert len(remaining["tasks"]) == 0
 
     def test_archive_tasks_id_dedup(self, tmp_project_dir):
@@ -234,21 +230,19 @@ class TestIdempotent:
             'recording_file_limit = 50\n'
             'recording_keep_days = 30\n'
         )
-        (diwu / "dtask.json").write_text(json.dumps({
-            "tasks": [
-                {"id": 1, "title": "t1", "status": "Done"},
-                {"id": 2, "title": "t2", "status": "Done"},
-                {"id": 3, "title": "t3", "status": "Done"},
-                {"id": 99, "title": "active", "status": "InProgress"},
-            ]
-        }, ensure_ascii=False, indent=2))
+        write_dtask_toml(tmp_project_dir, [
+            {"id": 1, "title": "t1", "status": "Done"},
+            {"id": 2, "title": "t2", "status": "Done"},
+            {"id": 3, "title": "t3", "status": "Done"},
+            {"id": 99, "title": "active", "status": "InProgress"},
+        ])
 
         # 第一次
         rc1, out1, _ = run_script("drec_archive.py", "run", "--cwd", str(tmp_project_dir))
         data1 = json.loads(out1)
         assert data1["tasks_archived"] == 3
 
-        # 第二次（dtask.json 中只剩 InProgress 任务）
+        # 第二次（dtask.toml 中只剩 InProgress 任务）
         rc2, out2, _ = run_script("drec_archive.py", "run", "--cwd", str(tmp_project_dir))
         data2 = json.loads(out2)
         assert data2["tasks_archived"] == 0
@@ -286,7 +280,7 @@ class TestNoArchiveNeeded:
     """无需归档的边界场景。"""
 
     def test_empty_project(self, tmp_project_dir):
-        """空项目（无 dtask.json 无 recording）不报错。"""
+        """空项目（无 dtask.toml 无 recording）不报错。"""
         rc, out, _ = run_script("drec_archive.py", "run", "--cwd", str(tmp_project_dir))
         data = json.loads(out)
         assert data["ok"] is True
@@ -302,12 +296,10 @@ class TestNoArchiveNeeded:
             'recording_file_limit = 50\n'
             'recording_keep_days = 30\n'
         )
-        (diwu / "dtask.json").write_text(json.dumps({
-            "tasks": [
-                {"id": 1, "title": "t1", "status": "InSpec"},
-                {"id": 2, "title": "t2", "status": "InProgress"},
-            ]
-        }, ensure_ascii=False, indent=2))
+        write_dtask_toml(tmp_project_dir, [
+            {"id": 1, "title": "t1", "status": "InSpec"},
+            {"id": 2, "title": "t2", "status": "InProgress"},
+        ])
 
         rc, out, _ = run_script("drec_archive.py", "run", "--cwd", str(tmp_project_dir))
         data = json.loads(out)

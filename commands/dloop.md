@@ -20,9 +20,9 @@ effort: low
 
 ## 运行时真相源
 
-- loop 元数据保存在 `.diwu/dtask-state.json.dloop`
+- loop 元数据保存在 `.diwu/dtask-state.toml.dloop`
 - 不再把 `.diwu/dloop-state.json` 当作长期真相源；它只作为 legacy 输入，在 `start/status/stop_decision` 中一次性迁移
-- 普通 `InProgress` owner 保存在 `.diwu/dtask-state.json.task_sessions`
+- 普通 `InProgress` owner 保存在 `.diwu/dtask-state.toml.task_sessions`
 - dloop state 字段：`mode`（固定 `"cron"`）、`cron_job_id`（CronCreate 返回的 job ID）
 
 ## 状态与停止
@@ -30,7 +30,7 @@ effort: low
 - `start`：启动新 loop；若已存在活跃 loop owner，返回 `already_running`
 - `status`：显示当前 iteration / completed / max_tasks
 - `stale_cleaned`：检测到 terminal stale 后自动清理残留 loop 元数据
-- `/dstop`：停止 dloop 循环（清除 `.diwu/dtask-state.json.dloop`），不负责 stale 检测
+- `/dstop`：停止 dloop 循环（清除 `.diwu/dtask-state.toml.dloop`），不负责 stale 检测
 
 ## Stale-State 规则
 
@@ -40,7 +40,7 @@ effort: low
 
 ## 与 stop_decision.py 的关系
 
-- **仅 cron 模式**：`stop_decision.py` 读取 `.diwu/dtask-state.json.dloop`，调用 `decide_cron_mode()` 判断终止或放行
+- **仅 cron 模式**：`stop_decision.py` 读取 `.diwu/dtask-state.toml.dloop`，调用 `decide_cron_mode()` 判断终止或放行
 - 未命中停止条件时：Stop hook 允许 session 自然结束（等下次 Cron 触发）
 - 终止条件命中：生成阶段报告 + 清理 dloop + 提示执行 `/dstop`
 

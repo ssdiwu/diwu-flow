@@ -23,7 +23,7 @@ except (ImportError, ModuleNotFoundError):
 
 MESSAGE = (
     "[diwu-plan-guard] Plan→Dtask 门控提醒：\n\n"
-    "⚠️ 如果本次 plan 包含 >=3 步实施工作，必须先用 /dtask 将步骤派生为 .diwu/dtask.json "
+    "⚠️ 如果本次 plan 包含 >=3 步实施工作，必须先用 /dtask 将步骤派生为 .diwu/dtask.toml "
     "条目（每条含 GWT acceptance），再进入 /drun 或代码实施。\n"
     "<3 步且结果可预期的小改动可直接执行。\n\n"
     "完整规则见 rules/mindset.md §Plan→Dtask 门控"

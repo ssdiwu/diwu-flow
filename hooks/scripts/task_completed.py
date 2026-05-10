@@ -7,7 +7,7 @@ Non-blocking: always exit(0), outputs reminder via additionalSystemPrompt.
 
 Does NOT write files — recording is handled by Stop hook.
 
-Loop tracking: maintains completed_task_ids in dtask-state.json.dloop
+Loop tracking: maintains completed_task_ids in dtask-state.toml.dloop
 when an active dloop session matches the current event session_id.
 Execution order: clear_task_owner (raw load, pre-sync) -> loop track -> reminder gating.
 
@@ -20,7 +20,7 @@ unconfirmed completions. Reminder sys.exit(0) comes after all bookkeeping.
 
 import json, os, sys, tomllib
 
-from _shared import setup_sys_path, load_json_fallback, load_stdin_event  # noqa: E402
+from _shared import setup_sys_path, load_toml_fallback, load_stdin_event  # noqa: E402
 
 setup_sys_path()
 
@@ -32,8 +32,8 @@ from dtask_state import (  # noqa: E402
 )
 
 SETTINGS_FILE = '.diwu/dsettings.toml'
-TASK_JSON_PATH = '.diwu/dtask.json'
-RUNTIME_STATE_PATH = '.diwu/dtask-state.json'
+TASK_JSON_PATH = '.diwu/dtask.toml'
+RUNTIME_STATE_PATH = '.diwu/dtask-state.toml'
 
 _CWD: str = "."
 
@@ -55,7 +55,7 @@ def _track_loop_completion(task_id: int, session_id: str):
     此函数内部使用 sync_runtime_state（含 cleanup），此时 owner 已被清除，
     cleanup 不再影响当前 task 的 loop 计数逻辑。
     """
-    task_data = load_json_fallback(TASK_JSON_PATH)
+    task_data = load_toml_fallback(TASK_JSON_PATH)
     sync_result = sync_runtime_state(_CWD, task_data, persist=True, ensure_exists=True)
     if not sync_result.ok:
         return
@@ -95,7 +95,7 @@ def main():
 
     if not completed_task:
         # Fallback: scan task.json for Done tasks (heuristic)
-        task_data = load_json_fallback(TASK_JSON_PATH)
+        task_data = load_toml_fallback(TASK_JSON_PATH)
         tasks = task_data.get("tasks", [])
         # Last Done task found (most recent completion)
         for t in reversed(tasks):

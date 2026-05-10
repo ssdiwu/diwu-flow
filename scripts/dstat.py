@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """diwu-flow dstat: 项目状态只读聚合。
 
-纯读取：dtask.json / recording/ / decisions.md / .git / archive/
+纯读取：dtask.toml / recording/ / decisions.md / .git / archive/
 不修改任何文件，优雅降级（I5: 缺失数据源输出 null/warning 而非报错退出）。
 CLI 入口：python3 scripts/dstat.py [--deep] --cwd <proj>
 """
@@ -19,7 +19,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 sys.path.insert(0, str(HOOKS_SCRIPTS_DIR))
 
 from _fs_snapshot import get_git_metadata, get_worktree_changes  # noqa: E402
-from common import DIWU_DIR, DTASK_JSON, DECISIONS_FILE, RECORDING_DIR, ARCHIVE_DIR, load_json_or_empty, rel_time  # noqa: E402
+from common import DIWU_DIR, DTASK_TOML, DECISIONS_FILE, RECORDING_DIR, ARCHIVE_DIR, load_toml_or_empty, rel_time  # noqa: E402
 
 
 def _read_recent_lines(path: Path, n: int = 20) -> str:
@@ -35,8 +35,8 @@ def _read_recent_lines(path: Path, n: int = 20) -> str:
 
 
 def get_tasks_summary(cwd: Path) -> dict:
-    """从 dtask.json 提取任务状态分布。"""
-    data = load_json_or_empty(cwd / DTASK_JSON)
+    """从 dtask.toml 提取任务状态分布。"""
+    data = load_toml_or_empty(cwd / DTASK_TOML)
     tasks = data.get("tasks", []) if isinstance(data, dict) else []
     summary = {"total": len(tasks), "InSpec": 0, "InProgress": 0, "InReview": 0, "Done": 0, "Blocked": 0, "Cancelled": 0}
     for t in tasks:
@@ -211,7 +211,7 @@ def format_output(summary: dict, sessions: list, decisions: list,
     if deep:
         lines.append("")
         lines.append("**活跃任务详情**:")
-        raw = load_json_or_empty(diwu_dir / "dtask.json")
+        raw = load_toml_or_empty(diwu_dir / "dtask.toml")
         active_tasks = [t for t in raw.get("tasks", []) if isinstance(t, dict) and t.get("status") in ("InProgress", "InSpec")]
         if active_tasks:
             for t in active_tasks[:5]:
@@ -257,8 +257,8 @@ def main():
     warnings = []
     if git_info.get("not_git"):
         warnings.append("非 git 目录，git 信息不可用")
-    if not (cwd / DTASK_JSON).exists():
-        warnings.append("dtask.json 不存在")
+    if not (cwd / DTASK_TOML).exists():
+        warnings.append("dtask.toml 不存在")
     if warnings:
         result["warnings"] = warnings
 

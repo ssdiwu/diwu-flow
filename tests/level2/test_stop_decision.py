@@ -12,7 +12,7 @@ from stop_decision import hook_session_id
 
 
 
-RUNTIME_STATE_NAME = ".diwu/dtask-state.json"
+RUNTIME_STATE_NAME = ".diwu/dtask-state.toml"
 
 
 class _PendingRecordingTestBase(unittest.TestCase):
@@ -42,10 +42,11 @@ class _PendingRecordingTestBase(unittest.TestCase):
         )
         _diwu_path = os.path.join(self.cwd, ".diwu")
         os.makedirs(_diwu_path, exist_ok=True)
-        state_path = os.path.join(_diwu_path, "dtask-state.json")
-        with open(state_path, "w") as f:
-            json.dump({"version": 1}, f)
-        task_path = os.path.join(_diwu_path, "dtask.json")
+        import tomli_w
+        state_path = os.path.join(_diwu_path, "dtask-state.toml")
+        with open(state_path, "wb") as f:
+            tomli_w.dump({"version": 1}, f)
+        task_path = os.path.join(_diwu_path, "dtask.toml")
         with open(task_path, "w") as f:
             json.dump({"tasks": []}, f)
         subprocess.run(
@@ -63,9 +64,18 @@ class _PendingRecordingTestBase(unittest.TestCase):
     def _write_state(self, **overrides):
         state = {"version": 1}
         state.update(overrides)
-        path = os.path.join(self.cwd, ".diwu", "dtask-state.json")
-        with open(path, "w") as f:
-            json.dump(state, f, ensure_ascii=False)
+        path = os.path.join(self.cwd, ".diwu", "dtask-state.toml")
+        import tomli_w
+
+        def _strip_none(obj):
+            if isinstance(obj, dict):
+                return {k: _strip_none(v) for k, v in obj.items() if v is not None}
+            if isinstance(obj, list):
+                return [_strip_none(item) for item in obj]
+            return obj
+
+        with open(path, "wb") as f:
+            tomli_w.dump(_strip_none(state), f)
 
     def _touch_file(self, relpath):
         full = os.path.join(self.cwd, relpath)
@@ -117,7 +127,7 @@ class TestPendingRecordingGate(_PendingRecordingTestBase):
             "session_id": "sess-own",
             "released_at": now_iso,
         })
-        self._touch_file(".diwu/dtask.json")
+        self._touch_file(".diwu/dtask.toml")
 
         level, hint = _check_pending_recording_gate(self.cwd, "sess-own")
         self.assertEqual(level, "block")
@@ -133,7 +143,7 @@ class TestPendingRecordingGate(_PendingRecordingTestBase):
             "released_at": now_iso,
         })
         subprocess.run(
-            ["git", "add", ".diwu/dtask-state.json"],
+            ["git", "add", ".diwu/dtask-state.toml"],
             cwd=self.cwd, capture_output=True,
         )
         subprocess.run(
@@ -154,7 +164,7 @@ class TestPendingRecordingGate(_PendingRecordingTestBase):
             "session_id": "sess-old",
             "released_at": stale_time,
         })
-        self._touch_file(".diwu/dtask.json")
+        self._touch_file(".diwu/dtask.toml")
 
         level, hint = _check_pending_recording_gate(self.cwd, "sess-old")
         self.assertEqual(level, "warn")
@@ -169,14 +179,14 @@ class TestPendingRecordingGate(_PendingRecordingTestBase):
             "session_id": "sess-other",
             "released_at": now_iso,
         })
-        self._touch_file(".diwu/dtask.json")
+        self._touch_file(".diwu/dtask.toml")
 
         level, hint = _check_pending_recording_gate(self.cwd, "sess-mine")
         self.assertEqual(level, "")
         self.assertEqual(hint, "")
 
     def test_corrupted_state_file_safe(self):
-        state_path = os.path.join(self.cwd, ".diwu", "dtask-state.json")
+        state_path = os.path.join(self.cwd, ".diwu", "dtask-state.toml")
         with open(state_path, "w") as f:
             f.write("{broken json!!!")
 
@@ -188,11 +198,11 @@ class TestPendingRecordingGate(_PendingRecordingTestBase):
 class TestDiuDirty(_PendingRecordingTestBase):
     """_check_diu_dirty 独立测试。"""
 
-    def test_diu_dirty_detects_dtask_json_change(self):
-        self._touch_file(".diwu/dtask.json")
+    def test_diu_dirty_detects_dtask_toml_change(self):
+        self._touch_file(".diwu/dtask.toml")
         has_dirty, files = _check_diu_dirty(self.cwd)
         self.assertTrue(has_dirty)
-        self.assertTrue(any("dtask.json" in f for f in files))
+        self.assertTrue(any("dtask.toml" in f for f in files))
 
     def test_diu_dirty_detects_recording_file_change(self):
         self._touch_file(".diwu/recording/session-test.md")

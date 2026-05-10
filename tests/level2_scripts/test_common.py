@@ -147,26 +147,30 @@ class TestMaxTaskIdCLI:
         assert data["max_id"] == 0
         assert data["source"] == "empty"
 
-    def test_with_dtask_json(self, tmp_project_dir):
-        dtask = tmp_project_dir / ".diwu" / "dtask.json"
-        dtask.write_text(json.dumps({
-            "tasks": [
-                {"id": 3, "title": "t3", "status": "Done"},
-                {"id": 7, "title": "t7", "status": "InProgress"},
-            ]
-        }, ensure_ascii=False, indent=2))
+    def test_with_dtask_toml(self, tmp_project_dir):
+        import tomli_w
+        dtask = tmp_project_dir / ".diwu" / "dtask.toml"
+        with open(dtask, "wb") as f:
+            tomli_w.dump({
+                "tasks": [
+                    {"id": 3, "title": "t3", "status": "Done"},
+                    {"id": 7, "title": "t7", "status": "InProgress"},
+                ]
+            }, f)
         rc, out, err = run_script("common.py", "--max-task-id", "--cwd", str(tmp_project_dir))
         assert rc == 0
         data = json.loads(out)
         assert data["max_id"] == 7
-        assert data["source"] == "dtask.json"
+        assert data["source"] == "dtask.toml"
 
     def test_with_archive_higher_id(self, tmp_project_dir):
-        # dtask.json has id=3, archive has id=5 → should pick 5
-        dtask = tmp_project_dir / ".diwu" / "dtask.json"
-        dtask.write_text(json.dumps({
-            "tasks": [{"id": 3, "title": "t3", "status": "Done"}]
-        }, ensure_ascii=False, indent=2))
+        # dtask.toml has id=3, archive has id=5 → should pick 5
+        import tomli_w
+        dtask = tmp_project_dir / ".diwu" / "dtask.toml"
+        with open(dtask, "wb") as f:
+            tomli_w.dump({
+                "tasks": [{"id": 3, "title": "t3", "status": "Done"}]
+            }, f)
 
         archive_dir = tmp_project_dir / ".diwu" / "archive"
         archive_dir.mkdir()
@@ -181,11 +185,12 @@ class TestMaxTaskIdCLI:
         assert data["max_id"] == 5
         assert "archive" in data["source"]
 
-    def test_corrupted_dtask_json(self, tmp_project_dir):
-        dtask = tmp_project_dir / ".diwu" / "dtask.json"
-        dtask.write_text("{broken json")
+    def test_corrupted_dtask_toml(self, tmp_project_dir):
+        dtask = tmp_project_dir / ".diwu" / "dtask.toml"
+        dtask.write_text("{broken toml")
         rc, out, err = run_script("common.py", "--max-task-id", "--cwd", str(tmp_project_dir))
         assert rc == 1  # exit 1 on corruption
-        data = json.loads(out)
+        # error_exit 输出到 stderr（JSON 格式）
+        data = json.loads(err)
         assert data["ok"] is False
-        assert "损坏" in data.get("error", "")
+        assert "损坏" in data.get("error", "") or "TOML 解析失败" in data.get("error", "")

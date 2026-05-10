@@ -1,6 +1,11 @@
 {
   "version": 1,
-  "task_sessions": {},
+  "task_sessions": {
+    "135": {
+      "session_id": "377f7272-3c9c-4f03-8e11-347a721e3fdc",
+      "started_at": "2026-05-10T18:16:40.359341+00:00"
+    }
+  },
   "dloop": null,
   "pending_recording": null
 }

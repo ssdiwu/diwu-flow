@@ -63,8 +63,8 @@ _IGNORE_FILES = {
     ".DS_Store",
 }
 _DIU_PREFIXES = (
-    ".diwu/dtask.json",
-    ".diwu/dtask-state.json",
+    ".diwu/dtask.toml",
+    ".diwu/dtask-state.toml",
     ".diwu/recording/",
 )
 

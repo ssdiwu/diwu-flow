@@ -138,10 +138,11 @@ class TestDinitCreateConfig:
         assert data["status"] == "created"
 
     def test_create_config_makes_dtask(self, tmp_project_dir):
+        import tomllib
         run_script("dinit.py", "create-config", "--cwd", str(tmp_project_dir))
-        dtask = tmp_project_dir / ".diwu" / "dtask.json"
+        dtask = tmp_project_dir / ".diwu" / "dtask.toml"
         assert dtask.exists()
-        task_data = json.loads(dtask.read_text())
+        task_data = tomllib.loads(dtask.read_bytes().decode())
         assert "tasks" in task_data
 
     def test_create_config_makes_runtime_dirs(self, tmp_project_dir):

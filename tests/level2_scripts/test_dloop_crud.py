@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from conftest import run_script  # noqa: E402
 
-RUNTIME_STATE_NAME = "dtask-state.json"
+RUNTIME_STATE_NAME = "dtask-state.toml"
 
 
 def _runtime_state_file(root: Path) -> Path:
@@ -19,7 +19,8 @@ def _runtime_state_file(root: Path) -> Path:
 
 
 def _read_runtime_state(root: Path) -> dict:
-    return json.loads(_runtime_state_file(root).read_text())
+    import tomllib
+    return tomllib.loads(_runtime_state_file(root).read_bytes().decode())
 
 
 def _read_loop_state(root: Path) -> dict | None:
@@ -28,10 +29,11 @@ def _read_loop_state(root: Path) -> dict | None:
 
 class TestDloopStart:
     def _write_dtask_with_tasks(self, root: Path, tasks_data):
+        import tomli_w
         diwu = root / ".diwu"
         diwu.mkdir(exist_ok=True)
-        dtask = diwu / "dtask.json"
-        dtask.write_text(json.dumps({"tasks": tasks_data}, ensure_ascii=False, indent=2))
+        dtask = diwu / "dtask.toml"
+        dtask.write_bytes(tomli_w.dumps({"tasks": tasks_data}).encode("utf-8"))
 
     def test_start_success(self, tmp_project_dir):
         self._write_dtask_with_tasks(tmp_project_dir, [
@@ -50,11 +52,12 @@ class TestDloopStart:
         # 先手动创建一个活跃的状态文件
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        # 需要 dtask.json 有可执行任务，否则 classify 判为 terminal_stale 而非 already_running
-        dtask = diwu / "dtask.json"
-        dtask.write_text(json.dumps({"tasks": [
+        # 需要 dtask.toml 有可执行任务，否则 classify 判为 terminal_stale 而非 already_running
+        dtask = diwu / "dtask.toml"
+        import tomli_w
+        dtask.write_bytes(tomli_w.dumps({"tasks": [
             {"id": 1, "title": "t1", "status": "InProgress"},
-        ]}, ensure_ascii=False, indent=2))
+        ]}).encode("utf-8"))
         existing_state = {
             "active": True,
             "session_id": "existing",
@@ -63,8 +66,14 @@ class TestDloopStart:
             "current_iteration": 5,
             "max_tasks": 10,
         }
-        (diwu / "dloop-state.json").write_text(
-            json.dumps(existing_state, ensure_ascii=False, indent=2)
+        import tomli_w
+        full_state = {
+            "version": 1,
+            "task_sessions": {},
+            "dloop": existing_state,
+        }
+        (diwu / "dtask-state.toml").write_bytes(
+            tomli_w.dumps(full_state).encode("utf-8")
         )
 
         rc, out, err = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir))
@@ -135,20 +144,29 @@ class TestDloopStatus:
         # 创建一个模拟的运行中状态
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        # 需要 dtask.json 有可执行任务，否则 classify 判为 terminal_stale
-        dtask = diwu / "dtask.json"
-        dtask.write_text(json.dumps({"tasks": [
+        # 需要 dtask.toml 有可执行任务，否则 classify 判为 terminal_stale
+        dtask = diwu / "dtask.toml"
+        import tomli_w
+        dtask.write_bytes(tomli_w.dumps({"tasks": [
             {"id": 4, "title": "t4", "status": "InProgress"},
-        ]}, ensure_ascii=False, indent=2))
+        ]}).encode("utf-8"))
         state = {
             "active": True,
             "session_id": "test-session",
-            "started_at": "2026-04-30T12:00:00Z",
+            "started_at": "2026-04-30T00:00:00Z",
             "completed_task_ids": [1, 2, 3],
             "current_iteration": 4,
             "max_tasks": 10,
         }
-        (diwu / "dloop-state.json").write_text(json.dumps(state, ensure_ascii=False, indent=2))
+        import tomli_w
+        full_state = {
+            "version": 1,
+            "task_sessions": {},
+            "dloop": state,
+        }
+        (diwu / "dtask-state.toml").write_bytes(
+            tomli_w.dumps(full_state).encode("utf-8")
+        )
 
         rc, out, err = run_script("dloop.py", "status", "--cwd", str(tmp_project_dir))
         assert rc == 0
@@ -164,7 +182,15 @@ class TestDloopStatus:
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
         state = {"active": False, "completed_task_ids": []}
-        (diwu / "dloop-state.json").write_text(json.dumps(state, ensure_ascii=False, indent=2))
+        import tomli_w
+        full_state = {
+            "version": 1,
+            "task_sessions": {},
+            "dloop": state,
+        }
+        (diwu / "dtask-state.toml").write_bytes(
+            tomli_w.dumps(full_state).encode("utf-8")
+        )
 
         rc, out, err = run_script("dloop.py", "status", "--cwd", str(tmp_project_dir))
         assert rc == 0
@@ -187,16 +213,25 @@ class TestDloopStaleState:
     """#23: stale-state 兜底 — terminal_stale 自动清理 / invalid 不删除 / active 保持。"""
 
     def _write_dtask(self, root: Path, tasks_data):
+        import tomli_w
         diwu = root / ".diwu"
         diwu.mkdir(exist_ok=True)
-        dtask = diwu / "dtask.json"
-        dtask.write_text(json.dumps({"tasks": tasks_data}, ensure_ascii=False, indent=2))
+        dtask = diwu / "dtask.toml"
+        dtask.write_bytes(tomli_w.dumps({"tasks": tasks_data}).encode("utf-8"))
 
     def _write_state(self, root: Path, state_data):
+        import tomli_w
         diwu = root / ".diwu"
         diwu.mkdir(exist_ok=True)
-        state_file = diwu / "dloop-state.json"
-        state_file.write_text(json.dumps(state_data, ensure_ascii=False, indent=2))
+        # 过滤掉 None 值（TOML 不支持 null）
+        clean_data = {k: v for k, v in state_data.items() if v is not None}
+        full_state = {
+            "version": 1,
+            "task_sessions": {},
+            "dloop": clean_data,
+        }
+        state_file = diwu / "dtask-state.toml"
+        state_file.write_bytes(tomli_w.dumps(full_state).encode("utf-8"))
 
     # --- terminal_stale: completed >= max_tasks ---
 
@@ -218,8 +253,12 @@ class TestDloopStaleState:
         assert data["ok"] is True
         assert data["status"] == "stale_cleaned"
         assert "cleanup_reason" in data.get("data", {})
-        # legacy 文件应已被删除
-        assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        # dtask-state.toml 是 canonical 路径，stale cleanup 后文件仍存在（dloop 已清除）
+        state_file = tmp_project_dir / ".diwu" / "dtask-state.toml"
+        assert state_file.exists()
+        import tomllib
+        remaining = tomllib.loads(state_file.read_bytes().decode())
+        assert remaining.get("dloop") is None
 
     def test_start_terminal_stale_clean_and_continue(self, tmp_project_dir):
         """start 命中 terminal_stale → 清理旧 state 后继续正常启动 started。"""
@@ -245,7 +284,7 @@ class TestDloopStaleState:
         assert "已清理残留" in data.get("message", "") or "🧹" in data.get("formatted_text", "")
         assert _runtime_state_file(tmp_project_dir).exists()
         assert _read_loop_state(tmp_project_dir)["active"] is True
-        assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        # dtask-state.toml 是 canonical 路径，start 后文件存在（含新的 dloop）
 
     # --- terminal_stale: 无可执行任务 ---
 
@@ -271,7 +310,12 @@ class TestDloopStaleState:
         data = json.loads(out)
         assert data["ok"] is True
         assert data["status"] == "stale_cleaned"
-        assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        # dtask-state.toml 是 canonical 路径，stale cleanup 后文件仍存在（dloop 已清除）
+        state_file = tmp_project_dir / ".diwu" / "dtask-state.toml"
+        assert state_file.exists()
+        import tomllib
+        remaining = tomllib.loads(state_file.read_bytes().decode())
+        assert remaining.get("dloop") is None
 
     # --- active_or_recoverable: 正常活跃 ---
 
@@ -297,7 +341,7 @@ class TestDloopStaleState:
         assert data["status"] == "running"
         assert _runtime_state_file(tmp_project_dir).exists()
         assert _read_loop_state(tmp_project_dir)["active"] is True
-        assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        # dtask-state.toml 是 canonical 路径，active 状态下文件存在
 
     def test_start_active_returns_already_running(self, tmp_project_dir):
         """start 命中 active_or_recoverable → already_running，不删文件。"""
@@ -321,7 +365,7 @@ class TestDloopStaleState:
         assert data["status"] == "already_running"
         assert _runtime_state_file(tmp_project_dir).exists()
         assert _read_loop_state(tmp_project_dir)["active"] is True
-        assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        # dtask-state.toml 是 canonical 路径，already_running 状态下文件存在
 
     # --- invalid_state: JSON 损坏 ---
 
@@ -370,19 +414,21 @@ class TestDloopStaleState:
         data = json.loads(out)
         assert data["ok"] is False
         assert data["status"] == "invalid_state_file"
-        assert (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        # invalid state 不删除 dtask-state.toml（canonical 路径）
+        assert (tmp_project_dir / ".diwu" / "dtask-state.toml").exists()
 
     def test_status_terminal_stale_pending_review(self, tmp_project_dir):
         """review_limit 仍支持向后兼容 — dloop_review_cap 为新键名测试。"""
+        import tomli_w
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dtask.json").write_text(json.dumps({
+        (diwu / "dtask.toml").write_bytes(tomli_w.dumps({
             "tasks": [
                 {"id": 1, "title": "review", "status": "InReview"},
                 {"id": 2, "title": "next", "status": "InSpec"},
             ],
             "review_used": 5,
-        }, ensure_ascii=False, indent=2))
+        }).encode("utf-8"))
         (diwu / "dsettings.toml").write_text("dloop_review_cap = 5\n", encoding="utf-8")
         self._write_state(tmp_project_dir, {
             "active": True,
@@ -399,20 +445,26 @@ class TestDloopStaleState:
         assert data["ok"] is True
         assert data["status"] == "stale_cleaned"
         assert "PENDING REVIEW" in data["data"]["cleanup_reason"]
-        assert not (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
+        # dtask-state.toml 是 canonical 路径，stale cleanup 后文件仍存在
+        state_file = tmp_project_dir / ".diwu" / "dtask-state.toml"
+        assert state_file.exists()
+        import tomllib
+        remaining = tomllib.loads(state_file.read_bytes().decode())
+        assert remaining.get("dloop") is None
 
 
 class TestDloopPathIntegrity:
     """#24: 防止 .diwu/.diwu 双重路径 bug 回归的可观测性测试。"""
 
     def test_status_running_reads_correct_state_path(self, tmp_project_dir):
-        """证明 subprocess 读的是 <cwd>/.diwu/dtask-state.json。"""
+        """证明 subprocess 读的是 <cwd>/.diwu/dtask-state.toml。"""
+        import tomli_w
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        dtask = diwu / "dtask.json"
-        dtask.write_text(json.dumps({"tasks": [
+        dtask = diwu / "dtask.toml"
+        dtask.write_bytes(tomli_w.dumps({"tasks": [
             {"id": 1, "title": "t1", "status": "InProgress"},
-        ]}, ensure_ascii=False, indent=2))
+        ]}).encode("utf-8"))
         state = {
             "version": 1,
             "task_sessions": {
@@ -425,12 +477,10 @@ class TestDloopPathIntegrity:
                 "completed_task_ids": [1],
                 "current_iteration": 1,
                 "max_tasks": 5,
-                "stopped_at": None,
-                "stop_reason": None,
             },
         }
-        (diwu / RUNTIME_STATE_NAME).write_text(
-            json.dumps(state, ensure_ascii=False, indent=2)
+        (diwu / RUNTIME_STATE_NAME).write_bytes(
+            tomli_w.dumps(state).encode("utf-8")
         )
         wrong_path = diwu / ".diwu" / RUNTIME_STATE_NAME
         assert not wrong_path.exists()
@@ -445,12 +495,13 @@ class TestDloopPathIntegrity:
 
     def test_start_and_status_use_same_state_path(self, tmp_project_dir):
         """start 创建的 state 文件必须被 status 读到（路径一致）。"""
+        import tomli_w
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        dtask = diwu / "dtask.json"
-        dtask.write_text(json.dumps({"tasks": [
+        dtask = diwu / "dtask.toml"
+        dtask.write_bytes(tomli_w.dumps({"tasks": [
             {"id": 1, "title": "t1", "status": "InSpec"},
-        ]}, ensure_ascii=False, indent=2))
+        ]}).encode("utf-8"))
 
         # 先 start
         rc_start, out_start, _ = run_script("dloop.py", "start", "--cwd", str(tmp_project_dir), "--interval", "3m")

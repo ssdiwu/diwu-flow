@@ -1,7 +1,7 @@
 # 任务状态机 — Persistent Task 真相源
 
 > **规则约束级别说明**：本文件定义任务状态机核心规则。
-> **定位**：`.diwu/dtask.json` 中 task 条目的 schema 真相来源与状态机契约。不承载实施流程（见 `skills/drun/SKILL.md`）或验收证据标准（见 `rules/verification.md`）。
+> **定位**：`.diwu/dtask.toml` 中 task 条目的 schema 真相来源与状态机契约。不承载实施流程（见 `skills/drun/SKILL.md`）或验收证据标准（见 `rules/verification.md`）。
 
 ## acceptance 格式规范
 
@@ -25,7 +25,7 @@
 | `blocked_by` | 数组 | (可选) 前置任务 ID |
 | `status` | 字符串 | 运行时状态 |
 
-**运行态真相源**：`.diwu/dtask.json`(status) / `.diwu/dtask-state.json`(runtime 元数据) / `scripts/dtask_transition.py`(唯一状态转移入口)。
+**运行态真相源**：`.diwu/dtask.toml`(status) / `.diwu/dtask-state.toml`(runtime 元数据) / `scripts/dtask_transition.py`(唯一状态转移入口)。
 
 ## 状态定义
 

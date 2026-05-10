@@ -2,7 +2,7 @@ import json
 import os
 import sys
 
-from _shared import setup_sys_path, load_json_fallback, load_stdin_event  # noqa: E402
+from _shared import setup_sys_path, load_toml_fallback, load_stdin_event  # noqa: E402
 
 setup_sys_path()
 
@@ -19,11 +19,11 @@ if sid and cwd:
     atomic_write_session_id(cwd, sid)
 
 if cwd:
-    task_data = load_json_fallback(os.path.join(cwd, ".diwu", "dtask.json"))
+    task_data = load_toml_fallback(os.path.join(cwd, ".diwu", "dtask.toml"))
     sync_result = sync_runtime_state(cwd, task_data, persist=True, ensure_exists=True)
     if sync_result.is_invalid:
         result["additionalSystemPrompt"] = (
-            "dtask-state.json 无效，当前 session 不会自动恢复 InProgress。"
+            "dtask-state.toml 无效，当前 session 不会自动恢复 InProgress。"
             f"请先修复 runtime state：{sync_result.reason}"
         )
 

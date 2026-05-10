@@ -76,9 +76,9 @@ class TestGetWorktreeChanges:
     def test_detects_diu_dirty_without_marking_code_dirty(self, tmp_git_repo: Path):
         diwu = tmp_git_repo / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dtask.json").write_text('{"tasks": []}', encoding="utf-8")
+        (diwu / "dtask.toml").write_text('{"tasks": []}', encoding="utf-8")
         changes = get_worktree_changes(tmp_git_repo)
-        assert any(p.endswith(".diwu/dtask.json") for p in changes.diu_dirty)
+        assert any(p.endswith(".diwu/dtask.toml") for p in changes.diu_dirty)
         assert changes.has_code_changes is False
 
     def test_unsupported_index_version_degrades_safely(self, tmp_git_repo: Path):

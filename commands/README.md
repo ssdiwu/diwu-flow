@@ -12,7 +12,7 @@
 | `/dref` | dref | 需求细化清单——洞察性反问→可执行检查清单 | — |
 | `/dprd` | dprd | 产品需求分析——灵魂三问门控+PRD 产出 | — |
 | `/ddoc` | ddoc | 产品文档——正向/逆向/ADR 三种模式 | — |
-| `/dtask` | dtask | 任务规划——生成/管理 dtask.json 任务列表 | — |
+| `/dtask` | dtask | 任务规划——生成/管理 dtask.toml 任务列表 | — |
 | `/drun` | drun | 单任务执行——Preflight → 实施 → 验证 → 记录 | — |
 | `/dloop` | dloop | cron 驱动：定时触发 `/drun` 批量执行 | — |
 | `/dstop` | dloop | 停止 cron 循环 | **是** |

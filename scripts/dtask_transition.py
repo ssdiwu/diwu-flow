@@ -10,7 +10,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from common import load_json_or_empty, save_json
+from common import load_toml_or_empty, load_toml_optional, save_toml
 from session_scope import read_scoped_session_id
 from dtask_state import (
     clear_pending_recording,
@@ -46,16 +46,16 @@ def _print_and_exit(payload: dict, rc: int) -> None:
 
 
 def _task_path(cwd: Path) -> Path:
-    return cwd / ".diwu" / "dtask.json"
+    return cwd / ".diwu" / "dtask.toml"
 
 
 def _load_tasks(cwd: Path) -> tuple[dict, list[dict]]:
-    data = load_json_or_empty(_task_path(cwd))
+    data = load_toml_or_empty(_task_path(cwd))
     if not isinstance(data, dict):
-        _print_and_exit(_result(False, "invalid_task_file", message="dtask.json 根结构必须是对象"), 1)
+        _print_and_exit(_result(False, "invalid_task_file", message="dtask.toml 根结构必须是对象"), 1)
     tasks = data.get("tasks", [])
     if not isinstance(tasks, list):
-        _print_and_exit(_result(False, "invalid_task_file", message="dtask.json.tasks 必须是数组"), 1)
+        _print_and_exit(_result(False, "invalid_task_file", message="dtask.toml.tasks 必须是数组"), 1)
     return data, tasks
 
 
@@ -105,11 +105,11 @@ def _cleanup_plan_marker(cwd: Path) -> None:
 
 def _save_claim(cwd: Path, task_payload: dict, runtime_state: dict) -> None:
     save_runtime_state(cwd, runtime_state, remove_legacy=True)
-    save_json(task_payload, _task_path(cwd))
+    save_toml(task_payload, _task_path(cwd))
 
 
 def _save_release(cwd: Path, task_payload: dict, runtime_state: dict) -> None:
-    save_json(task_payload, _task_path(cwd))
+    save_toml(task_payload, _task_path(cwd))
     save_runtime_state(cwd, runtime_state, remove_legacy=True)
 
 
@@ -137,7 +137,7 @@ def cmd_mark_inspec(cwd: Path, task_ids: list[int]) -> dict:
     if sync_result.is_invalid:
         return _result(False, "invalid_runtime_state", message=sync_result.reason)
 
-    save_json(task_payload, _task_path(cwd))
+    save_toml(task_payload, _task_path(cwd))
     _cleanup_plan_marker(cwd)
     return _result(True, "marked_inspec", task_ids=changed)
 
@@ -180,8 +180,8 @@ def cmd_claim(cwd: Path, task_id: int, session_id: str) -> dict:
         return _result(False, "invalid_transition", message=f"Task#{task_id} 当前为 {task.get('status')}，不能 claim")
 
     # 检查 task_sessions 是否已有其他 owner（防止跨会话抢任务）
-    state_path = cwd / ".diwu" / "dtask-state.json"
-    _existing_state = json.loads(state_path.read_text()) if state_path.exists() else {}
+    state_path = cwd / ".diwu" / "dtask-state.toml"
+    _existing_state = load_toml_optional(state_path, default={})
     existing_owner = get_task_owner(_existing_state, task_id)
     if existing_owner is not None:
         existing_sid = existing_owner.get("session_id", "")

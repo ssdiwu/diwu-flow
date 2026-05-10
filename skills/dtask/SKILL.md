@@ -9,8 +9,8 @@ argument-hint: "[功能描述] [category] [blocked_by]"
 
 ## 不可协商规则
 
-- 任务 ID 从 1 递增永不复用，写入前必须先 Read 当前 dtask.json 完整内容
-- 写入 dtask.json 必须使用 indent=2, ensure_ascii=False 格式化，禁止整行压缩 JSON
+- 任务 ID 从 1 递增永不复用，写入前必须先 Read 当前 dtask.toml 完整内容
+- 写入 dtask.toml 必须使用 indent=2, ensure_ascii=False 格式化，禁止整行压缩 JSON
 - acceptance 必须使用 GWT 格式（Given...When...Then），functional/ui/bugfix 类别不得省略
 - steps 必须使用绝对路径，[锁定]标注技术选型，[建议]标注实现细节
 - blocked_by 必须无循环依赖，Done 的前置任务 ID 由系统自动清理
@@ -39,9 +39,9 @@ argument-hint: "[功能描述] [category] [blocked_by]"
 
 ## 运行时真相源
 
-- `dtask.json`：任务定义与 `status` 的真相源
-- `dtask-state.json`：运行态 owner / dloop 元数据真相源
-- `scripts/dtask_transition.py`：唯一允许同时修改 `dtask.json.status` 与 `dtask-state.json` 的入口
+- `dtask.toml`：任务定义与 `status` 的真相源
+- `dtask-state.toml`：运行态 owner / dloop 元数据真相源
+- `scripts/dtask_transition.py`：唯一允许同时修改 `dtask.toml.status` 与 `dtask-state.toml` 的入口
 
 ---
 
@@ -74,7 +74,7 @@ if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/commo
   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common.py" --max-task-id --cwd <项目根目录>
 else
   echo '[dtask] WARNING: CLAUDE_PLUGIN_ROOT 未设置或 common.py 不存在，无法自动获取 max-id' >&2
-  echo '{"ok":false,"error":"需要通过 CLAUDE_PLUGIN_ROOT 访问 common.py，或手动读取 .diwu/dtask.json + archive/"}' >&2
+  echo '{"ok":false,"error":"需要通过 CLAUDE_PLUGIN_ROOT 访问 common.py，或手动读取 .diwu/dtask.toml + archive/"}' >&2
 fi
 ```
 
@@ -85,11 +85,11 @@ fi
 ### task.json 写入规则
 状态一律 InDraft；ID 递增不复用；category: functional/ui/bugfix/refactor/infra；追加到列表末尾；必须含 acceptance（GWT）；steps 必须自包含。
 
-**格式化约束**：写入 dtask.json 时必须使用 `json.dump(data, f, indent=2, ensure_ascii=False)` 格式化为多行可读 JSON（禁止整行压缩）。新任务应**追加**到现有 tasks 数组末尾并重新序列化整个文件，保持缩进一致。
+**格式化约束**：写入 dtask.toml 时必须使用 `json.dump(data, f, indent=2, ensure_ascii=False)` 格式化为多行可读 JSON（禁止整行压缩）。新任务应**追加**到现有 tasks 数组末尾并重新序列化整个文件，保持缩进一致。
 
 > **文件操作安全（R1）**：修改已有文件前先 Read 当前内容；整文件重写先 Read 完整文件；新建文件确认不存在后再 Write。
 >
-> **（R1）写入 dtask.json 前必须先 Read 当前完整内容**（含 tasks 数组和已有任务数据），避免覆盖或结构破坏。
+> **（R1）写入 dtask.toml 前必须先 Read 当前完整内容**（含 tasks 数组和已有任务数据），避免覆盖或结构破坏。
 
 ---
 

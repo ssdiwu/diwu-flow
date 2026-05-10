@@ -15,14 +15,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import DIWU_DIR, DTASK_JSON, DSETTINGS_TOML, load_toml_or_empty, load_json_or_empty, save_json  # noqa: E402
+from common import DIWU_DIR, DTASK_TOML, DSETTINGS_TOML, load_toml_or_empty  # noqa: E402
 from dloop_state import classify, cleanup_state, get_active_tasks, get_done_ids, get_executable_tasks  # noqa: E402
 from dtask_state import clear_loop_state, loop_state, runtime_state_path, save_runtime_state, set_loop_state, sync_runtime_state  # noqa: E402
 
 
 def _task_payload(cwd: Path) -> dict:
     """Load dtask payload once for start/status decisions."""
-    data = load_json_or_empty(cwd / DTASK_JSON)
+    data = load_toml_or_empty(cwd / DTASK_TOML)
     return data if isinstance(data, dict) else {}
 
 
@@ -30,8 +30,8 @@ def _invalid_state_result(reason: str) -> dict:
     return {
         "ok": False,
         "status": "invalid_state_file",
-        "message": f"dtask-state.json 损坏或无效：{reason}。请用 /dstop 清理或人工检查。",
-        "formatted_text": "❌ dtask-state.json 无效，无法安全操作",
+        "message": f"dtask-state.toml 损坏或无效：{reason}。请用 /dstop 清理或人工检查。",
+        "formatted_text": "❌ dtask-state.toml 无效，无法安全操作",
     }
 
 
@@ -213,15 +213,15 @@ def cmd_status(cwd: Path) -> dict:
 
 
 def cmd_stop(cwd: Path) -> dict:
-    """停止 dloop 循环。读取 dtask-state.json.dloop → 摘要 → 清除 → 持久化。
+    """停止 dloop 循环。读取 dtask-state.toml.dloop → 摘要 → 清除 → 持久化。
     cron 模式下额外调用 CronDelete 清理调度资源（P1）。"""
     sync_result = sync_runtime_state(cwd, persist=True, ensure_exists=False)
     if sync_result.is_invalid:
         return {
             "ok": False,
             "status": "invalid_state_file",
-            "message": f"dtask-state.json 损坏或无效：{sync_result.reason}",
-            "formatted_text": "❌ dtask-state.json 无效，无法取消 dloop",
+            "message": f"dtask-state.toml 损坏或无效：{sync_result.reason}",
+            "formatted_text": "❌ dtask-state.toml 无效，无法取消 dloop",
         }
 
     dloop = loop_state(sync_result.state)

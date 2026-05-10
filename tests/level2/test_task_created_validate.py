@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+import tomli_w
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
@@ -26,8 +27,8 @@ def _run_validate(tmp_path, task_dict, full_tasks=None):
     diwu.mkdir(exist_ok=True)
     if full_tasks is None:
         full_tasks = [task_dict]
-    (diwu / "dtask.json").write_text(
-        json.dumps({"tasks": full_tasks}, ensure_ascii=False, indent=2)
+    (diwu / "dtask.toml").write_bytes(
+        tomli_w.dumps({"tasks": full_tasks}).encode('utf-8')
     )
     payload = {"task": task_dict}
     result = subprocess.run(

@@ -8,23 +8,24 @@ import os
 import sys
 
 try:
-    from _shared import load_json_fallback  # noqa: E402
+    from _shared import load_toml_fallback  # noqa: E402
 except (ImportError, ModuleNotFoundError):
-    def load_json_fallback(path):
+    def load_toml_fallback(path):
         if not os.path.exists(path):
             return {}
         try:
-            with open(path, encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError):
+            import tomllib
+            with open(path, "rb") as f:
+                return tomllib.load(f)
+        except Exception:
             return {}
 
-TASK_JSON_PATH = ".diwu/dtask.json"
+TASK_JSON_PATH = ".diwu/dtask.toml"
 REQUIRED_FIELDS = ["id", "title", "description", "acceptance", "steps", "category", "status"]
 GWT_CATEGORIES = ["functional", "ui", "bugfix"]
 
 
-# _load replaced by load_json_fallback from _shared
+# _load replaced by load_toml_fallback from _shared
 
 
 def _has_gwt_keywords(text):
@@ -54,7 +55,7 @@ def validate_blocked_by_cycle(task):
     new_deps = task.get("blocked_by", [])
     if not new_deps:
         return True
-    all_deps = {t["id"]: t.get("blocked_by", []) for t in load_json_fallback(TASK_JSON_PATH).get("tasks", [])}
+    all_deps = {t["id"]: t.get("blocked_by", []) for t in load_toml_fallback(TASK_JSON_PATH).get("tasks", [])}
     all_deps[tid] = new_deps
     if _dfs_cycle(tid, all_deps, set(), []):
         print(f"[diwu] Task#{tid} blocked_by 循环依赖检测失败", file=sys.stderr)

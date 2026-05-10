@@ -234,7 +234,9 @@ class TestIntegration:
         # Setup minimal environment
         diwu = tmp_path / ".diwu"
         diwu.mkdir()
-        (diwu / "dtask.json").write_text(json.dumps({"tasks": []}))
+        import tomli_w
+        with open(diwu / "dtask.toml", "wb") as f:
+            tomli_w.dump({"tasks": []}, f)
         rec_dir = diwu / "recording"
         rec_dir.mkdir()
         monkeypatch.chdir(tmp_path)
@@ -249,8 +251,9 @@ class TestIntegration:
         diwu.mkdir()
 
         # Task: 25 Done tasks
+        import tomli_w
         tasks = [{"id": i, "status": "Done"} for i in range(25)]
-        (diwu / "dtask.json").write_text(json.dumps({"tasks": tasks}))
+        (diwu / "dtask.toml").write_bytes(tomli_w.dumps({"tasks": tasks}).encode("utf-8"))
 
         # Recording: 55 session files
         rec_dir = diwu / "recording"

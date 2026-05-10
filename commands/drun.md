@@ -14,15 +14,15 @@ effort: low
 ## 快速开始
 
 - 输入 `/drun`：恢复当前 session 可继续的唯一任务。
-- 若存在 `InProgress` 任务：`/drun` 只恢复 **当前 session 在 `.diwu/dtask-state.json.task_sessions` 中持有的 owner**。
+- 若存在 `InProgress` 任务：`/drun` 只恢复 **当前 session 在 `.diwu/dtask-state.toml.task_sessions` 中持有的 owner**。
 - 若当前无 `InProgress`：`/drun` 选择第一个可执行的 `InSpec` 任务，并先通过 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py claim --task-id N --cwd <proj>` 把它显式切到 `InProgress`，再开始实施（`--session-id` 默认 `auto`，自动解析真实 session ID）。
-- 当本轮实施与验证结束：必须通过 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py release --task-id N --to done|inreview --cwd <proj>` 显式收尾，不能手改 `status`（`--session-id` 同样默认 `auto`）。`release` 会自动在 `dtask-state.json` 写入 `pending_recording` 标记；若忘记后续调 `/drec`，Stop Hook 会检测到此标记并强制拦截，要求先执行 `/drec` 清除标记后才允许继续。
+- 当本轮实施与验证结束：必须通过 `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dtask_transition.py release --task-id N --to done|inreview --cwd <proj>` 显式收尾，不能手改 `status`（`--session-id` 同样默认 `auto`）。`release` 会自动在 `dtask-state.toml` 写入 `pending_recording` 标记；若忘记后续调 `/drec`，Stop Hook 会检测到此标记并强制拦截，要求先执行 `/drec` 清除标记后才允许继续。
 
 ## 运行时真相源
 
-- `dtask.json`：任务内容与 `status` 的真相源。
-- `dtask-state.json`：运行态 owner 与 dloop 元数据真相源。
-- `dtask_transition.py`：唯一允许同时修改 `dtask.json.status` 与 `dtask-state.json` 的入口。
+- `dtask.toml`：任务内容与 `status` 的真相源。
+- `dtask-state.toml`：运行态 owner 与 dloop 元数据真相源。
+- `dtask_transition.py`：唯一允许同时修改 `dtask.toml.status` 与 `dtask-state.toml` 的入口。
 
 > 没有完成 `claim` 进入 `InProgress` 的任务，不允许直接开始实施。
 
@@ -31,7 +31,7 @@ effort: low
 ## 与 /dloop 的关系
 
 - `/drun`：单任务执行，做完即停。
-- `/dloop`：多任务连续执行，loop 元数据写在 `.diwu/dtask-state.json.dloop`。
+- `/dloop`：多任务连续执行，loop 元数据写在 `.diwu/dtask-state.toml.dloop`。
 
 ## 常见结果
 
@@ -39,7 +39,7 @@ effort: low
 - `选择下一个 InSpec`：通过 `dtask_transition.py claim` 接管新任务后开始。
 - `完成并收尾`：通过 `dtask_transition.py release` 将当前 `InProgress` 显式切到 `Done` 或 `InReview`。S1/S2 路径标 Done 前先经 verifier 终验（详见 drun SKILL.md §Verifier 终验规则）。
 - `PENDING REVIEW`：超前实施达到上限，停止并等待人工验收。
-- `invalid runtime state`：`dtask-state.json` 缺失 owner、损坏或与 `dtask.json` 冲突；此时不会自动恢复 чужой 任务。
+- `invalid runtime state`：`dtask-state.toml` 缺失 owner、损坏或与 `dtask.toml` 冲突；此时不会自动恢复 чужой 任务。
 
 ## 细粒度子代理委托
 

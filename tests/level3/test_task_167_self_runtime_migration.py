@@ -1,12 +1,13 @@
 from pathlib import Path
 import json
+import tomllib
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 CLAUDE_DIR = PROJECT_ROOT / ".claude"
 DIWU_DIR = PROJECT_ROOT / ".diwu"
 
 RUNTIME_FILES = [
-    "dtask.json",
+    "dtask.toml",
     "recording",
     "decisions.md",
     "dsettings.toml",
@@ -38,7 +39,7 @@ def test_claude_keeps_only_native_mechanisms_after_migration():
 
 
 def test_migration_preserves_task_count_and_recording_sessions():
-    task_data = json.loads((DIWU_DIR / "dtask.json").read_text(encoding="utf-8"))
+    task_data = tomllib.loads((DIWU_DIR / "dtask.toml").read_bytes().decode())
     assert isinstance(task_data.get("tasks"), list)
     sessions = sorted((DIWU_DIR / "recording").glob("session-*.md"))
     assert sessions, "expected migrated session files"
