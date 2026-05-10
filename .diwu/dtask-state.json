@@ -29,7 +29,7 @@
     "stopped_at": null,
     "stop_reason": null,
     "mode": "cron",
-    "cron_job_id": null
+    "cron_job_id": "30643dcf"
   },
   "pending_recording": null
 }
