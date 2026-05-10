@@ -1,5 +1,13 @@
 ## [v0.1.1] - 2026-05-10
 
+### Fixed — Stop hook 性能瓶颈（Issue #47）
+
+- **消除重复 git 子进程调用**（`hooks/scripts/stop_decision.py`）：`git status` 从 2 次降为 1 次，`git ls-files` 从 2 次降为 1 次，总计从 5 次降为 3 次
+- **新增 `_GitInfo` frozen dataclass**：统一持有 git 解析结果，通过参数传递给下游检查函数
+- **recording/ 目录扫描合并**：3 处独立扫描（decision_reminder + recording_reminder + stop_archive）合并为入口处单次扫描
+- **向后兼容保留**：所有检查函数接受可选预计算参数，无参时自动 fallback 到内部调用
+- **Windows 预估收益**：~3m41s → ~2m20s（-35%），macOS/Linux 保持 ~80ms 不变
+
 ### Changed — didea acceptance 对齐（D5+D7 最终裁定）
 
 - **status 字段移除**（`scripts/didea_core.py` + `skills/didea/SKILL.md`）：frontmatter 中去掉 status，list 中去掉 `--status` 过滤，change-status 子命令删除，validate 不再校验 status 枚举值
@@ -70,6 +78,22 @@
 ### Deleted — 不再需要的文件
 
 - `workflow.md`×3, `judgments.md`×3, `dsettings.json.template`, `didea_github.py`, `test_didea_github.py`, `skills/ddoc/references/demo.md`
+
+### Added — 多视角审议架构落地（Issue #25, PR #46）
+
+- **dpth Passive/Active 双模门控**（`skills/dpth/SKILL.md`）：默认 Passive（单代理对话）；满足 S1/S2/S3 信号时切换 Active（3×explorer 并发 + verifier 审查）。含三视角摘要表（diag/founder/builder）、5 步审查裁决流程、Verifier 注入规格（事实核查/一致性/质量三维审查）
+- **dref §2 精简**（`skills/dref/SKILL.md`）：~52 行四维判断表压缩为 ~12 行方向确认门控（真伪判断已由 dpth 承担）；新增 Type C 可选独立校验（verifier 派发）
+- **Explorer 公共协议增强**（`agents/explorer.md`）：13→45 行——4 步执行流程（Gather→Analyze→Filter→Output）、输出格式规范、噪声抑制规则、L1-L5 证据等级表、角色证据默认值（diag/founder 禁 L5，builder L5 需标注）
+- **Debugger 证据体系升级**（`agents/debugger.md`）：HIGH/MEDIUM/LOW 置信度替换为 L1-L5 证据等级，与 verification.md 统一
+
+### Fixed — 版本号同步
+
+- `CLAUDE.md` + `marketplace.json` 版本号修正为 0.1.1（与 plugin.json 对齐），4 处版本一致测试通过
+
+### Changed — 迁移增强
+
+- **migrate-legacy 补充 ideas 归档迁移**（`scripts/dinit.py`）：检测 v0.1.0 格式的 `status: archived` 想法文件，自动物理移动到 `ideas/archived/`；独立于旧版标志检测，每次 `/dinit` 均执行
+- **README 升级指引**：快速开始新增 Step 5——插件升级后执行 `/dinit` 即可刷新到最新版本
 
 ---
 
