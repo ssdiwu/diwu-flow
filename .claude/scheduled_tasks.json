@@ -1,11 +1,3 @@
 {
-  "tasks": [
-    {
-      "id": "30643dcf",
-      "cron": "*/3 * * * *",
-      "prompt": "/drun --max-tasks 1",
-      "createdAt": 1778408878361,
-      "recurring": true
-    }
-  ]
+  "tasks": []
 }

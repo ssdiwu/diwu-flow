@@ -31,7 +31,7 @@ class TestLoadSettings:
     """Settings loading with fallbacks."""
 
     def test_default_when_missing(self, tmp_path, monkeypatch):
-        """Returns defaults when dsettings.json missing."""
+        """Returns defaults when dsettings.toml missing."""
         monkeypatch.chdir(tmp_path)
         from hooks.scripts.stop_archive import _load_settings
 
@@ -41,15 +41,13 @@ class TestLoadSettings:
         assert s["recording_retention_days"] == 30
 
     def test_custom_values(self, tmp_path, monkeypatch):
-        """Reads custom values from dsettings.json."""
+        """Reads custom values from dsettings.toml."""
         ds = tmp_path / ".diwu"
         ds.mkdir()
-        (ds / "dsettings.json").write_text(
-            json.dumps({
-                "task_archive_threshold": 10,
-                "recording_archive_threshold": 20,
-                "recording_retention_days": 7,
-            })
+        (ds / "dsettings.toml").write_text(
+            'task_archive_threshold = 10\n'
+            'recording_archive_threshold = 20\n'
+            'recording_retention_days = 7\n'
         )
         monkeypatch.chdir(tmp_path)
         from hooks.scripts.stop_archive import _load_settings
@@ -59,11 +57,11 @@ class TestLoadSettings:
         assert s["recording_archive_threshold"] == 20
         assert s["recording_retention_days"] == 7
 
-    def test_corrupted_json_fallback(self, tmp_path, monkeypatch):
-        """Falls back to defaults on corrupted JSON."""
+    def test_corrupted_toml_fallback(self, tmp_path, monkeypatch):
+        """Falls back to defaults on corrupted TOML."""
         ds = tmp_path / ".diwu"
         ds.mkdir()
-        (ds / "dsettings.json").write_text("{invalid json}")
+        (ds / "dsettings.toml").write_text("{invalid toml}")
         monkeypatch.chdir(tmp_path)
         from hooks.scripts.stop_archive import _load_settings
 

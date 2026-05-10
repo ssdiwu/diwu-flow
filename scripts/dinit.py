@@ -140,15 +140,15 @@ def cmd_sync_rules(cwd: Path) -> dict:
     """按 rules-manifest.json 同步 rules 到 .claude/rules/。"""
     target_dir = cwd / ".claude" / "rules"
 
-    # 读 manifest
+    # 读 manifest，缺失时降级为全目录复制
     if not MANIFEST_PATH.exists():
-        return {"ok": False, "status": "manifest_missing",
-                "message": f"rules-manifest.json 不存在: {MANIFEST_PATH}"}
-
-    manifest = load_json_or_empty(MANIFEST_PATH)
-    rule_names = manifest.get("rules", [])
-    if not isinstance(rule_names, list):
-        rule_names = []
+        print("⚠️  rules-manifest.json 缺失，降级为全目录复制", file=sys.stderr)
+        rule_names = sorted(p.name for p in RULES_SRC.glob("*.md") if p.is_file())
+    else:
+        manifest = load_json_or_empty(MANIFEST_PATH)
+        rule_names = manifest.get("rules", [])
+        if not isinstance(rule_names, list):
+            rule_names = []
 
     files_report = []
     counts = {"total": len(rule_names), "new": 0, "same": 0, "updated": 0}

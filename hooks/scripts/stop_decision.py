@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import tomllib
 import platform
 import subprocess
 import sys
@@ -577,7 +578,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Stop hook: dual-mode decision")
     parser.add_argument("--task-json", default=".diwu/dtask.json", help="Path to dtask.json")
-    parser.add_argument("--settings-json", default=".diwu/dsettings.json", help="Path to dsettings.json")
+    parser.add_argument("--settings-toml", default=".diwu/dsettings.toml", help="Path to dsettings.toml")
     args = parser.parse_args()
 
     stdin_data = load_stdin_event(check_tty=True)
@@ -588,9 +589,16 @@ if __name__ == "__main__":
 
     cwd = stdin_data.get("cwd") or os.getcwd()
     task_json_path = os.path.join(cwd, args.task_json) if not os.path.isabs(args.task_json) else args.task_json
-    settings_path = os.path.join(cwd, args.settings_json) if not os.path.isabs(args.settings_json) else args.settings_json
+    settings_path = os.path.join(cwd, args.settings_toml) if not os.path.isabs(args.settings_toml) else args.settings_toml
     data = load_json_fallback(task_json_path)
-    settings = load_json_fallback(settings_path)
+    # Load settings from TOML
+    settings = {}
+    if os.path.exists(settings_path):
+        try:
+            with open(settings_path, "rb") as f:
+                settings = tomllib.load(f)
+        except (tomllib.TOMLDecodeError, OSError):
+            pass
     tasks = data.get("tasks", [])
 
     sync_result = sync_runtime_state(cwd, data, persist=True)

@@ -27,9 +27,7 @@ class TestCfgDefaults(unittest.TestCase):
     def test_cfg_returns_defaults_when_no_settings_file(self):
         tmpdir = tempfile.mkdtemp()
         orig_settings = cm.SETTINGS
-        cm.SETTINGS = os.path.join(tmpdir, 'nonexistent_dsettings.json')
-        orig_cache = cm.CACHE
-        cm.CACHE = os.path.join(tmpdir, 'nonexistent_cache.json')
+        cm.SETTINGS = os.path.join(tmpdir, 'nonexistent_dsettings.toml')
         try:
             result = cm._cfg()
             self.assertIn('warning', result)
@@ -40,22 +38,19 @@ class TestCfgDefaults(unittest.TestCase):
             self.assertEqual(result['delay'], 10)
         finally:
             cm.SETTINGS = orig_settings
-            cm.CACHE = orig_cache
             import shutil
             shutil.rmtree(tmpdir, ignore_errors=True)
 
     def test_cfg_reads_custom_values(self):
         tmpdir = tempfile.mkdtemp()
-        settings_path = os.path.join(tmpdir, 'dsettings.json')
-        cache_path = os.path.join(tmpdir, 'cache.json')
+        settings_path = os.path.join(tmpdir, 'dsettings.toml')
         with open(settings_path, 'w') as f:
-            json.dump({'context_monitor_warning': 20, 'context_monitor_critical': 40,
-                       'context_monitor_delay': 5}, f)
+            f.write('context_monitor_warning = 20\n'
+                    'context_monitor_critical = 40\n'
+                    'context_monitor_delay = 5\n')
 
         orig_settings = cm.SETTINGS
-        orig_cache = cm.CACHE
         cm.SETTINGS = settings_path
-        cm.CACHE = cache_path
         try:
             result = cm._cfg()
             self.assertEqual(result['warning'], 20)
@@ -63,7 +58,6 @@ class TestCfgDefaults(unittest.TestCase):
             self.assertEqual(result['delay'], 5)
         finally:
             cm.SETTINGS = orig_settings
-            cm.CACHE = orig_cache
             import shutil
             shutil.rmtree(tmpdir, ignore_errors=True)
 

@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import time
+import tomllib
 from pathlib import Path
 
 try:
@@ -23,7 +24,7 @@ except (ImportError, ModuleNotFoundError):
         except (json.JSONDecodeError, ValueError):
             return {}
 
-SETTINGS_PATH = ".diwu/dsettings.json"
+SETTINGS_PATH = ".diwu/dsettings.toml"
 TASK_JSON_PATH = ".diwu/dtask.json"
 RECORDING_DIR = ".diwu/recording"
 
@@ -41,14 +42,14 @@ def _resolve(path: str) -> str:
 
 
 def _load_settings():
-    """Load settings from dsettings.json, falling back to defaults."""
+    """Load settings from dsettings.toml, falling back to defaults."""
     full = _resolve(SETTINGS_PATH)
     if not os.path.exists(full):
         return dict(DEFAULTS)
     try:
-        with open(full, encoding="utf-8") as f:
-            data = json.load(f)
-    except (json.JSONDecodeError, OSError):
+        with open(full, "rb") as f:
+            data = tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
         return dict(DEFAULTS)
     result = dict(DEFAULTS)
     result.update({k: v for k, v in data.items() if k in DEFAULTS})

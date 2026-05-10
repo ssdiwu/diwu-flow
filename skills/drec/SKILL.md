@@ -1,23 +1,18 @@
 ---
 name: drec
 version: "1.1"
-type: rule
-description: "Session 记录写入操作手册——原子 commit、Amend 模式、标记清除语义、归档聚合策略、调用契约"
-triggers:
-  - "写 session 记录"
-  - "Session 结束前整理"
-  - "Amend 上一个 recording"
-  - "归档阈值触发（任务数/Session 数超限）"
-  - "用户说 记录、recording、rec、/drec"
-keywords:
-  - "recording"
-  - "commit"
-  - "amend"
-  - "归档"
-  - "decisions"
+description: "当 Session 结束需要写入记录、整理归档或 amend 上一个 recording 时使用"
 effort: normal
 argument-hint: "[session内容]"
 ---
+
+## 不可协商规则
+
+- 必须运行 `date '+%Y-%m-%d %H:%M:%S'` 获取真实时间戳，禁止手写日期
+- 追加 session 记录前必须先 Read 当前 session 文件尾部，确认追加位置正确不覆盖已有内容
+- drec 是项目状态存档的唯一入口，写完 recording 后必须执行原子 commit，禁止调用方自行 commit 包含 recording 或 .diwu/ 状态文件
+- closeout 成功后才可清除 pending_recording 标记，closeout 失败时必须保留标记
+- 本次踩坑/经验字段为必填，不得省略
 
 # drec
 

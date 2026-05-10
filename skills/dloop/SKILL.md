@@ -1,22 +1,21 @@
 ---
 name: dloop
 version: "3.0"
-type: rule
-description: "cron 驱动批量执行——定时触发 /drun 自动完成每个任务"
-triggers:
-  - "用户要求批量执行、连续执行、循环执行多个任务"
-  - "用户说 /dloop、循环、批量、全部任务"
-keywords:
-  - "循环"
-  - "批量执行"
-  - "连续任务"
-  - "dloop"
+description: "当用户要求批量、连续或循环执行多个任务时使用"
 depends:
   - dtask
   - drun
 effort: low
 argument-hint: "[--max-tasks N] [--interval <min>]"
 ---
+
+## 不可协商规则
+
+- 每轮执行必须全部委托 `/drun`，禁止自行选任务或独立实施
+- 禁止重复 drun 的执行协议细节，dloop 只负责循环调度
+- 停止条件命中时必须立即终止并提示执行 `/dstop`
+- 循环状态必须持久化到 `.diwu/dtask-state.json.dloop`，禁止仅保存在内存中
+- 收到 `decision: block` 时必须发起完整的 `/drun` 执行本轮任务，不得跳过
 
 # dloop
 

@@ -16,6 +16,11 @@ event = load_stdin_event()
 cwd = event.get("cwd", ".")
 session_id = event.get("session_id") or event.get("sessionId") or ""
 
+# Session ID validation: reject writes from non-current session
+expected_sid = os.environ.get("DIWU_SESSION_ID", "")
+if expected_sid and session_id and session_id != expected_sid:
+    sys.exit(0)
+
 task_file = os.path.join(cwd, TASK_JSON_PATH)
 task_data = load_json_fallback(task_file)
 sync_result = sync_runtime_state(cwd, task_data, persist=True)
@@ -53,5 +58,8 @@ if stat:
 
 os.makedirs(recording_dir, exist_ok=True)
 session_file = os.path.join(recording_dir, f"session-{filename}.md")
-with open(session_file, "w", encoding="utf-8") as f:
+# Atomic write: write to tmp file then rename
+tmp_file = session_file + ".tmp"
+with open(tmp_file, "w", encoding="utf-8") as f:
     f.write(entry)
+os.rename(tmp_file, session_file)

@@ -1,22 +1,18 @@
 ---
 name: dstat
 version: "1.0"
-type: tool
-description: "项目状态只读聚合——一键展示任务进度、最近 Session、近期决策、Git 状态。触发场景：用户说 /dstat、看看项目状态、项目概况、当前进展"
-triggers:
-  - "/dstat"
-  - "看看项目状态"
-  - "项目概况"
-  - "当前进展"
-keywords:
-  - "状态"
-  - "概览"
-  - "progress"
-  - "dstat"
+description: "当用户要求查看项目状态、任务进度、最近 Session 或 Git 状态时使用"
 depends: []
 effort: low
 argument-hint: "[--deep]"
 ---
+
+## 不可协商规则
+
+- 禁止创建、修改或删除任何文件——dstat 是纯只读聚合命令
+- 禁止触发 drun 执行循环或改变任何任务状态
+- 任何数据源缺失时必须优雅降级输出"不可用"，禁止因数据源缺失而报错退出
+- 涉及相对时间的输出必须先执行 `date` 获取当前时间再计算差值，禁止凭记忆或目测估算
 
 # dstat
 

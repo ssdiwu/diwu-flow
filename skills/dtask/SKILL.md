@@ -1,24 +1,19 @@
 ---
 name: dtask
 version: "1.1"
-type: rule
-description: "任务管理操作手册——规划分解、实施流程、max-id 脚本调用、子代理策略、Done 判定矩阵"
-triggers:
-  - "创建或管理任务"
-  - "规划任务分解"
-  - "判断任务状态转移"
-  - "用户说 任务、task、规划、分解、验收"
-keywords:
-  - "任务管理"
-  - "规划"
-  - "分解"
-  - "验收"
-  - "子代理"
-  - "architect"
+description: "当需要创建任务、规划分解、管理任务状态转移或判定任务完成时使用"
 depends: []
 effort: high
 argument-hint: "[功能描述] [category] [blocked_by]"
 ---
+
+## 不可协商规则
+
+- 任务 ID 从 1 递增永不复用，写入前必须先 Read 当前 dtask.json 完整内容
+- 写入 dtask.json 必须使用 indent=2, ensure_ascii=False 格式化，禁止整行压缩 JSON
+- acceptance 必须使用 GWT 格式（Given...When...Then），functional/ui/bugfix 类别不得省略
+- steps 必须使用绝对路径，[锁定]标注技术选型，[建议]标注实现细节
+- blocked_by 必须无循环依赖，Done 的前置任务 ID 由系统自动清理
 
 # dtask
 

@@ -1,23 +1,19 @@
 ---
 name: didea
 version: "1.0"
-type: tool
-description: "想法捕获容器——挂住灵感并连接下游判断/收束/执行链。触发场景：用户说「先记下来」「这个以后做」「突然想到一个方向」/didea create/list/show/refine/archive/push"
-triggers:
-  - "先记下来 / 先挂着 / 这个以后再做 / 有个想法"
-  - "突然想到 / 灵感来了 / 脑子里冒出一个方向"
-  - "/didea / 想法 / idea / 挂起 / 记住灵感"
-  - "这个值得做但不现在 / 先存着以后再说"
-keywords:
-  - "想法捕获"
-  - "灵感挂起"
-  - "idea容器"
-  - "didea"
-  - "想法管理"
+description: "当用户表达「先记下来」「以后再做」「突然想到一个方向」等灵感暂存意图时使用"
 depends: []
 effort: normal
 argument-hint: "[动作: create/list/show/refine/archive/push] [想法标题或描述]"
 ---
+
+## 不可协商规则
+
+- 必须在用户明确确认后才落盘写入 `.diwu/ideas/`，禁止自动落盘
+- 禁止对想法做诊断判断或细化拆解——didea 只负责挂住和连接下游
+- 禁止代替 dpth/dref/dprd/dtask 执行其专属职责
+- 想法文件必须包含 YAML frontmatter + markdown 正文，frontmatter 格式必须合法
+- push 操作必须在想法已 refine 为可执行条目后才能执行
 
 # didea
 

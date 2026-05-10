@@ -6,6 +6,7 @@ critical+delay threshold, writes an auto-checkpoint to recording/.
 import json
 import os
 import sys
+import tomllib
 from datetime import datetime
 
 from _shared import setup_sys_path, load_stdin_event  # noqa: E402
@@ -15,8 +16,8 @@ setup_sys_path()
 from dtask_state import resolve_session_inprogress_task, sync_runtime_state  # noqa: E402
 
 # Configuration paths (relative to project root)
-SETTINGS = ".diwu/dsettings.json"
-CACHE = ".diwu/.context_monitor_cache.json"
+SETTINGS = ".diwu/dsettings.toml"
+CACHE_TEMPLATE = ".diwu/.context_monitor_cache_{sid}.json"
 
 # Default threshold values
 DEFAULTS = {
@@ -31,37 +32,45 @@ WR_TOOLS = {"Edit", "Write", "Bash"}
 
 
 def _cfg():
-    """Load context monitor settings from dsettings.json with defaults."""
+    """Load context monitor settings from dsettings.toml with defaults."""
     defaults = DEFAULTS.copy()
     if not os.path.exists(SETTINGS):
         return defaults
     try:
-        with open(SETTINGS, encoding="utf-8") as f:
-            data = json.load(f)
+        with open(SETTINGS, "rb") as f:
+            data = tomllib.load(f)
         return {
             "warning": data.get("context_monitor_warning", defaults["warning"]),
             "critical": data.get("context_monitor_critical", defaults["critical"]),
             "delay": data.get("context_monitor_delay", defaults["delay"]),
         }
-    except (json.JSONDecodeError, OSError):
+    except (tomllib.TOMLDecodeError, OSError):
         return defaults
 
 
-def _load_cache():
-    """Load or initialize the usage cache."""
-    if os.path.exists(CACHE):
+def _cache_path(session_id=""):
+    """Return session-scoped cache file path."""
+    sid = session_id or ""
+    return CACHE_TEMPLATE.format(sid=sid) if sid else ".diwu/.context_monitor_cache.json"
+
+
+def _load_cache(session_id=""):
+    """Load or initialize the session-scoped usage cache."""
+    cp = _cache_path(session_id)
+    if os.path.exists(cp):
         try:
-            with open(CACHE, encoding="utf-8") as f:
+            with open(cp, encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, OSError):
             pass
     return {"rd_count": 0, "wr_count": 0, "checkpoint_written": False}
 
 
-def _save_cache(cache):
-    """Persist usage cache."""
-    os.makedirs(os.path.dirname(CACHE) or ".", exist_ok=True)
-    with open(CACHE, "w", encoding="utf-8") as f:
+def _save_cache(cache, session_id=""):
+    """Persist session-scoped usage cache."""
+    cp = _cache_path(session_id)
+    os.makedirs(os.path.dirname(cp) or ".", exist_ok=True)
+    with open(cp, "w", encoding="utf-8") as f:
         json.dump(cache, f)
 
 
@@ -146,8 +155,10 @@ def checkpoint(task_info=None, session_id=None, cwd="."):
 def main():
     """Main entry point — called by PreToolUse hook on every Bash tool use."""
     cfg = _cfg()
-    cache = _load_cache()
     event = _load_event()
+    session_id = event.get("session_id") or event.get("sessionId") or ""
+
+    cache = _load_cache(session_id)
 
     tool_type = _classify_tool(event)
     if tool_type is None:
@@ -161,7 +172,6 @@ def main():
 
     # Check if we've crossed critical + delay threshold
     if wr_count >= critical + delay and not cache.get("checkpoint_written"):
-        session_id = event.get("session_id") or event.get("sessionId") or ""
         cwd = event.get("cwd") or os.getcwd()
         cp_path = checkpoint(session_id=session_id or None, cwd=cwd)
         cache["checkpoint_written"] = True
@@ -193,7 +203,7 @@ def main():
         }
         print(json.dumps(result, ensure_ascii=False))
 
-    _save_cache(cache)
+    _save_cache(cache, session_id)
     sys.exit(0)
 
 

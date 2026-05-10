@@ -1,22 +1,7 @@
 ---
 name: drun
 version: "1.0"
-type: rule
-description: "单任务执行器——启动（Preflight 5 步）、上下文恢复、归档检查、任务选择、Session 结束协议、执行验证循环"
-triggers:
-  - "Session 启动或结束"
-  - "选择下一个任务"
-  - "判断是否续跑"
-  - "归档旧任务"
-  - "用户说 session、启动、下一步、续跑、归档"
-  - "需要执行验证循环"
-keywords:
-  - "session"
-  - "启动"
-  - "Preflight"
-  - "单任务执行"
-  - "执行验证"
-  - "debugger"
+description: "当需要启动 Session 执行任务、恢复上下文、选择下一任务或结束当前 Session 时使用"
 depends:
   - dtask
   - dcorr
@@ -24,6 +9,14 @@ depends:
 effort: high
 argument-hint: "[功能描述] [category] [blocked_by]"
 ---
+
+## 不可协商规则
+
+- Session 启动必须按 Preflight→上下文恢复→归档检查→任务选择顺序串行执行，Preflight 失败则停止
+- 任务状态变更必须通过 `dtask_transition.py` claim/release 显式完成，禁止直接手改 dtask.json.status
+- closeout 顺序铁律：整理摘要 → decisions → verifier → release → /drec，不可跳序
+- drun 是单任务执行器，执行完毕后停止；批量连续执行必须使用 `/dloop`
+- stop hook 注入 InSpec 任务信息时必须暂停等待用户明确指示，禁止假设沉默=授权而自动执行
 
 # drun
 
