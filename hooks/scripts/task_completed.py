@@ -2,7 +2,7 @@
 """TaskCompleted: lightweight reminder after a task is marked Done.
 
 Fires when task.json transitions to Done.
-Checks recording_reminder.enabled (default true) in settings dsettings.toml.
+Checks reminder_on_taskdone (default true) in settings dsettings.toml.
 Non-blocking: always exit(0), outputs reminder via additionalSystemPrompt.
 
 Does NOT write files — recording is handled by Stop hook.
@@ -125,7 +125,7 @@ def main():
                         _track_loop_completion(task_id, session_id)
 
     # === 阶段 2: Reminder 门控（安全地在 loop 追踪和 owner 清理之后）===
-    if settings.get("recording_reminder", {}).get("enabled") == False:
+    if settings.get("reminder_on_taskdone") == False:
         sys.exit(0)
 
     # === 阶段 3: Reminder 输出 ===

@@ -6,13 +6,9 @@ recording_file_limit = 30
 recording_retention_days = 30
 dloop_review_cap = 5
 dloop_max_consecutive = 0
-context_monitor_warning = 30
-context_monitor_critical = 50
-context_monitor_delay = 10
+ctxmon_warning_threshold = 30
+ctxmon_critical_threshold = 50
+ctxmon_check_interval = 10
 error_tracking_enabled = true
-
-[drift_detection]
-enabled = true
-
-[recording_reminder]
-enabled = true
+drift_enabled = true
+reminder_on_taskdone = true

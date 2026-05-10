@@ -8,7 +8,7 @@
 ```
 .diwu/
 ├── CLAUDE.md                      # 全局 Agent 配置入口
-├── dsettings.json                 # 可调参数配置
+├── dsettings.toml                 # 可调参数配置
 ├── dtask.json                     # 当前任务列表（status 真相源）
 ├── dtask-state.json               # runtime owner / dloop 元数据真相源
 ├── recording/                     # Session 进度记录目录
@@ -73,8 +73,8 @@ tests/
 
 | 归档目标 | 触发条件 | 阈值来源 |
 |---------|---------|---------|
-| task_archive_YYYY-MM.json | Done/Cancelled 任务数超阈值 | dsettings.json `task_archive_limit`（默认 20）|
-| recording_YYYY-MM-DD.md | session 文件数超阈值 | dsettings.json `recording_file_limit`（默认 30）|
+| task_archive_YYYY-MM.json | Done/Cancelled 任务数超阈值 | dsettings.toml `task_archive_limit`（默认 20）|
+| recording_YYYY-MM-DD.md | session 文件数超阈值 | dsettings.toml `recording_file_limit`（默认 30）|
 
 ## 数据所有权
 

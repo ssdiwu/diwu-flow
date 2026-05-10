@@ -1,15 +1,12 @@
-import json
 import os
 import subprocess
 import sys
 
-from _shared import setup_sys_path, load_json_fallback, load_stdin_event  # noqa: E402
+from _shared import setup_sys_path, load_stdin_event  # noqa: E402
 
 setup_sys_path()
 
-from dtask_state import resolve_session_inprogress_task, sync_runtime_state  # noqa: E402
 
-TASK_JSON_PATH = ".diwu/dtask.json"
 RECORDING_DIR = ".diwu/recording"
 
 event = load_stdin_event()
@@ -19,16 +16,6 @@ session_id = event.get("session_id") or event.get("sessionId") or ""
 # Session ID validation: reject writes from non-current session
 expected_sid = os.environ.get("DIWU_SESSION_ID", "")
 if expected_sid and session_id and session_id != expected_sid:
-    sys.exit(0)
-
-task_file = os.path.join(cwd, TASK_JSON_PATH)
-task_data = load_json_fallback(task_file)
-sync_result = sync_runtime_state(cwd, task_data, persist=True)
-if sync_result.is_invalid:
-    sys.exit(0)
-
-resolution = resolve_session_inprogress_task(task_data.get("tasks", []), sync_result.state, session_id)
-if not resolution.is_match:
     sys.exit(0)
 
 recording_dir = os.path.join(cwd, RECORDING_DIR)
@@ -48,10 +35,8 @@ except (subprocess.CalledProcessError, OSError, FileNotFoundError):
 
 now = subprocess.check_output(["date", "+%Y-%m-%d %H:%M:%S"]).decode().strip()
 filename = now.replace(" ", "-").replace(":", "")
-task = resolution.task
 entry = (
-    "## [auto-compact] Task#" + str(task["id"]) + " 进度快照 " + now + "\n\n"
-    + "任务：" + task.get("title", "") + "\n"
+    "## [auto-compact] 进度快照 " + now + "\n\n"
 )
 if stat:
     entry += "\n```\n" + stat + "\n```\n"

@@ -154,7 +154,7 @@ fi
 | 架构级变更审稿（新增模块/改变数据流/修改核心抽象） | `architect` | 只读技术评审，输出 Architect Summary |
 | 无匹配能力 | 标记「能力缺口」 | 不在 task 内临时发明新 agent |
 
-> 完整的 agent 设计原则与判断锚点见 `rules/mindset.md` §Agent 设计约束 和 `rules/judgments.md` §五、Agent Dispatch 判断
+> 完整的 agent 设计原则与判断锚点见 `rules/handoff.md` §六、Agent 设计约束 和 §五、Handoff Matrix
 
 ### Architect 技术审稿 Gate
 

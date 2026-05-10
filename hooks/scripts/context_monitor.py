@@ -13,7 +13,6 @@ from _shared import setup_sys_path, load_stdin_event  # noqa: E402
 
 setup_sys_path()
 
-from dtask_state import resolve_session_inprogress_task, sync_runtime_state  # noqa: E402
 
 # Configuration paths (relative to project root)
 SETTINGS = ".diwu/dsettings.toml"
@@ -24,6 +23,13 @@ DEFAULTS = {
     "warning": 30,
     "critical": 50,
     "delay": 10,
+}
+
+# TOML key mapping (Issue #31 alignment)
+_TOML_KEYS = {
+    "warning": "ctxmon_warning_threshold",
+    "critical": "ctxmon_critical_threshold",
+    "delay": "ctxmon_check_interval",
 }
 
 # Tool classification sets
@@ -40,9 +46,9 @@ def _cfg():
         with open(SETTINGS, "rb") as f:
             data = tomllib.load(f)
         return {
-            "warning": data.get("context_monitor_warning", defaults["warning"]),
-            "critical": data.get("context_monitor_critical", defaults["critical"]),
-            "delay": data.get("context_monitor_delay", defaults["delay"]),
+            "warning": data.get(_TOML_KEYS["warning"], defaults["warning"]),
+            "critical": data.get(_TOML_KEYS["critical"], defaults["critical"]),
+            "delay": data.get(_TOML_KEYS["delay"], defaults["delay"]),
         }
     except (tomllib.TOMLDecodeError, OSError):
         return defaults
@@ -50,8 +56,8 @@ def _cfg():
 
 def _cache_path(session_id=""):
     """Return session-scoped cache file path."""
-    sid = session_id or ""
-    return CACHE_TEMPLATE.format(sid=sid) if sid else ".diwu/.context_monitor_cache.json"
+    sid = session_id or "unknown"
+    return CACHE_TEMPLATE.format(sid=sid)
 
 
 def _load_cache(session_id=""):
@@ -88,63 +94,18 @@ def _classify_tool(event):
     return None
 
 
-def _current_task_for_session(cwd, session_id):
-    task_path = os.path.join(cwd, ".diwu", "dtask.json")
-    if not os.path.exists(task_path):
-        return None
-    try:
-        with open(task_path, encoding="utf-8") as f:
-            dtask = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return None
-    sync_result = sync_runtime_state(cwd, dtask, persist=True)
-    if sync_result.is_invalid:
-        return None
-    resolution = resolve_session_inprogress_task(dtask.get("tasks", []), sync_result.state, session_id)
-    if resolution.is_match:
-        return resolution.task
-    return None
-
-
-def checkpoint(task_info=None, session_id=None, cwd="."):
-    """Write an auto-checkpoint session file for the current InProgress task.
-
-    If task_info is not provided, reads .diwu/dtask.json to find
-    the current InProgress task (backward compatible with L2 tests).
-    """
+def checkpoint(cwd="."):
+    """Write an auto-checkpoint session file (no task association)."""
     rec_dir = os.path.join(cwd, ".diwu", "recording")
     os.makedirs(rec_dir, exist_ok=True)
-
-    # Auto-read task if not provided
-    if task_info is None:
-        if session_id:
-            task_info = _current_task_for_session(cwd, session_id)
-        else:
-            task_path = os.path.join(cwd, ".diwu", "dtask.json")
-            try:
-                if os.path.exists(task_path):
-                    with open(task_path, encoding="utf-8") as f:
-                        data = json.load(f)
-                    tasks = [t for t in data.get("tasks", []) if t.get("status") == "InProgress"]
-                    if tasks:
-                        task_info = tasks[0]
-            except (json.JSONDecodeError, OSError):
-                pass
-
-    # 无 InProgress 任务时不创建 checkpoint
-    if not task_info:
-        return None
 
     ts = datetime.now().strftime("%Y-%m-%d-%H%M%S")
     filename = f"checkpoint-{ts}.md"
     filepath = os.path.join(rec_dir, filename)
 
-    task_line = f"**Task#{task_info['id']}: {task_info.get('title', '')} → {task_info.get('status', '')}**\n"
-
     content = (
         f"## Checkpoint {ts}\n"
         f"### [Auto Checkpoint]\n"
-        f"{task_line}"
         f"自动检查点：上下文监控触发（写工具调用达 CRITICAL+DELAY 阈值）\n"
     )
     with open(filepath, "w", encoding="utf-8") as f:
@@ -162,7 +123,6 @@ def main():
 
     tool_type = _classify_tool(event)
     if tool_type is None:
-        # Non-tracked tool, no-op but still exit clean
         sys.exit(0)
 
     cache[f"{tool_type}_count"] = cache.get(f"{tool_type}_count", 0) + 1
@@ -170,27 +130,17 @@ def main():
     critical = cfg["critical"]
     delay = cfg["delay"]
 
-    # Check if we've crossed critical + delay threshold
     if wr_count >= critical + delay and not cache.get("checkpoint_written"):
         cwd = event.get("cwd") or os.getcwd()
-        cp_path = checkpoint(session_id=session_id or None, cwd=cwd)
+        cp_path = checkpoint(cwd=cwd)
         cache["checkpoint_written"] = True
 
-        # Output structured info for Claude to pick up
-        if cp_path:
-            result = {
-                "level": "checkpoint",
-                "message": f"上下文监控：写工具调用 ({wr_count}) 达到阈值 ({critical}+{delay})，已写入自动检查点 {cp_path}",
-                "wr_count": wr_count,
-                "threshold": critical + delay,
-            }
-        else:
-            result = {
-                "level": "checkpoint",
-                "message": f"上下文监控：写工具调用 ({wr_count}) 达到阈值 ({critical}+{delay})，无 InProgress 任务，跳过 checkpoint",
-                "wr_count": wr_count,
-                "threshold": critical + delay,
-            }
+        result = {
+            "level": "checkpoint",
+            "message": f"上下文监控：写工具调用 ({wr_count}) 达到阈值 ({critical}+{delay})，已写入自动检查点 {cp_path}",
+            "wr_count": wr_count,
+            "threshold": critical + delay,
+        }
         print(json.dumps(result, ensure_ascii=False))
 
     elif wr_count >= cfg["warning"] and not cache.get("warning_emitted"):
