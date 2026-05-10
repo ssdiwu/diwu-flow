@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import ensure_dir, load_json_or_empty, plugin_root, load_toml_or_empty, save_toml  # noqa: E402
+from common import ensure_dir, load_json_or_empty, plugin_root, load_toml_or_empty, load_toml_optional, save_json, save_toml  # noqa: E402
 
 PLUGIN_ROOT = plugin_root()
 ASSETS_DIR = PLUGIN_ROOT / "assets" / "dinit" / "assets"
@@ -462,6 +462,48 @@ def _convert_dsettings_json_to_toml(json_path: Path, toml_path: Path) -> dict:
     return {"ok": True}
 
 
+def _convert_dtask_json_to_toml(json_path: Path, toml_path: Path) -> dict:
+    """将旧 dtask.json 转换为 dtask.toml。
+
+    JSON schema: {"tasks": [...]} → TOML [[tasks]].
+    无需键名映射，结构完全兼容。
+    """
+    try:
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"ok": False, "reason": "json_parse_failed"}
+
+    if not isinstance(data, dict) or "tasks" not in data:
+        return {"ok": False, "reason": "invalid_schema"}
+
+    save_toml(data, toml_path)
+    return {"ok": True}
+
+
+def _convert_dtask_state_json_to_toml(json_path: Path, toml_path: Path) -> dict:
+    """将旧 dtask-state.json 转换为 dtask-state.toml。
+
+    清除 None 值（tomli_w 不支持），其余结构不变。
+    """
+    try:
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"ok": False, "reason": "json_parse_failed"}
+
+    if not isinstance(data, dict):
+        return {"ok": False, "reason": "invalid_schema"}
+
+    def _remove_none(obj):
+        if isinstance(obj, dict):
+            return {k: _remove_none(v) for k, v in obj.items() if v is not None}
+        if isinstance(obj, list):
+            return [_remove_none(v) for v in obj if v is not None]
+        return obj
+
+    save_toml(_remove_none(data), toml_path)
+    return {"ok": True}
+
+
 def cmd_migrate_legacy(cwd: Path) -> dict:
     """检测旧版 v0.x 标志并执行迁移。"""
     claude_rules = cwd / ".claude" / "rules"
@@ -556,6 +598,46 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
                     actions.append(f"删除旧: {dsettings_json_path.name}")
                 else:
                     actions.append(f"dsettings 转换失败 ({result.get('reason')}): {dsettings_json_path.name}")
+
+    # dtask JSON→TOML 转换
+    for dtask_json_path in (
+        cwd / ".diwu" / "dtask.json",
+        cwd / ".claude" / "dtask.json",
+    ):
+        if dtask_json_path.exists():
+            dtask_toml_path = cwd / ".diwu" / "dtask.toml"
+            if not dtask_toml_path.exists():
+                result = _convert_dtask_json_to_toml(dtask_json_path, dtask_toml_path)
+                if result.get("ok"):
+                    actions.append(f"dtask 格式转换: JSON → TOML ({dtask_json_path.name})")
+                    backup_path = dtask_json_path.with_suffix(".json.backup")
+                    if not backup_path.exists():
+                        shutil.copy2(str(dtask_json_path), str(backup_path))
+                        actions.append(f"备份: {dtask_json_path.name} → .backup")
+                    dtask_json_path.unlink()
+                    actions.append(f"删除旧: {dtask_json_path.name}")
+                else:
+                    actions.append(f"dtask 转换失败 ({result.get('reason')}): {dtask_json_path.name}")
+
+    # dtask-state JSON→TOML 转换
+    for state_json_path in (
+        cwd / ".diwu" / "dtask-state.json",
+        cwd / ".claude" / "dtask-state.json",
+    ):
+        if state_json_path.exists():
+            state_toml_path = cwd / ".diwu" / "dtask-state.toml"
+            if not state_toml_path.exists():
+                result = _convert_dtask_state_json_to_toml(state_json_path, state_toml_path)
+                if result.get("ok"):
+                    actions.append(f"dtask-state 格式转换: JSON → TOML ({state_json_path.name})")
+                    backup_path = state_json_path.with_suffix(".json.backup")
+                    if not backup_path.exists():
+                        shutil.copy2(str(state_json_path), str(backup_path))
+                        actions.append(f"备份: {state_json_path.name} → .backup")
+                    state_json_path.unlink()
+                    actions.append(f"删除旧: {state_json_path.name}")
+                else:
+                    actions.append(f"dtask-state 转换失败 ({result.get('reason')}): {state_json_path.name}")
 
     # 迁移旧运行时文件
     migrated_count = 0
