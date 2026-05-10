@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import ensure_dir, load_json_or_empty, plugin_root  # noqa: E402
+from common import ensure_dir, load_json_or_empty, plugin_root, load_toml_or_empty, save_toml  # noqa: E402
 
 PLUGIN_ROOT = plugin_root()
 ASSETS_DIR = PLUGIN_ROOT / "assets" / "dinit" / "assets"
@@ -415,6 +415,48 @@ def cmd_create_config(cwd: Path, project_info_file: str | None = None,
     }
 
 
+def _convert_dsettings_json_to_toml(json_path: Path, toml_path: Path) -> dict:
+    """将旧 dsettings.json 转换为 dsettings.toml（含键名映射）。
+
+    旧格式 (.json) → 新格式 (.toml)，键名按 Issue #31 D3 映射表转换。
+    不返回错误——JSON 损坏时返回空映射，由调用方决定是否继续。
+    """
+    try:
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"ok": False, "reason": "json_parse_failed"}
+
+    result = {}
+    # 顶层键直接映射
+    key_map = {
+        "task_archive_threshold": "task_archive_limit",
+        "recording_archive_threshold": "recording_file_limit",
+        "review_limit": "dloop_review_cap",
+    }
+    passthrough = {
+        "recording_retention_days", "context_monitor_warning",
+        "context_monitor_critical", "context_monitor_delay",
+        "dloop_max_consecutive", "error_tracking_enabled",
+    }
+    for old_key, new_key in key_map.items():
+        if old_key in data:
+            result[new_key] = data[old_key]
+    for key in passthrough:
+        if key in data:
+            result[key] = data[key]
+
+    # 嵌套 table 保留
+    for section in ("drift_detection", "recording_reminder"):
+        if section in data and isinstance(data[section], dict):
+            result[section] = data[section]
+
+    if not result:
+        return {"ok": False, "reason": "no_mappable_keys"}
+
+    save_toml(result, toml_path)
+    return {"ok": True}
+
+
 def cmd_migrate_legacy(cwd: Path) -> dict:
     """检测旧版 v0.x 标志并执行迁移。"""
     claude_rules = cwd / ".claude" / "rules"
@@ -459,6 +501,26 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
             shutil.copy2(str(states_old), str(backup))
             actions.append(f"备份 states.md → states.md.backup")
 
+    # dsettings JSON→TOML 转换（在文件迁移之前，优先处理格式转换）
+    for dsettings_json_path in (
+        cwd / ".claude" / "dsettings.json",
+        cwd / ".diwu" / "dsettings.json",
+    ):
+        if dsettings_json_path.exists():
+            dsettings_toml_path = cwd / ".diwu" / "dsettings.toml"
+            if not dsettings_toml_path.exists():
+                result = _convert_dsettings_json_to_toml(dsettings_json_path, dsettings_toml_path)
+                if result.get("ok"):
+                    actions.append(f"dsettings 格式转换: JSON → TOML ({dsettings_json_path.name})")
+                    backup_path = dsettings_json_path.with_suffix(".json.backup")
+                    if not backup_path.exists():
+                        shutil.copy2(str(dsettings_json_path), str(backup_path))
+                        actions.append(f"备份: {dsettings_json_path.name} → .backup")
+                    dsettings_json_path.unlink()
+                    actions.append(f"删除旧: {dsettings_json_path.name}")
+                else:
+                    actions.append(f"dsettings 转换失败 ({result.get('reason')}): {dsettings_json_path.name}")
+
     # 迁移旧运行时文件
     migrated_count = 0
     for old_path, new_path in old_runtime_patterns:
@@ -469,6 +531,9 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
                     migrated_count += 1
                     actions.append(f"迁移目录: {old_path.name} → .diwu/{old_path.name}")
             else:
+                # 跳过 dsettings（已单独处理格式转换）
+                if "dsettings.json" in str(old_path):
+                    continue
                 ensure_dir(new_path.parent)
                 if not new_path.exists():
                     shutil.copy2(str(old_path), str(new_path))
