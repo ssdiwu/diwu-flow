@@ -98,7 +98,7 @@
 | `skills/` | 11 个方法论 Skill（唯一真相源） |
 | `agents/` | 5 个执行 Agent |
 | `scripts/` | 共享脚本（common.py/dtask_transition/dloop/dstat/...） |
-| `hooks/scripts/` | 10 业务脚本 + 1 wrapper（run_hook.py） |
+| `hooks/scripts/` | 10 业务脚本 + 1 wrapper（run_hook.py） | 导航见 `hooks/README.md`（事件→hook 映射）；设计原则见 `.doc/架构规范.md` Part C |
 | `rules/` | 14 个规则文件 |
 | `assets/` | /dinit 初始化模板 |
 | `tests/` | 三级测试（L1 配置 / L2 脚本 / L3 一致性） |
