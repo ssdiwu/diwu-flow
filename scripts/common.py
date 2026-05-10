@@ -138,11 +138,24 @@ def save_toml(data, path: Path):
 _NEXT_TASK_ID_FILE = ".diwu/next-task-id"
 
 
+def _fallback_max_id(cwd: Path) -> int:
+    """fallback 扫描 dtask.json 和 archive 取最大 task id。
+
+    next-task-id 文件不存在或损坏时调用。
+    连 dtask.json 都不存在时返回 0（从 1 开始分配）。
+    """
+    result = max_task_id(cwd)
+    if result.get("ok"):
+        return result["max_id"]
+    return 0
+
+
 def allocate_task_id(cwd: Path) -> dict:
     """分配下一个单调递增任务 ID。
 
     通过 .diwu/next-task-id 纯文本文件实现：
-    - 文件不存在时从 1 开始
+    - 文件不存在时从 dtask.json/archive 最大 id + 1 开始
+    - 连 dtask.json 也不存在时从 1 开始
     - 连续调用返回 1,2,3,... 无重复无跳号
     - 使用 os.open + O_EXCL 保证并发安全
 
@@ -153,13 +166,15 @@ def allocate_task_id(cwd: Path) -> dict:
     id_file = cwd / _NEXT_TASK_ID_FILE
     ensure_dir(id_file.parent)
 
-    # 原子读取当前值：不存在则默认 0
-    current = 0
+    # 原子读取当前值
     if id_file.exists():
         try:
             current = int(id_file.read_text(encoding="utf-8").strip())
         except (ValueError, OSError):
-            current = 0
+            current = _fallback_max_id(cwd)
+    else:
+        # 文件不存在：fallback 扫描 dtask.json 取最大 id
+        current = _fallback_max_id(cwd)
 
     next_id = current + 1
 
