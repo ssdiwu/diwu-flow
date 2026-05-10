@@ -11,6 +11,29 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'hooks', 
 from stop_decision import decide, decide_cron_mode, format_task, hook_session_id
 import tempfile as _tmpmod
 
+
+def _dict_to_toml(d):
+    """Simple dict-to-TOML conversion for test settings (flat + one-level nested)."""
+    lines = []
+    for k, v in d.items():
+        if isinstance(v, dict):
+            lines.append(f"[{k}]")
+            for sk, sv in v.items():
+                if isinstance(sv, bool):
+                    lines.append(f"{sk} = {'true' if sv else 'false'}")
+                elif isinstance(sv, (int, float)):
+                    lines.append(f"{sk} = {sv}")
+                else:
+                    lines.append(f'{sk} = "{sv}"')
+        else:
+            if isinstance(v, bool):
+                lines.append(f"{k} = {'true' if v else 'false'}")
+            elif isinstance(v, (int, float)):
+                lines.append(f"{k} = {v}")
+            else:
+                lines.append(f'{k} = "{v}"')
+    return "\n".join(lines) + "\n"
+
 _TEST_CWD = None
 RUNTIME_STATE_NAME = ".diwu/dtask-state.json"
 
@@ -27,10 +50,10 @@ def _make_dtask_for_test(tasks, tmp_path):
 def _make_dsettings_for_test(tmp_path, **overrides):
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    settings = {"review_limit": 5}
+    settings = {"dloop_review_cap": 5}
     settings.update(overrides)
-    (diwu / "dsettings.json").write_text(
-        json.dumps(settings), encoding="utf-8"
+    (diwu / "dsettings.toml").write_text(
+        _dict_to_toml(settings), encoding="utf-8"
     )
 
 
@@ -144,7 +167,7 @@ class TestDecideInReview(unittest.TestCase):
                   'description': '', 'acceptance': [], 'steps': []},
                  {'id': 2, 'status': 'InSpec', 'title': 'Next',
                   'description': '', 'acceptance': [], 'steps': [], 'blocked_by': []}]
-        settings = {'continuous_mode': True, 'review_limit': 5}
+        settings = {'continuous_mode': True, 'dloop_review_cap': 5}
         data = {'review_used': 0}
         # New behavior: no dloop-state -> default mode -> allow stop
         should_continue, output = decide(tasks, settings, data, '.diwu/t.json', _get_test_cwd(), [], None)
@@ -153,7 +176,7 @@ class TestDecideInReview(unittest.TestCase):
     def test_inreview_at_limit_stops(self):
         tasks = [{'id': 1, 'status': 'InReview', 'title': 'R',
                   'description': '', 'acceptance': [], 'steps': []}]
-        settings = {'continuous_mode': True, 'review_limit': 5}
+        settings = {'continuous_mode': True, 'dloop_review_cap': 5}
         data = {'review_used': 5}  # at limit
         # Patch notify to avoid /dev/tty OSError in test env
         import stop_decision

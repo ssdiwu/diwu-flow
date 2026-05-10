@@ -46,12 +46,35 @@ def _make_dtask(tasks, tmp_path, **extra):
 
 
 def _make_dsettings(tmp_path, **overrides):
-    """Write dsettings.json to tmp_path/.diwu/."""
+    """Write dsettings.toml to tmp_path/.diwu/."""
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    settings = {"review_limit": 5}
+    settings = {"dloop_review_cap": 5}
     settings.update(overrides)
-    (diwu / "dsettings.json").write_text(json.dumps(settings), encoding="utf-8")
+    (diwu / "dsettings.toml").write_text(_dict_to_toml(settings), encoding="utf-8")
+
+
+def _dict_to_toml(d):
+    """Simple dict-to-TOML conversion for test settings (flat + one-level nested)."""
+    lines = []
+    for k, v in d.items():
+        if isinstance(v, dict):
+            lines.append(f"[{k}]")
+            for sk, sv in v.items():
+                if isinstance(sv, bool):
+                    lines.append(f"{sk} = {'true' if sv else 'false'}")
+                elif isinstance(sv, (int, float)):
+                    lines.append(f"{sk} = {sv}")
+                else:
+                    lines.append(f'{sk} = "{sv}"')
+        else:
+            if isinstance(v, bool):
+                lines.append(f"{k} = {'true' if v else 'false'}")
+            elif isinstance(v, (int, float)):
+                lines.append(f"{k} = {v}")
+            else:
+                lines.append(f'{k} = "{v}"')
+    return "\n".join(lines) + "\n"
 
 
 def _make_runtime_state(tmp_path, *, dloop=None, task_sessions=None):
@@ -273,7 +296,7 @@ def test_stop_decision_pending_review_stops_with_report(tmp_path):
         {"id": 2, "title": "Pending C", "status": "InSpec"},
     ]
     _make_dtask(tasks, tmp_path, review_used=5)
-    _make_dsettings(tmp_path, review_limit=5)
+    _make_dsettings(tmp_path, dloop_review_cap=5)
     _make_dloop_state(
         tmp_path,
         session_id="session-review-limit",

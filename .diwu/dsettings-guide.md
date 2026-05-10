@@ -1,7 +1,7 @@
-# dsettings.json 配置说明
+# dsettings.toml 配置说明
 
-> 本文件为 `.diwu/dsettings.json` 的逐项配置指南。
-> 修改后立即生效，无需重启。模板来源：`assets/dinit/assets/dsettings.json.template`
+> 本文件为 `.diwu/dsettings.toml` 的逐项配置指南。
+> 修改后立即生效，无需重启。模板来源：`assets/dinit/assets/dsettings.toml.template`
 
 ---
 
@@ -22,11 +22,11 @@
 
 ## 二、归档阈值
 
-### `task_archive_threshold`（数字，默认 `20`）
+### `task_archive_limit`（数字，默认 `20`）
 
 Done/Cancelled 任务数达到此值时触发归档（写入 `.diwu/archive/task_archive_YYYY-MM.json`）。
 
-### `recording_archive_threshold`（数字，默认 `30`）
+### `recording_file_limit`（数字，默认 `30`）
 
 Session 记录文件数达到此值时触发归档（写入 `.diwu/archive/recording_YYYY-MM-DD.md`）。
 
@@ -38,7 +38,7 @@ Session 记录文件数达到此值时触发归档（写入 `.diwu/archive/recor
 
 ## 三、审查与超前实施
 
-### `review_limit`（数字，默认 `5`）
+### `dloop_review_cap`（数字，默认 `5`）
 
 允许「超前实施」的最大任务数。当 InReview 任务达到此数量时停止自动续跑，提示人工验收。
 
@@ -129,7 +129,7 @@ scope_drift 容忍度。`"high"` = 同目录或同文件名即放行；可扩展
 
 最多回溯多少个历史 session 来提取错误模式。值越大参考样本越多，但 context 占用也越多。
 
-### `error_tracking.enabled`（布尔值，默认 `true`）
+### `error_tracking_enabled`（布尔值，默认 `true`）
 
 **错误追踪开关**。开启后，同一工具连续失败时会启动 **3-Strike 协议**：
 
@@ -168,5 +168,5 @@ Session 结束前是否提醒写入 recording 文件。
 | 子代理想用更好的模型 | `subagent_explore_model` | `"sonnet"` |
 | 不想看退化提醒 | `drift_detection.enabled` | `false` |
 | 不需要错误注入学习 | `error_injection.enabled` | `false` |
-| 不需要 3-Strike 重试机制 | `error_tracking.enabled` | `false` |
+| 不需要 3-Strike 重试机制 | `error_tracking_enabled` | `false` |
 | 并行更多子代理 | `subagent_concurrency` | `5` 或更高 |

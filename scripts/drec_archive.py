@@ -24,8 +24,8 @@ from common import DIWU_DIR, ARCHIVE_DIR, DTASK_JSON, DSETTINGS_TOML, RECORDING_
 LAST_SUMMARY = ".last_archive_summary.json"
 
 DEFAULTS = {
-    "task_archive_threshold": 20,
-    "recording_archive_threshold": 30,
+    "task_archive_limit": 20,
+    "recording_file_limit": 30,
     "recording_retention_days": 30,
 }
 
@@ -87,7 +87,7 @@ def archive_tasks(cwd: Path, tasks: list, settings: dict) -> int:
     if not terminal:
         return 0
 
-    threshold = settings.get("task_archive_threshold", DEFAULTS["task_archive_threshold"])
+    threshold = settings.get("task_archive_limit", DEFAULTS["task_archive_limit"])
     if len(terminal) < threshold:
         return 0
 
@@ -172,7 +172,7 @@ def archive_recordings(cwd: Path, settings: dict) -> list:
     if not rec_dir.is_dir():
         return []
 
-    ct = settings.get("recording_archive_threshold", DEFAULTS["recording_archive_threshold"])
+    ct = settings.get("recording_file_limit", DEFAULTS["recording_file_limit"])
     rd = settings.get("recording_retention_days", DEFAULTS["recording_retention_days"])
 
     now = time.time()

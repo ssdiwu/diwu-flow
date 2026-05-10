@@ -62,7 +62,7 @@ tests/
 | 路径 | 用途 | 读写方 |
 |------|------|--------|
 | `.diwu/CLAUDE.md` | 全局配置、个人偏好、规则索引 | 共同维护 |
-| `.diwu/dsettings.json` | 可调参数配置 | 人工设置，Agent 读取 |
+| `.diwu/dsettings.toml` | 可调参数配置 | 人工设置，Agent 读取 |
 | `.diwu/dtask.json` | 任务定义与 `status` 的真相源 | Agent 读写 |
 | `.diwu/dtask-state.json` | runtime owner / dloop 元数据真相源；不重复保存 task status | Agent 读写 |
 | `.diwu/recording/` | Session 进度记录，每个 session 一个文件 | Agent 写 |
@@ -73,8 +73,8 @@ tests/
 
 | 归档目标 | 触发条件 | 阈值来源 |
 |---------|---------|---------|
-| task_archive_YYYY-MM.json | Done/Cancelled 任务数超阈值 | dsettings.json `task_archive_threshold`（默认 20）|
-| recording_YYYY-MM-DD.md | session 文件数超阈值 | dsettings.json `recording_archive_threshold`（默认 30）|
+| task_archive_YYYY-MM.json | Done/Cancelled 任务数超阈值 | dsettings.json `task_archive_limit`（默认 20）|
+| recording_YYYY-MM-DD.md | session 文件数超阈值 | dsettings.json `recording_file_limit`（默认 30）|
 
 ## 数据所有权
 
