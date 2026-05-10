@@ -1,5 +1,13 @@
 ## [v0.1.1] - 2026-05-10
 
+### Changed — didea acceptance 对齐（D5+D7 最终裁定）
+
+- **status 字段移除**（`scripts/didea_core.py` + `skills/didea/SKILL.md`）：frontmatter 中去掉 status，list 中去掉 `--status` 过滤，change-status 子命令删除，validate 不再校验 status 枚举值
+- **push 动作移除**（`skills/didea/SKILL.md` + `commands/didea.md` + `scripts/didea_github.py`）：didea 只负责"记住"和"提醒"，push 五条下游链路全部砍掉
+- **archive 改为文件移动**（`scripts/didea_core.py`）：从 frontmatter status→archived 改为实际移动到 `ideas/archived/` 目录
+- **测试适配**：`test_didea_core.py` 更新 archive/refine/validate 用例，`test_didea_github.py` 删除
+- **动作从 6 减为 5**：create/list/show/refine/archive（去掉 push）
+
 ### Changed — didea 正文门控 + CLAUDE.md 变更传播整合
 
 - **didea 正文最低内容门槛**（`skills/didea/SKILL.md`）：新增规则 3，create 动作的描述区块不能是纯占位符（"ddd"/"test" 等），AI 必须追问后才写入

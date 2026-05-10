@@ -351,6 +351,7 @@ def cmd_create_config(cwd: Path, project_info_file: str | None = None,
         _record(str(claude_md.relative_to(cwd)), "ERROR_NO_TEMPLATE")
 
     # 4.2 dtask.json
+    ensure_dir(diwu_dir)
     dtask = diwu_dir / "dtask.json"
     dtask_template = ASSETS_DIR / "task.json.template"
     if not dtask.exists():

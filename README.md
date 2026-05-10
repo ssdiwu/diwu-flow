@@ -173,13 +173,14 @@ InDraft 任务 Agent 不会执行。完整规则见 `rules/task.md`。
 
 | 配置项 | 默认 | 用途 |
 |--------|------|------|
-| `continuous_mode` | `true` | 完成后是否自动续跑下一个任务 |
-| `dloop_review_cap` | `5` | 最大超前实施任务数 |
-| `subagent_concurrency` | `3` | 并行子代理上限 |
-| `drift_enabled` | `true` | 退化信号检测（走神/死循环/越界编辑） |
-| `error_tracking_enabled` | `true` | 3-Strike 工具失败重试 |
 | `task_archive_limit` | `20` | Done/Cancelled 任务数触发归档 |
 | `recording_file_limit` | `30` | session 文件数触发归档 |
+| `recording_retention_days` | `30` | 归档保留最近 N 天 recording |
+| `dloop_review_cap` | `5` | 最大超前实施任务数 |
+| `drift_enabled` | `true` | 退化信号检测（走神/死循环/越界编辑） |
+| `error_tracking_enabled` | `true` | 3-Strike 工具失败重试 |
+| `reminder_on_taskdone` | `true` | 结束前提醒写 recording |
+| `ctxmon_critical_threshold` | `50` | 写工具调用触发 checkpoint |
 
 完整说明见 `.diwu/dsettings-guide.md`。
 

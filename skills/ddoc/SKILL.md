@@ -171,16 +171,6 @@ argument-hint: "[类型] [范围] [输入源]"
 - 从 `references/templates.md` 获取 **AI1/AI2 prompt 模板**
 - 从 `references/completeness.md` 执行**两层完整性检查**
 
-### 输出结构选择
-
-```
-有 3 个以上明确业务域？
-  ├─ 是 → 领域驱动结构（推荐长期维护项目）
-  └─ 否 → 分层结构（适合工具类/小项目）
-```
-
-> 领域驱动结构和分层结构的目录模板见 `references/templates.md` §输出结构模板
-
 ---
 
 ## 六、五约束维度（通用工具箱）
@@ -207,4 +197,4 @@ argument-hint: "[类型] [范围] [输入源]"
 | `references/forward-mode.md` | 正向生成方法论：六步设计法、状态机/管道设计、变化速率原理 |
 | `references/reverse-mode.md` | 逆向提取方法论：代码映射表、跨语言识别、逆向 Spec 技术 |
 | `references/completeness.md` | 两层完整性检查：结构检查 + 深度检查 + AI 自审清单 |
-| `references/templates.md` | 输出模板：AI prompt / 设计文档 / task.json / 输出结构 / 反模式 |
+| `references/templates.md` | 输出模板：AI prompt / 设计文档 / 反模式 |
