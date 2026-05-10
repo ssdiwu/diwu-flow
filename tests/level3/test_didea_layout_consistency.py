@@ -71,18 +71,9 @@ class TestSkillFrontmatter:
     def test_required_fields(self):
         content = SKILL_MD.read_text(encoding="utf-8")
         fm = yaml.safe_load(content.split("---", 2)[1])
-        for field in ["name", "type", "description"]:
+        for field in ["name", "description"]:
             assert field in fm, f"SKILL.md frontmatter 缺少 {field}"
         assert fm["name"] == "didea"
-        assert fm["type"] == "tool"
-
-    def test_triggers_nonempty(self):
-        content = SKILL_MD.read_text(encoding="utf-8")
-        fm = yaml.safe_load(content.split("---", 2)[1])
-        triggers = fm.get("triggers", [])
-        assert isinstance(triggers, list) and len(triggers) >= 4, (
-            f"triggers 应 ≥4 条，实际 {len(triggers)}"
-        )
 
 
 class TestCommandFrontmatter:

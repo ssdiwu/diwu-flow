@@ -18,15 +18,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import DIWU_DIR, ARCHIVE_DIR, DTASK_JSON, DSETTINGS_JSON, PITFALLS_FILE, RECORDING_DIR, save_json  # noqa: E402
+from common import DIWU_DIR, ARCHIVE_DIR, DTASK_JSON, DSETTINGS_TOML, RECORDING_DIR, PITFALLS_FILE, load_toml_optional, save_json  # noqa: E402
 
 # ── 本文件特有常量（不在 common.py 中） ──────────
 LAST_SUMMARY = ".last_archive_summary.json"
 
 DEFAULTS = {
-    "task_archive_threshold": 20,
-    "recording_archive_threshold": 30,
-    "recording_retention_days": 30,
+    "task_archive_limit": 20,
+    "recording_file_limit": 30,
+    "recording_keep_days": 30,
 }
 
 # ─── 工具函数 ──────────────────────────────────────────
@@ -46,9 +46,9 @@ def _load_json(path: Path):
 
 
 def _load_settings(cwd: Path) -> dict:
-    """加载 dsettings.json，缺失字段用默认值补全。"""
-    settings_path = _p(cwd, DSETTINGS_JSON)
-    raw = _load_json(settings_path)
+    """加载 dsettings.toml，缺失字段用默认值补全。"""
+    settings_path = _p(cwd, DSETTINGS_TOML)
+    raw = load_toml_optional(settings_path)
     result = dict(DEFAULTS)
     if raw and isinstance(raw, dict):
         for k in DEFAULTS:
@@ -87,7 +87,7 @@ def archive_tasks(cwd: Path, tasks: list, settings: dict) -> int:
     if not terminal:
         return 0
 
-    threshold = settings.get("task_archive_threshold", DEFAULTS["task_archive_threshold"])
+    threshold = settings.get("task_archive_limit", DEFAULTS["task_archive_limit"])
     if len(terminal) < threshold:
         return 0
 
@@ -172,8 +172,8 @@ def archive_recordings(cwd: Path, settings: dict) -> list:
     if not rec_dir.is_dir():
         return []
 
-    ct = settings.get("recording_archive_threshold", DEFAULTS["recording_archive_threshold"])
-    rd = settings.get("recording_retention_days", DEFAULTS["recording_retention_days"])
+    ct = settings.get("recording_file_limit", DEFAULTS["recording_file_limit"])
+    rd = settings.get("recording_keep_days", DEFAULTS["recording_keep_days"])
 
     now = time.time()
     cutoff = now - (rd * 86400)

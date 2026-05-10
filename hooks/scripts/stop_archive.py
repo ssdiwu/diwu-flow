@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import time
+import tomllib
 from pathlib import Path
 
 try:
@@ -23,14 +24,14 @@ except (ImportError, ModuleNotFoundError):
         except (json.JSONDecodeError, ValueError):
             return {}
 
-SETTINGS_PATH = ".diwu/dsettings.json"
+SETTINGS_PATH = ".diwu/dsettings.toml"
 TASK_JSON_PATH = ".diwu/dtask.json"
 RECORDING_DIR = ".diwu/recording"
 
 DEFAULTS = {
-    "task_archive_threshold": 20,
-    "recording_archive_threshold": 30,
-    "recording_retention_days": 30,
+    "task_archive_limit": 20,
+    "recording_file_limit": 30,
+    "recording_keep_days": 30,
 }
 
 _CWD: str = "."
@@ -41,14 +42,14 @@ def _resolve(path: str) -> str:
 
 
 def _load_settings():
-    """Load settings from dsettings.json, falling back to defaults."""
+    """Load settings from dsettings.toml, falling back to defaults."""
     full = _resolve(SETTINGS_PATH)
     if not os.path.exists(full):
         return dict(DEFAULTS)
     try:
-        with open(full, encoding="utf-8") as f:
-            data = json.load(f)
-    except (json.JSONDecodeError, OSError):
+        with open(full, "rb") as f:
+            data = tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
         return dict(DEFAULTS)
     result = dict(DEFAULTS)
     result.update({k: v for k, v in data.items() if k in DEFAULTS})
@@ -74,7 +75,7 @@ def check_task_archive(settings, tasks):
     Returns:
         (needs_archive: bool, count: int, threshold: int, message: str)
     """
-    threshold = settings.get("task_archive_threshold", DEFAULTS["task_archive_threshold"])
+    threshold = settings.get("task_archive_limit", DEFAULTS["task_archive_limit"])
     terminal = [t for t in tasks if t.get("status") in ("Done", "Cancelled")]
     count = len(terminal)
 
@@ -97,10 +98,10 @@ def check_recording_archive(settings):
          count_threshold: int, days_threshold: int, message: str)
     """
     ct = settings.get(
-        "recording_archive_threshold", DEFAULTS["recording_archive_threshold"]
+        "recording_file_limit", DEFAULTS["recording_file_limit"]
     )
     dt = settings.get(
-        "recording_retention_days", DEFAULTS["recording_retention_days"]
+        "recording_keep_days", DEFAULTS["recording_keep_days"]
     )
 
     rec_dir = _resolve(RECORDING_DIR)

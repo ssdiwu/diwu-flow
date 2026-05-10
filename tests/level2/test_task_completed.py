@@ -148,8 +148,8 @@ class TestTaskCompletedLoopTracking:
         }, task_sessions={
             "5": {"session_id": "session-match", "started_at": "2026-04-30T12:00:00Z"}
         })
-        (tmp_path / ".diwu" / "dsettings.json").write_text(
-            json.dumps({"recording_reminder": {"enabled": False}}, ensure_ascii=False, indent=2)
+        (tmp_path / ".diwu" / "dsettings.toml").write_text(
+            "dloop_review_cap = 5\n\nreminder_on_taskdone = false\n", encoding="utf-8"
         )
 
         result = _run_task_completed(tmp_path, {

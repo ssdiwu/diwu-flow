@@ -373,7 +373,7 @@ class TestDloopStaleState:
         assert (tmp_project_dir / ".diwu" / "dloop-state.json").exists()
 
     def test_status_terminal_stale_pending_review(self, tmp_project_dir):
-        """review_limit 命中时，status 也应识别为 terminal_stale 并清理文件。"""
+        """review_limit 仍支持向后兼容 — dloop_review_cap 为新键名测试。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
         (diwu / "dtask.json").write_text(json.dumps({
@@ -383,7 +383,7 @@ class TestDloopStaleState:
             ],
             "review_used": 5,
         }, ensure_ascii=False, indent=2))
-        (diwu / "dsettings.json").write_text(json.dumps({"review_limit": 5}, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text("dloop_review_cap = 5\n", encoding="utf-8")
         self._write_state(tmp_project_dir, {
             "active": True,
             "session_id": "review-limit",

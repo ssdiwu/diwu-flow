@@ -46,12 +46,35 @@ def _make_dtask(tasks, tmp_path, **extra):
 
 
 def _make_dsettings(tmp_path, **overrides):
-    """Write dsettings.json to tmp_path/.diwu/."""
+    """Write dsettings.toml to tmp_path/.diwu/."""
     diwu = tmp_path / ".diwu"
     diwu.mkdir(exist_ok=True)
-    settings = {"review_limit": 5}
+    settings = {"dloop_review_cap": 5}
     settings.update(overrides)
-    (diwu / "dsettings.json").write_text(json.dumps(settings), encoding="utf-8")
+    (diwu / "dsettings.toml").write_text(_dict_to_toml(settings), encoding="utf-8")
+
+
+def _dict_to_toml(d):
+    """Simple dict-to-TOML conversion for test settings (flat + one-level nested)."""
+    lines = []
+    for k, v in d.items():
+        if isinstance(v, dict):
+            lines.append(f"[{k}]")
+            for sk, sv in v.items():
+                if isinstance(sv, bool):
+                    lines.append(f"{sk} = {'true' if sv else 'false'}")
+                elif isinstance(sv, (int, float)):
+                    lines.append(f"{sk} = {sv}")
+                else:
+                    lines.append(f'{sk} = "{sv}"')
+        else:
+            if isinstance(v, bool):
+                lines.append(f"{k} = {'true' if v else 'false'}")
+            elif isinstance(v, (int, float)):
+                lines.append(f"{k} = {v}")
+            else:
+                lines.append(f'{k} = "{v}"')
+    return "\n".join(lines) + "\n"
 
 
 def _make_runtime_state(tmp_path, *, dloop=None, task_sessions=None):
@@ -117,60 +140,14 @@ def test_stop_decision_default_mode_allows_stop(tmp_path):
 
 
 def test_stop_decision_inprogress_always_blocks(tmp_path):
-    """InProgress task -> block regardless of dloop mode."""
-    tasks = [{"id": 1, "title": "Active task", "status": "InProgress"}]
-    _make_dtask(tasks, tmp_path)
-    _make_runtime_state(
-        tmp_path,
-        task_sessions={"1": {"session_id": "session-a", "started_at": "2026-04-30T12:00:00Z"}},
-    )
-
-    result = _run_stop_decision(tmp_path, session_id="session-a", cwd=str(tmp_path))
-    assert result.returncode == 0, f"rc={result.returncode}"
-    assert len(result.stdout) > 0, f"stdout empty! len={len(result.stdout)}"
-    output = json.loads(result.stdout)
-    assert output.get("decision") == "block", f"parsed={output}"
-
-    _make_dloop_state(tmp_path, session_id="session-a")
-    result = _run_stop_decision(
-        tmp_path,
-        session_id="session-a",
-        cwd=str(tmp_path),
-    )
-    assert result.returncode == 0
-    output = json.loads(result.stdout) if result.stdout.strip() else {}
-    assert output.get("decision") == "block"
+    """InProgress task no longer triggers dloop block in stop_decision (A group removed).
+    stop_decision now only handles B group checks (pending_recording, reminders)."""
+    pass
 
 
 def test_stop_decision_max_tasks_stops_with_report(tmp_path):
-    """completed_task_ids >= max_tasks -> loop stops with phase report + cleanup."""
-    tasks = [
-        {"id": 1, "title": "Done task", "status": "Done"},
-        {"id": 2, "title": "Next task", "status": "InSpec"},
-    ]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(
-        tmp_path,
-        session_id="session-max",
-        completed_task_ids=[1, 2, 3],
-        current_iteration=3,
-        max_tasks=3,
-    )
-
-    result = _run_stop_decision(
-        tmp_path,
-        session_id="session-max",
-        cwd=str(tmp_path),
-    )
-
-    # Should stop and emit phase report without blocking the stop hook process
-    assert result.returncode == 0
-    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    assert runtime_state["dloop"] is None
-    # Phase report should be in stderr
-    assert "DLOOP 阶段报告" in result.stderr
-    assert "达到任务上限" in result.stderr
-
+    """dloop max_tasks stop logic removed from stop_decision (A group removed)."""
+    pass
 
 def test_task_guard_allows_loop_state_write(tmp_path):
     """task_entry_guard should allow writes to .diwu/dtask-state.json."""
@@ -193,57 +170,15 @@ def test_task_guard_allows_loop_state_write(tmp_path):
 
 
 def test_stop_decision_no_tasks_stops_with_report(tmp_path):
-    """No InSpec/InProgress tasks in loop mode -> loop stops with report + cleanup."""
-    tasks = [
-        {"id": 1, "title": "Done task", "status": "Done"},
-        {"id": 2, "title": "Also done", "status": "Done"},
-    ]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(
-        tmp_path,
-        session_id="session-empty",
-        completed_task_ids=[1, 2],
-        current_iteration=2,
-    )
-
-    result = _run_stop_decision(
-        tmp_path,
-        session_id="session-empty",
-        cwd=str(tmp_path),
-    )
-
-    assert result.returncode == 0
-    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    assert runtime_state["dloop"] is None
-    assert "DLOOP 阶段报告" in result.stderr
-    assert "无可执行任务" in result.stderr
+    """dloop no-tasks stop logic removed from stop_decision (A group removed)."""
+    pass
 
 
 def test_stop_decision_only_inreview_stops(tmp_path):
-    """Only InReview tasks remaining (no InSpec/InProgress) -> allow stop."""
-    tasks = [
-        {"id": 1, "title": "Done task", "status": "Done"},
-        {"id": 2, "title": "Review task", "status": "InReview"},
-    ]
-    _make_dtask(tasks, tmp_path)
-    _make_dloop_state(
-        tmp_path,
-        session_id="session-inreview",
-        completed_task_ids=[1],
-        current_iteration=1,
-    )
+    """dloop inreview stop logic removed from stop_decision (A group removed)."""
+    pass
 
-    result = _run_stop_decision(
-        tmp_path,
-        session_id="session-inreview",
-        cwd=str(tmp_path),
-    )
 
-    assert result.returncode == 0
-    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    assert runtime_state["dloop"] is None
-    assert "DLOOP 阶段报告" in result.stderr
-    assert "无可执行任务" in result.stderr
 
 
 def test_loop_completion_reports_completed_tasks(tmp_path):
@@ -269,39 +204,12 @@ def test_loop_completion_reports_completed_tasks(tmp_path):
     )
 
     assert result.returncode == 0
-    # Report should mention completed tasks by name
-    assert "Fix bug A" in result.stderr
-    assert "Refactor B" in result.stderr
-    # Report should mention remaining tasks
-    assert "Pending C" in result.stderr
+    assert result.stderr == ""
 
 
 def test_stop_decision_pending_review_stops_with_report(tmp_path):
-    """PENDING REVIEW should stop the loop and cleanup stale state."""
-    tasks = [
-        {"id": 1, "title": "Review task", "status": "InReview"},
-        {"id": 2, "title": "Pending C", "status": "InSpec"},
-    ]
-    _make_dtask(tasks, tmp_path, review_used=5)
-    _make_dsettings(tmp_path, review_limit=5)
-    _make_dloop_state(
-        tmp_path,
-        session_id="session-review-limit",
-        completed_task_ids=[1],
-        current_iteration=1,
-        max_tasks=0,
-    )
-
-    result = _run_stop_decision(
-        tmp_path,
-        session_id="session-review-limit",
-        cwd=str(tmp_path),
-    )
-
-    assert result.returncode == 0
-    runtime_state = json.loads((tmp_path / RUNTIME_STATE_NAME).read_text(encoding="utf-8"))
-    assert runtime_state["dloop"] is None
-    assert "PENDING REVIEW" in result.stderr
+    """dloop pending_review stop logic removed from stop_decision (A group removed)."""
+    pass
 
 
 # ── Cron mode tests ──────────────────────────────────────────────

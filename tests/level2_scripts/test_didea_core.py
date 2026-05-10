@@ -1,13 +1,11 @@
 """scripts/didea_core.py 测试。
 
 覆盖：create（正常/自增ID/frontmatter完整/重复标题处理/空标题拒绝）
-      list（空目录/多文件/status过滤）
+      list（空目录/多文件）
       show（存在/不存在）
-      refine（内容追加/updated_at更新/archived拒绝）
-      archive（状态变更）
-      change-status（正常/非法值拒绝）
-      validate（全合法/缺失字段/非法status）
-I2: CLI-first subprocess 调用。
+      refine（内容追加/updated_at更新/archived文件不存在）
+      archive（文件移动归档）
+      validate（全合法/缺失字段）
 """
 
 import json
@@ -20,6 +18,10 @@ from conftest import run_script  # noqa: E402
 
 def _ideas_dir(root: Path) -> Path:
     return root / ".diwu" / "ideas"
+
+
+def _archived_dir(root: Path) -> Path:
+    return root / ".diwu" / "ideas" / "archived"
 
 
 def _read_idea_file(root: Path, filename: str) -> str:
@@ -50,7 +52,6 @@ class TestCreate:
 
         fm = _parse_idea_fm(tmp_project_dir, data["data"]["filename"])
         assert fm["id"] == 1
-        assert fm["status"] == "idea"
         assert "created_at" in fm
         assert "updated_at" in fm
         assert fm["tags"] == []
@@ -130,22 +131,6 @@ class TestList:
         assert "A想法" in titles
         assert "B想法" in titles
 
-    def test_list_status_filter(self, tmp_project_dir):
-        run_script("didea_core.py", "create", "--title", "想法1", "--cwd", str(tmp_project_dir))
-        run_script("didea_core.py", "create", "--title", "想法2", "--cwd", str(tmp_project_dir))
-        # archive 想法2
-        run_script("didea_core.py", "archive", "--id", "2", "--cwd", str(tmp_project_dir))
-
-        rc, out, _ = run_script(
-            "didea_core.py", "list",
-            "--status", "idea",
-            "--cwd", str(tmp_project_dir),
-        )
-        assert rc == 0
-        data = json.loads(out)
-        assert data["count"] == 1
-        assert data["data"][0]["id"] == 1
-
 
 class TestShow:
     def test_show_existing(self, tmp_project_dir):
@@ -187,8 +172,9 @@ class TestRefine:
         content = _read_idea_file(tmp_project_dir, "待完善.md")
         assert "补充说明内容" in content
 
-    def test_refine_archived_rejected(self, tmp_project_dir):
-        run_script("didea_core.py", "create", "--title", "已归档", "--cwd", str(tmp_project_dir))
+    def test_refine_archived_file_gone(self, tmp_project_dir):
+        """归档后文件移走，refine 应报不存在。"""
+        run_script("didea_core.py", "create", "--title", "归档测试", "--cwd", str(tmp_project_dir))
         run_script("didea_core.py", "archive", "--id", "1", "--cwd", str(tmp_project_dir))
         rc, out, err = run_script(
             "didea_core.py", "refine",
@@ -197,7 +183,7 @@ class TestRefine:
             "--cwd", str(tmp_project_dir),
         )
         assert rc != 0
-        assert "已归档" in err
+        assert "不存在" in err
 
 
 class TestArchive:
@@ -211,35 +197,9 @@ class TestArchive:
         assert rc == 0
         data = json.loads(out)
         assert data["status"] == "archived"
-        fm = _parse_idea_fm(tmp_project_dir, "归档目标.md")
-        assert fm["status"] == "archived"
-
-
-class TestChangeStatus:
-    def test_change_status(self, tmp_project_dir):
-        run_script("didea_core.py", "create", "--title", "改状态", "--cwd", str(tmp_project_dir))
-        rc, out, _ = run_script(
-            "didea_core.py", "change-status",
-            "--id", "1",
-            "--new-status", "refined",
-            "--cwd", str(tmp_project_dir),
-        )
-        assert rc == 0
-        data = json.loads(out)
-        assert data["data"]["new_status"] == "refined"
-        fm = _parse_idea_fm(tmp_project_dir, "改状态.md")
-        assert fm["status"] == "refined"
-
-    def test_change_status_invalid_rejected(self, tmp_project_dir):
-        rc, out, err = run_script(
-            "didea_core.py", "change-status",
-            "--id", "1",
-            "--new-status", "invalid_status",
-            "--cwd", str(tmp_project_dir),
-        )
-        assert rc != 0
-        # argparse choices 校验先于业务逻辑拦截，两种错误信息均可接受
-        assert "非法 status" in err or "invalid choice" in err
+        # 文件应从 ideas/ 移动到 ideas/archived/
+        assert not (_ideas_dir(tmp_project_dir) / "归档目标.md").exists()
+        assert (_archived_dir(tmp_project_dir) / "归档目标.md").exists()
 
 
 class TestValidate:
@@ -261,7 +221,7 @@ class TestValidate:
         ideas.mkdir(parents=True, exist_ok=True)
         bad_file = ideas / "不完整.md"
         bad_file.write_text(
-            "---\nid: 99\nstatus: idea\n---\n## 描述\n只有两个字段\n",
+            "---\nid: 99\n---\n## 描述\n只有 id 一个字段\n",
             encoding="utf-8",
         )
         rc, out, _ = run_script(

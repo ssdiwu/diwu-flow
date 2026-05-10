@@ -2,7 +2,7 @@
 """TaskCompleted: lightweight reminder after a task is marked Done.
 
 Fires when task.json transitions to Done.
-Checks recording_reminder.enabled (default true) in dsettings.json.
+Checks reminder_on_taskdone (default true) in settings dsettings.toml.
 Non-blocking: always exit(0), outputs reminder via additionalSystemPrompt.
 
 Does NOT write files — recording is handled by Stop hook.
@@ -18,7 +18,7 @@ Loop tracking only fires after successful owner clearance to avoid counting
 unconfirmed completions. Reminder sys.exit(0) comes after all bookkeeping.
 """
 
-import json, os, sys
+import json, os, sys, tomllib
 
 from _shared import setup_sys_path, load_json_fallback, load_stdin_event  # noqa: E402
 
@@ -31,7 +31,7 @@ from dtask_state import (  # noqa: E402
     load_runtime_state,
 )
 
-SETTINGS_FILE = '.diwu/dsettings.json'
+SETTINGS_FILE = '.diwu/dsettings.toml'
 TASK_JSON_PATH = '.diwu/dtask.json'
 RUNTIME_STATE_PATH = '.diwu/dtask-state.json'
 
@@ -69,6 +69,18 @@ def _track_loop_completion(task_id: int, session_id: str):
     save_runtime_state(_CWD, sync_result.state, remove_legacy=True)
 
 
+def _load_settings_toml():
+    """Load settings from dsettings.toml."""
+    full = os.path.join(_CWD, SETTINGS_FILE) if _CWD != "." else SETTINGS_FILE
+    if not os.path.exists(full):
+        return {}
+    try:
+        with open(full, "rb") as f:
+            return tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
+        return {}
+
+
 def main():
     global _CWD
     event = load_stdin_event()
@@ -76,7 +88,7 @@ def main():
     session_id = event.get("sessionId", event.get("session_id", ""))
 
     # === 阶段 1: Fallback heuristic + clear_task_owner + loop 追踪（必须在 reminder 之前完成）===
-    settings = load_json_fallback(SETTINGS_FILE)  # 提前加载，后面还要用
+    settings = _load_settings_toml()  # 提前加载，后面还要用
 
     task_info = ''
     completed_task = event.get("task")
@@ -113,7 +125,7 @@ def main():
                         _track_loop_completion(task_id, session_id)
 
     # === 阶段 2: Reminder 门控（安全地在 loop 追踪和 owner 清理之后）===
-    if settings.get("recording_reminder", {}).get("enabled") == False:
+    if settings.get("reminder_on_taskdone") == False:
         sys.exit(0)
 
     # === 阶段 3: Reminder 输出 ===

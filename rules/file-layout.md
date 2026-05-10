@@ -8,13 +8,13 @@
 ```
 .diwu/
 ├── CLAUDE.md                      # 全局 Agent 配置入口
-├── dsettings.json                 # 可调参数配置
+├── dsettings.toml                 # 可调参数配置
 ├── dtask.json                     # 当前任务列表（status 真相源）
 ├── dtask-state.json               # runtime owner / dloop 元数据真相源
 ├── recording/                     # Session 进度记录目录
 │   └── session-YYYY-MM-DD-HHMMSS.md
 ├── decisions.md                   # 设计决策记录（可选）
-├── ideas/                        # 想法容器（每个 idea 一个 .md 文件，YAML frontmatter + markdown 正文）
+├── ideas/                        # 想法容器
 ├── archive/                       # 归档目录
 │   ├── task_archive_YYYY-MM.json
 │   ├── recording_YYYY-MM-DD.md
@@ -23,24 +23,10 @@
 │   ├── smoke.sh
 │   └── task_<id>_verify.sh
 ├── init.sh                        # 环境初始化脚本（可选）
-└── rules/                         # 工作流规则（由初始化命令同步而来）
-    ├── README.md                  # 规则导航页
-    ├── mindset.md                 # 上位心智层（独立注入，非自动加载）
-    ├── handoff.md                 # 子代理交接协议
-    ├── testing.md                 # 测试分层策略
-    ├── judgments.md               # 判断锚点
-    ├── task.md                    # 任务状态机、acceptance、dtask 结构
-    ├── workflow.md                # 阶段流转（P-J-A + 入口门控 + 跨阶段回退）
-    ├── session.md                 # Session 结束规范、3-Strike、Checkpoint
-    ├── verification.md            # 证据优先级体系（L1-L5）
-    ├── pitfalls.md                # 误判防护：项目高频表 / 接口预留
-    ├── exceptions.md              # 异常处理与 BLOCKED 判定
-    ├── templates.md               # 格式模板
-    ├── constraints.md             # 架构约束（含命名约束）
-    └── file-layout.md             # 本文件：目录结构与归档规则
+└── rules/                         # 工作流规则（由初始化命令同步而来，详见 rules/README.md）
 ```
 
-> 规则文件通过项目配置的注入机制加载到 Agent 上下文。具体注入方式因项目而异（hook、手动复制、或工具链集成）。
+> 规则文件通过项目配置的注入机制加载到 Agent 上下文。具体注入方式因项目而异。
 
 ## tests/ 目录结构（测试资产）
 
@@ -57,28 +43,14 @@ tests/
 
 ## 规则文件说明
 
-| 路径 | 用途 | 读写方 |
-|------|------|--------|
-| `rules/mindset.md` | 上位心智层：三唯一框架、P-J-A 骨架、不确定性门控 | Agent 读（hook 独立注入） |
-| `rules/handoff.md` | 子代理交接协议：启动仪式、回交模型、Agent 设计约束、Plan→Dtask 门控 | Agent 读 |
-| `rules/testing.md` | 测试分层策略：幅度→验证方式映射、补测试触发条件 | Agent 读 |
-| `rules/judgments.md` | 全部判断锚点：按阶段索引（启动/实施/验收/纠偏/handoff） | Agent 读 |
-| `rules/task.md` | 任务状态机、GWT acceptance 格式、dtask 结构、blocked_by、提交规范 | Agent 读写 |
-| `rules/workflow.md` | 阶段流转：层级路线图、入口门控、跨阶段回退 | Agent 读 |
-| `rules/session.md` | Session 结束规范：时间戳+踩坑+Stop hook 正则、3-Strike、Checkpoint | Agent 读 |
-| `rules/verification.md` | 证据优先级体系：L1-L5、Done 判定门槛、无法验证处理 | Agent 读 |
-| `rules/pitfalls.md` | 误判防护：Layer 2 项目高频表机制 / Layer 3 接口预留 | Agent 读 |
-| `rules/exceptions.md` | 异常处理与 BLOCKED 判定、阻塞恢复流程 | Agent 读 |
-| `rules/templates.md` | 格式模板：BLOCKED/REVIEW/DECISION TRACE/Session/Checkpoint/Handoff Report | Agent 读 |
-| `rules/constraints.md` | 架构约束：六维约束+命名约束+规则回写约束+版本号判定 | Agent 读 |
-| `rules/README.md` | 规则导航页：问题导向导航 + 分层全局地图 | Agent 读 |
+完整规则清单与导航见 `rules/README.md`。
 
 ## 运行时文件说明
 
 | 路径 | 用途 | 读写方 |
 |------|------|--------|
 | `.diwu/CLAUDE.md` | 全局配置、个人偏好、规则索引 | 共同维护 |
-| `.diwu/dsettings.json` | 可调参数配置 | 人工设置，Agent 读取 |
+| `.diwu/dsettings.toml` | 可调参数配置 | 人工设置，Agent 读取 |
 | `.diwu/dtask.json` | 任务定义与 `status` 的真相源 | Agent 读写 |
 | `.diwu/dtask-state.json` | runtime owner / dloop 元数据真相源；不重复保存 task status | Agent 读写 |
 | `.diwu/recording/` | Session 进度记录，每个 session 一个文件 | Agent 写 |
@@ -89,8 +61,8 @@ tests/
 
 | 归档目标 | 触发条件 | 阈值来源 |
 |---------|---------|---------|
-| task_archive_YYYY-MM.json | Done/Cancelled 任务数超阈值 | dsettings.json `task_archive_threshold`（默认 20）|
-| recording_YYYY-MM-DD.md | session 文件数超阈值 | dsettings.json `recording_archive_threshold`（默认 30）|
+| task_archive_YYYY-MM.json | Done/Cancelled 任务数超阈值 | dsettings.toml `task_archive_limit`（默认 20）|
+| recording_YYYY-MM-DD.md | session 文件数超阈值 | dsettings.toml `recording_file_limit`（默认 30）|
 
 ## 数据所有权
 

@@ -68,7 +68,6 @@ def test_templates_use_diwu_for_runtime_paths():
         RULES_DIR / "templates.md",
         RULES_DIR / "task.md",
         RULES_DIR / "verification.md",
-        RULES_DIR / "workflow.md",
     ]
     joined = "\n".join(path.read_text(encoding="utf-8") for path in targets)
     assert ".diwu/dtask.json" in joined

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """diwu-flow didea_core: ideas/ 容器 CRUD 操作。
 
-create / list / show / refine / archive / change-status / validate
+create / list / show / refine / archive / validate
 CLI 入口：python3 scripts/didea_core.py <action> [options] --cwd <proj>
 """
 
@@ -10,6 +10,7 @@ import json
 import os
 import re
 import sys
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,12 +18,16 @@ sys.path.insert(0, str(Path(__file__).parent))
 from common import DIWU_DIR, error_exit  # noqa: E402
 
 IDEAS_DIR = ".diwu/ideas"
-VALID_STATUSES = {"idea", "refined", "archived"}
+ARCHIVE_DIR = ".diwu/ideas/archived"
 ILLEGAL_CHARS_RE = re.compile(r'[\\/:*?"<>|]')
 
 
 def _ideas_dir(cwd: Path) -> Path:
     return cwd / IDEAS_DIR
+
+
+def _archive_dir(cwd: Path) -> Path:
+    return cwd / ARCHIVE_DIR
 
 
 def _scan_ideas(ideas_path: Path) -> list[dict]:
@@ -99,7 +104,6 @@ def cmd_create(args, cwd: Path):
 
     frontmatter = {
         "id": next_id,
-        "status": "idea",
         "created_at": now,
         "updated_at": now,
         "source_session": "",
@@ -133,13 +137,10 @@ def cmd_create(args, cwd: Path):
 def cmd_list(args, cwd: Path):
     ideas_path = _ideas_dir(cwd)
     ideas = _scan_ideas(ideas_path)
-    if args.status:
-        ideas = [fm for fm in ideas if fm.get("status") == args.status]
 
     items = [{
         "id": fm.get("id"),
         "title": fm.get("filename", "").removesuffix(".md"),
-        "status": fm.get("status"),
         "updated_at": fm.get("updated_at"),
     } for fm in ideas]
 
@@ -172,8 +173,6 @@ def cmd_refine(args, cwd: Path):
         error_exit(f"Idea #{args.id} 不存在")
     target = Path(target_fm["filepath"])
 
-    if target_fm.get("status") == "archived":
-        error_exit(f"Idea #{args.id} 已归档，无法 refine")
     if not (args.content or "").strip():
         error_exit("refine 需要提供 --content 参数")
 
@@ -181,12 +180,10 @@ def cmd_refine(args, cwd: Path):
     content = target.read_text(encoding="utf-8")
     target.write_text(content.rstrip() + f"\n\n{args.content}\n", encoding="utf-8")
     _update_frontmatter_field(target, "updated_at", now)
-    if args.promote:
-        _update_frontmatter_field(target, "status", "refined")
 
     print(json.dumps({
         "ok": True, "status": "refined",
-        "data": {"id": args.id, "updated_at": now, "promoted": bool(args.promote)},
+        "data": {"id": args.id, "updated_at": now},
     }, ensure_ascii=False, indent=2))
 
 
@@ -198,34 +195,17 @@ def cmd_archive(args, cwd: Path):
         error_exit(f"Idea #{args.id} 不存在")
 
     target = Path(target_fm["filepath"])
+    archive_path = _archive_dir(cwd)
+    archive_path.mkdir(parents=True, exist_ok=True)
+
     now = _now_iso()
-    _update_frontmatter_field(target, "status", "archived")
-    _update_frontmatter_field(target, "updated_at", now)
+    archived_file = archive_path / target.name
+    shutil.move(str(target), str(archived_file))
+    _update_frontmatter_field(archived_file, "updated_at", now)
 
     print(json.dumps({
         "ok": True, "status": "archived",
-        "data": {"id": args.id, "updated_at": now},
-    }, ensure_ascii=False, indent=2))
-
-
-def cmd_change_status(args, cwd: Path):
-    if args.new_status not in VALID_STATUSES:
-        error_exit(f"非法 status: {args.new_status}，可选值: {VALID_STATUSES}")
-
-    ideas_path = _ideas_dir(cwd)
-    ideas = _scan_ideas(ideas_path)
-    target_fm = next((fm for fm in ideas if fm.get("id") == args.id), None)
-    if not target_fm:
-        error_exit(f"Idea #{args.id} 不存在")
-
-    target = Path(target_fm["filepath"])
-    now = _now_iso()
-    _update_frontmatter_field(target, "status", args.new_status)
-    _update_frontmatter_field(target, "updated_at", now)
-
-    print(json.dumps({
-        "ok": True, "status": "changed",
-        "data": {"id": args.id, "new_status": args.new_status},
+        "data": {"id": args.id, "archived_to": str(archived_file), "updated_at": now},
     }, ensure_ascii=False, indent=2))
 
 
@@ -235,7 +215,7 @@ def cmd_validate(args, cwd: Path):
         print(json.dumps({"ok": True, "status": "ok", "data": {"total": 0, "valid": 0, "errors": []}}, ensure_ascii=False))
         return
 
-    required_fields = {"id", "status", "created_at", "updated_at"}
+    required_fields = {"id", "created_at", "updated_at"}
     errors, valid, total = [], 0, 0
 
     for f in sorted(ideas_path.glob("*.md")):
@@ -247,9 +227,6 @@ def cmd_validate(args, cwd: Path):
         missing = required_fields - set(fm.keys())
         if missing:
             errors.append({"file": f.name, "error": f"缺少必填字段: {missing}"})
-            continue
-        if fm.get("status") not in VALID_STATUSES:
-            errors.append({"file": f.name, "error": f"非法 status: {fm.get('status')}"})
             continue
         valid += 1
 
@@ -280,11 +257,10 @@ def main():
     sub = parser.add_subparsers(dest="action")
 
     p = sub.add_parser("create"); p.add_argument("--title", required=True); p.add_argument("--body", default=""); p.add_argument("--tags", default=""); p.add_argument("--cwd", default=".")
-    p = sub.add_parser("list"); p.add_argument("--status", choices=list(VALID_STATUSES)); p.add_argument("--cwd", default=".")
+    p = sub.add_parser("list"); p.add_argument("--cwd", default=".")
     p = sub.add_parser("show"); p.add_argument("--id", type=int, required=True); p.add_argument("--cwd", default=".")
-    p = sub.add_parser("refine"); p.add_argument("--id", type=int, required=True); p.add_argument("--content", required=True); p.add_argument("--promote", action="store_true"); p.add_argument("--cwd", default=".")
+    p = sub.add_parser("refine"); p.add_argument("--id", type=int, required=True); p.add_argument("--content", required=True); p.add_argument("--cwd", default=".")
     p = sub.add_parser("archive"); p.add_argument("--id", type=int, required=True); p.add_argument("--cwd", default=".")
-    p = sub.add_parser("change-status"); p.add_argument("--id", type=int, required=True); p.add_argument("--new-status", required=True, choices=list(VALID_STATUSES)); p.add_argument("--cwd", default=".")
     p = sub.add_parser("validate"); p.add_argument("--cwd", default=".")
 
     args = parser.parse_args()
@@ -297,7 +273,6 @@ def main():
         "show": lambda: cmd_show(args, Path(args.cwd).resolve()),
         "refine": lambda: cmd_refine(args, Path(args.cwd).resolve()),
         "archive": lambda: cmd_archive(args, Path(args.cwd).resolve()),
-        "change-status": lambda: cmd_change_status(args, Path(args.cwd).resolve()),
         "validate": lambda: cmd_validate(args, Path(args.cwd).resolve()),
     }
     fn = dispatch.get(args.action)

@@ -95,8 +95,6 @@ CONTINUOUS MODE COMPLETE - 所有可执行任务已完成
 
 ## Checkpoint 格式模板
 
-> 从 `rules/task.md` 提取并统一到此处的 Checkpoint 格式。
-
 触发条件（满足任一）：
 - steps 数量 > `checkpoint_min_steps`（默认 5）
 - 预估修改行数 > `checkpoint_min_lines`（默认 500）
@@ -111,35 +109,46 @@ CONTINUOUS MODE COMPLETE - 所有可执行任务已完成
 ```
 
 > 退化信号与止损动作见 `skills/dcorr/SKILL.md` §Step 1 触发条件。
-> 可调参数见 `assets/dinit/assets/dsettings.json.template`（唯一真实来源）。
+> 可调参数见 `assets/dinit/assets/dsettings.toml.template`（唯一真实来源）。
 
-## Handoff Report 模板（交接报告）
+## Handoff Report 模板
 
-> 从 `rules/handoff.md` §二 交接清单提取标准化。子代理完成工作后必须输出此结构。
+交接报告完整模板见 `rules/handoff.md` §二 交接清单。
 
-```text
-## 交接报告 - Task#N
+## Commit message 格式
 
-### Acceptance 验证结果
-- [x] GWT-1: PASS — [证据简述]
-- [ ] GWT-2: FAIL — [失败原因]
-
-### 代码变更摘要
-- 新增: path/to/file.ts (+/- 行数)
-- 修改: path/to/other.ts (+/- 行数)
-- 删除: path/to/old.ts
-
-### 遗留阻塞点
-- [阻塞描述] → 影响: [具体影响] → 建议: [下一步操作]
-
-### 下一步前置条件
-- [条件1]
-- [条件2]
+```
+[Task#N] 标题 - completed
+Category: functional/ui/refactor/infra/bugfix
+Files: src/auth.ts, src/models/user.ts
+Evidence: L1-L3 (运行态+自动化)
+Status: Done
 ```
 
-**PASS/FAIL 判定规则**：逐条对照 acceptance 的 GWT 条目，每条必须标注 PASS 或 FAIL 并附证据。存在 FAIL 时不得标记 InReview。
+| 行 | 字段 | 说明 |
+|---|------|------|
+| 1 | 标题行 | `[Task#N] 标题 - completed` 或 `(超前 X/5, blocked_by Task#M)` |
+| 2 | Category | 任务分类 |
+| 3 | Files | 修改文件列表（逗号分隔） |
+| 4 | Evidence | 证据等级范围（L1-L5） |
+| 5 | Status | `Done` 或 `InReview(超前 X/5)` |
 
-> 完整交接协议（注入格式、回交模型、Handoff Matrix）见 `rules/handoff.md`。
+**并行提交**：多子代理并行时分块列出：
+
+```
+[Task#N] 标题 - completed (并行)
+## 子代理 A
+Files: src/auth.ts
+Evidence: L2-L3
+Acceptance: [x] GWT-1 PASS [x] GWT-2 PASS
+## 子代理 B
+Files: src/payment.ts
+Evidence: L1-L3
+Acceptance: [x] GWT-1 PASS [ ] GWT-2 FAIL
+Status: InReview(超前 3/5)
+```
+
+**分支命名**：`feature/{task-id}-{short-title}` / `fix/{task-id}-{short-title}` / `release/v{version}` / `hotfix/v{version}`
 
 ## 验证脚本模板
 

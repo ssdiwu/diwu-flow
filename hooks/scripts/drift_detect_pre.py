@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""PreToolUse drift detection: edit_streak / pure_discussion / repetitive_loop / scope_drift.
+"""PreToolUse drift detection: edit_streak / pure_discussion / repetitive_loop.
 
 Lightweight injection only — never blocks (exit code always 0).
 Tolerance: high (only obvious drift triggers a prompt).
 """
 
-import json, os, sys, re
+import json, os, sys, time, tomllib
 
 try:
     from _shared import load_json_fallback  # noqa: E402
@@ -20,29 +20,34 @@ except (ImportError, ModuleNotFoundError):
             return {}
 
 CTX_PREFIX = '/tmp/diwu_ctx_'
-TASK_FILE = '.diwu/dtask.json'
-SETTINGS_FILE = '.diwu/dsettings.json'
+SETTINGS_FILE = '.diwu/dsettings.toml'
 EDIT_STREAK_LIMIT = 5
 DISCUSSION_LIMIT = 8
 LOOP_REPEAT = 3
-_SID_CACHE = None  # cache stdin read since it's consumed on first access
 
 
 def _get_sid():
-    """Get sessionId from stdin event data. Cached — safe to call multiple times."""
-    global _SID_CACHE
-    if _SID_CACHE is not None:
-        return _SID_CACHE
+    """Get sessionId from environment variable (set by hook runner)."""
+    return os.environ.get("DIWU_SESSION_ID", "")
+
+
+def _cleanup_stale_tmp():
+    """Remove expired /tmp/diwu_ctx_* files on startup."""
+    import glob
     try:
-        raw = sys.stdin.read()
-        if raw:
-            event = json.loads(raw)
-            _SID_CACHE = event.get('session_id', event.get('sessionId', str(os.getpid())))
-        else:
-            _SID_CACHE = str(os.getpid())
-    except (json.JSONDecodeError, ValueError, OSError):
-        _SID_CACHE = str(os.getpid())
-    return _SID_CACHE
+        for fp in glob.glob(CTX_PREFIX + '*'):
+            try:
+                age = time.time() - os.path.getmtime(fp)
+                if age > 3600:  # 1 hour stale threshold
+                    os.remove(fp)
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+
+# Run cleanup once on module load
+_cleanup_stale_tmp()
 
 
 def _ctx_path():
@@ -56,16 +61,6 @@ def _save(p, d):
             f.write('\n')
     except OSError:
         pass
-
-
-def _extract_fp(input_str):
-    """Extract file path from tool input JSON."""
-    try:
-        inp = json.loads(input_str) if isinstance(input_str, str) else {}
-        return inp.get('file_path', '') or inp.get('path', '')
-    except (json.JSONDecodeError, TypeError):
-        m = re.search(r'["\']?(/?[\w./-]+\.\w+)["\']?', input_str or '')
-        return m.group(1) if m else ''
 
 
 # --- detectors ---
@@ -106,34 +101,22 @@ def detect_repetitive_loop(ctx, tool_name, input_str=''):
     return None
 
 
-def detect_scope_drift(tool_name, input_str=''):
-    if tool_name not in ('Edit', 'Write'):
-        return None
-    fp = _extract_fp(input_str)
-    if not fp:
-        return None
-    task = load_json_fallback(TASK_FILE)
-    it = [t for t in task.get('tasks', []) if t.get('status') == 'InProgress']
-    if not it:
-        return None
-    allowed = it[0].get('files_modified', [])
-    if not allowed:
-        return None
-    # high tolerance: same basename or same directory → OK
-    for a in allowed:
-        if os.path.basename(a) in fp or a in fp or fp in a:
-            return None
-        ad, fd = os.path.dirname(a), os.path.dirname(fp)
-        if ad and fd and ad == fd:
-            return None
-    return ('[drift] 编辑文件 %s 不在 Task#%d 的 files_modified 范围内，确认是否必要越界。') % (fp, it[0]['id'])
+def _load_settings():
+    """Load drift detection settings from dsettings.toml."""
+    if not os.path.exists(SETTINGS_FILE):
+        return {}
+    try:
+        with open(SETTINGS_FILE, "rb") as f:
+            return tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
+        return {}
 
 
 def main():
     tool_name = os.environ.get('DIWU_TOOL_NAME', '')
     input_str = os.environ.get('DIWU_TOOL_INPUT', '')
-    settings = load_json_fallback(SETTINGS_FILE)
-    if settings.get('drift_detection', {}).get('enabled') == False:
+    settings = _load_settings()
+    if settings.get('drift_enabled') == False:
         sys.exit(0)
 
     ctx = load_json_fallback(_ctx_path())
@@ -141,7 +124,6 @@ def main():
         detect_edit_streak(ctx, tool_name),
         detect_pure_discussion(ctx, tool_name),
         detect_repetitive_loop(ctx, tool_name, input_str),
-        detect_scope_drift(tool_name, input_str),
     ] if r]
 
     _save(_ctx_path(), ctx)

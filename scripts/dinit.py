@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import ensure_dir, load_json_or_empty, plugin_root  # noqa: E402
+from common import ensure_dir, load_json_or_empty, plugin_root, load_toml_or_empty, save_toml  # noqa: E402
 
 PLUGIN_ROOT = plugin_root()
 ASSETS_DIR = PLUGIN_ROOT / "assets" / "dinit" / "assets"
@@ -140,15 +140,15 @@ def cmd_sync_rules(cwd: Path) -> dict:
     """按 rules-manifest.json 同步 rules 到 .claude/rules/。"""
     target_dir = cwd / ".claude" / "rules"
 
-    # 读 manifest
+    # 读 manifest，缺失时降级为全目录复制
     if not MANIFEST_PATH.exists():
-        return {"ok": False, "status": "manifest_missing",
-                "message": f"rules-manifest.json 不存在: {MANIFEST_PATH}"}
-
-    manifest = load_json_or_empty(MANIFEST_PATH)
-    rule_names = manifest.get("rules", [])
-    if not isinstance(rule_names, list):
-        rule_names = []
+        print("⚠️  rules-manifest.json 缺失，降级为全目录复制", file=sys.stderr)
+        rule_names = sorted(p.name for p in RULES_SRC.glob("*.md") if p.is_file())
+    else:
+        manifest = load_json_or_empty(MANIFEST_PATH)
+        rule_names = manifest.get("rules", [])
+        if not isinstance(rule_names, list):
+            rule_names = []
 
     files_report = []
     counts = {"total": len(rule_names), "new": 0, "same": 0, "updated": 0}
@@ -351,6 +351,7 @@ def cmd_create_config(cwd: Path, project_info_file: str | None = None,
         _record(str(claude_md.relative_to(cwd)), "ERROR_NO_TEMPLATE")
 
     # 4.2 dtask.json
+    ensure_dir(diwu_dir)
     dtask = diwu_dir / "dtask.json"
     dtask_template = ASSETS_DIR / "task.json.template"
     if not dtask.exists():
@@ -371,9 +372,9 @@ def cmd_create_config(cwd: Path, project_info_file: str | None = None,
         else:
             _record(str(rp.relative_to(cwd)), "SKIPPED")
 
-    # 4.7 dsettings.json
-    dsettings = diwu_dir / "dsettings.json"
-    ds_template = ASSETS_DIR / "dsettings.json.template"
+    # 4.7 dsettings.toml
+    dsettings = diwu_dir / "dsettings.toml"
+    ds_template = ASSETS_DIR / "dsettings.toml.template"
     if not dsettings.exists() and ds_template.exists():
         shutil.copy2(str(ds_template), str(dsettings))
         _record(str(dsettings.relative_to(cwd)), "CREATED")
@@ -414,6 +415,51 @@ def cmd_create_config(cwd: Path, project_info_file: str | None = None,
     }
 
 
+def _convert_dsettings_json_to_toml(json_path: Path, toml_path: Path) -> dict:
+    """将旧 dsettings.json 转换为 dsettings.toml（含键名映射）。
+
+    旧格式 (.json) → 新格式 (.toml)，键名按 Issue #31 D3 映射表转换。
+    不返回错误——JSON 损坏时返回空映射，由调用方决定是否继续。
+    """
+    try:
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"ok": False, "reason": "json_parse_failed"}
+
+    result = {}
+    # 顶层键映射
+    key_map = {
+        "task_archive_threshold": "task_archive_limit",
+        "recording_archive_threshold": "recording_file_limit",
+        "review_limit": "dloop_review_cap",
+        "context_monitor_warning": "ctxmon_warn_at",
+        "context_monitor_critical": "ctxmon_checkpoint_at",
+        "context_monitor_delay": "ctxmon_checkpoint_delay",
+    }
+    passthrough = {
+        "recording_keep_days", "dloop_max_consecutive",
+        "error_tracking_enabled",
+    }
+    for old_key, new_key in key_map.items():
+        if old_key in data:
+            result[new_key] = data[old_key]
+    for key in passthrough:
+        if key in data:
+            result[key] = data[key]
+
+    # 嵌套 table → 摊平顶层
+    if "drift_detection" in data and isinstance(data["drift_detection"], dict):
+        result["drift_enabled"] = data["drift_detection"].get("enabled", True)
+    if "recording_reminder" in data and isinstance(data["recording_reminder"], dict):
+        result["reminder_on_taskdone"] = data["recording_reminder"].get("enabled", True)
+
+    if not result:
+        return {"ok": False, "reason": "no_mappable_keys"}
+
+    save_toml(result, toml_path)
+    return {"ok": True}
+
+
 def cmd_migrate_legacy(cwd: Path) -> dict:
     """检测旧版 v0.x 标志并执行迁移。"""
     claude_rules = cwd / ".claude" / "rules"
@@ -426,7 +472,7 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
     old_runtime_patterns = [
         (cwd / ".claude" / "recording", cwd / ".diwu" / "recording"),
         (cwd / ".claude" / "decisions.md", cwd / ".diwu" / "decisions.md"),
-        (cwd / ".claude" / "dsettings.json", cwd / ".diwu" / "dsettings.json"),
+        (cwd / ".claude" / "dsettings.json", cwd / ".diwu" / "dsettings.toml"),
         (cwd / ".claude" / "project-pitfalls.md", cwd / ".diwu" / "project-pitfalls.md"),
         (cwd / ".claude" / "archive", cwd / ".diwu" / "archive"),
         (cwd / ".claude" / "continue-here.md", cwd / ".diwu" / "continue-here.md"),
@@ -458,6 +504,26 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
             shutil.copy2(str(states_old), str(backup))
             actions.append(f"备份 states.md → states.md.backup")
 
+    # dsettings JSON→TOML 转换（在文件迁移之前，优先处理格式转换）
+    for dsettings_json_path in (
+        cwd / ".claude" / "dsettings.json",
+        cwd / ".diwu" / "dsettings.json",
+    ):
+        if dsettings_json_path.exists():
+            dsettings_toml_path = cwd / ".diwu" / "dsettings.toml"
+            if not dsettings_toml_path.exists():
+                result = _convert_dsettings_json_to_toml(dsettings_json_path, dsettings_toml_path)
+                if result.get("ok"):
+                    actions.append(f"dsettings 格式转换: JSON → TOML ({dsettings_json_path.name})")
+                    backup_path = dsettings_json_path.with_suffix(".json.backup")
+                    if not backup_path.exists():
+                        shutil.copy2(str(dsettings_json_path), str(backup_path))
+                        actions.append(f"备份: {dsettings_json_path.name} → .backup")
+                    dsettings_json_path.unlink()
+                    actions.append(f"删除旧: {dsettings_json_path.name}")
+                else:
+                    actions.append(f"dsettings 转换失败 ({result.get('reason')}): {dsettings_json_path.name}")
+
     # 迁移旧运行时文件
     migrated_count = 0
     for old_path, new_path in old_runtime_patterns:
@@ -468,6 +534,9 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
                     migrated_count += 1
                     actions.append(f"迁移目录: {old_path.name} → .diwu/{old_path.name}")
             else:
+                # 跳过 dsettings（已单独处理格式转换）
+                if "dsettings.json" in str(old_path):
+                    continue
                 ensure_dir(new_path.parent)
                 if not new_path.exists():
                     shutil.copy2(str(old_path), str(new_path))

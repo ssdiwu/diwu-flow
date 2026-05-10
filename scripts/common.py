@@ -19,11 +19,22 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    import tomllib
+except ImportError:
+    tomllib = None
+try:
+    import tomli_w
+except ImportError:
+    tomli_w = None
+
 # ── 路径常量（集中管理，消除跨文件硬编码） ──
 DIWU_DIR = ".diwu"
 DTASK_JSON = ".diwu/dtask.json"
 DTASK_STATE_JSON = ".diwu/dtask-state.json"
-DSETTINGS_JSON = ".diwu/dsettings.json"
+DSETTINGS_TOML = ".diwu/dsettings.toml"
+# 向后兼容别名（一阶段过渡期）
+DSETTINGS_JSON = DSETTINGS_TOML
 RECORDING_DIR = ".diwu/recording"
 ARCHIVE_DIR = ".diwu/archive"
 DECISIONS_FILE = ".diwu/decisions.md"
@@ -84,6 +95,119 @@ def save_json(data, path: Path):
 def ensure_dir(path: Path):
     """确保目录存在（含父目录）。"""
     Path(path).mkdir(parents=True, exist_ok=True)
+
+
+# ─── TOML 读写工具 ─────────────────────────────────────
+
+def load_toml_optional(path: Path, default=None):
+    """加载可选 TOML 文件。不存在返回 default；损坏则 error_exit。"""
+    if tomllib is None:
+        error_exit("tomllib 需要 Python 3.11+")
+    if not path.exists():
+        return default
+    try:
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    except Exception as e:
+        error_exit(f"TOML 解析失败 {path}: {e}")
+
+
+def load_toml_or_empty(path: Path):
+    """加载 TOML。文件不存在返回 {}；损坏则 error_exit。"""
+    return load_toml_optional(path, default={})
+
+
+def save_toml(data, path: Path):
+    """原子写入 TOML 文件。"""
+    if tomli_w is None:
+        error_exit("tomli_w 未安装，请运行 pip install tomli-w")
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            tomli_w.dump(data, f)
+        os.replace(tmp, str(path))
+    except BaseException:
+        os.unlink(tmp)
+        raise
+
+
+# ─── Task ID 分配器 ────────────────────────────────────
+
+_NEXT_TASK_ID_FILE = ".diwu/next-task-id"
+
+
+def _fallback_max_id(cwd: Path) -> int:
+    """fallback 扫描 dtask.json 和 archive 取最大 task id。
+
+    next-task-id 文件不存在或损坏时调用。
+    连 dtask.json 都不存在时返回 0（从 1 开始分配）。
+    """
+    result = max_task_id(cwd)
+    if result.get("ok"):
+        return result["max_id"]
+    return 0
+
+
+def allocate_task_id(cwd: Path) -> dict:
+    """分配下一个单调递增任务 ID。
+
+    通过 .diwu/next-task-id 纯文本文件实现：
+    - 文件不存在时从 dtask.json/archive 最大 id + 1 开始
+    - 连 dtask.json 也不存在时从 1 开始
+    - 连续调用返回 1,2,3,... 无重复无跳号
+    - 使用 os.open + O_EXCL 保证并发安全
+
+    Returns:
+        {"ok": true, "task_id": N}
+    """
+    cwd = Path(cwd)
+    id_file = cwd / _NEXT_TASK_ID_FILE
+    ensure_dir(id_file.parent)
+
+    # 原子读取当前值
+    if id_file.exists():
+        try:
+            current = int(id_file.read_text(encoding="utf-8").strip())
+        except (ValueError, OSError):
+            current = _fallback_max_id(cwd)
+    else:
+        # 文件不存在：fallback 扫描 dtask.json 取最大 id
+        current = _fallback_max_id(cwd)
+
+    next_id = current + 1
+
+    # 原子写入：O_EXCL 防止并发冲突
+    fd = None
+    try:
+        fd = os.open(str(id_file), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(str(next_id))
+            f.write("\n")
+        fd = None  # 已移交 fdopen
+    except FileExistsError:
+        # 并发竞争：回退到 read-modify-write 循环
+        import time
+        for attempt in range(10):
+            time.sleep(0.01 * (attempt + 1))
+            try:
+                current = int(id_file.read_text(encoding="utf-8").strip())
+            except (ValueError, OSError):
+                current = 0
+            next_id = current + 1
+            try:
+                # 先写临时文件再 rename（跨平台原子替换）
+                tmp_id = id_file.with_suffix(".tmp")
+                tmp_id.write_text(f"{next_id}\n", encoding="utf-8")
+                os.replace(str(tmp_id), str(id_file))
+                break
+            except FileNotFoundError:
+                continue
+        else:
+            error_exit("无法分配 task ID：并发写入重试耗尽")
+
+    return {"ok": True, "task_id": next_id}
 
 
 def rel_time(ts_str: str) -> str:
@@ -193,6 +317,7 @@ def self_test() -> dict:
 def main():
     parser = argparse.ArgumentParser(description="diwu-flow common utilities")
     parser.add_argument("--max-task-id", action="store_true", help="输出最大任务 ID")
+    parser.add_argument("--allocate-task-id", action="store_true", help="分配下一个任务 ID")
     parser.add_argument("--self-test", action="store_true", help="输出自身路径和可访问性信息")
     parser.add_argument("--cwd", type=str, default=".", help="工作目录")
     args = parser.parse_args()
@@ -207,6 +332,11 @@ def main():
     if args.max_task_id:
         result = max_task_id(cwd)
         # T8: stdout JSON
+        print(json.dumps(result, ensure_ascii=False))
+        sys.exit(0 if result.get("ok") else 1)
+
+    if args.allocate_task_id:
+        result = allocate_task_id(cwd)
         print(json.dumps(result, ensure_ascii=False))
         sys.exit(0 if result.get("ok") else 1)
 

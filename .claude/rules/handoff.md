@@ -128,7 +128,7 @@ Explorer 的默认域是**只读调查**，但以下情况触发跨域切换：
 
 ## 六、Agent 设计约束
 
-> 从 `mindset.md` 迁入。Agent 是能力容器不是岗位标签。
+Agent 是能力容器不是岗位标签。
 
 - **能力驱动**：先编排任务节点→识别能力需求→有对应 agent 就派发→无则标记能力缺口
 - **不强塞职责**：不要把完整 workflow SOP 塞进 agent prompt
@@ -137,8 +137,6 @@ Explorer 的默认域是**只读调查**，但以下情况触发跨域切换：
 - **故障隔离**：任何非核心 agent 失败时，必须能退化回 explorer→implementer→verifier 闭环
 
 ## 七、Plan→Dtask 门控
-
-> 从 `mindset.md` 迁入。守卫实现：`plan_exit_hint.py`（ExitPlanMode 强提示）+ `task_entry_guard.py`（Edit|Write 实施入口守卫）
 
 - **Plan 不是执行契约**：Plan 输出是架构设计方案，不是可直接实施的任务定义
 - **大计划先落任务**：≥3 步的实施工作必须先落地为任务定义文件条目（含 GWT acceptance），再进入执行引擎循环

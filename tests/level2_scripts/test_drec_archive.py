@@ -28,19 +28,25 @@ class TestArchiveTasks:
         diwu = root / ".diwu"
         diwu.mkdir(exist_ok=True)
         settings = {
-            "task_archive_threshold": 20,
-            "recording_archive_threshold": 50,
-            "recording_retention_days": 30,
+            "task_archive_limit": 20,
+            "recording_file_limit": 50,
+            "recording_keep_days": 30,
         }
         if overrides:
             settings.update(overrides)
-        (diwu / "dsettings.json").write_text(
-            json.dumps(settings, ensure_ascii=False, indent=2)
-        )
+        lines = []
+        for k, v in settings.items():
+            if isinstance(v, bool):
+                lines.append(f"{k} = {'true' if v else 'false'}")
+            elif isinstance(v, str):
+                lines.append(f'{k} = "{v}"')
+            else:
+                lines.append(f"{k} = {v}")
+        (diwu / "dsettings.toml").write_text("\n".join(lines) + "\n")
 
     def test_archive_tasks_basic(self, tmp_project_dir):
         """25 个 Done 任务 → 归档到 task_archive_YYYY-MM.json，dtask.json 清空。"""
-        self._write_settings(tmp_project_dir, {"task_archive_threshold": 20})
+        self._write_settings(tmp_project_dir, {"task_archive_limit": 20})
         tasks = [
             {"id": i, "title": f"task-{i}", "status": "Done", "description": f"desc {i}"}
             for i in range(1, 26)
@@ -70,7 +76,7 @@ class TestArchiveTasks:
 
     def test_archive_tasks_id_dedup(self, tmp_project_dir):
         """幂等：重复执行不产生重复条目（按 id 去重）。"""
-        self._write_settings(tmp_project_dir, {"task_archive_threshold": 3})
+        self._write_settings(tmp_project_dir, {"task_archive_limit": 3})
         tasks = [
             {"id": 1, "title": "t1", "status": "Done"},
             {"id": 2, "title": "t2", "status": "Done"},
@@ -108,7 +114,7 @@ class TestArchiveTasks:
 
     def test_archive_tasks_below_threshold(self, tmp_project_dir):
         """低于阈值时不归档。"""
-        self._write_settings(tmp_project_dir, {"task_archive_threshold": 20})
+        self._write_settings(tmp_project_dir, {"task_archive_limit": 20})
         tasks = [
             {"id": i, "title": f"t{i}", "status": "Done"}
             for i in range(1, 10)
@@ -131,22 +137,28 @@ class TestArchiveRecordingsMove:
         rec_dir.mkdir(exist_ok=True)
 
         settings = {
-            "task_archive_threshold": 20,
-            "recording_archive_threshold": 50,
-            "recording_retention_days": 30,
+            "task_archive_limit": 20,
+            "recording_file_limit": 50,
+            "recording_keep_days": 30,
         }
         if settings_overrides:
             settings.update(settings_overrides)
-        (diwu / "dsettings.json").write_text(
-            json.dumps(settings, ensure_ascii=False, indent=2)
-        )
+        lines = []
+        for k, v in settings.items():
+            if isinstance(v, bool):
+                lines.append(f"{k} = {'true' if v else 'false'}")
+            elif isinstance(v, str):
+                lines.append(f'{k} = "{v}"')
+            else:
+                lines.append(f"{k} = {v}")
+        (diwu / "dsettings.toml").write_text("\n".join(lines) + "\n")
         return rec_dir
 
     def test_recording_move_by_month(self, tmp_project_dir):
         """月份分片验收：session-2026-04-* 进 2026-04/，session-2026-05-* 进 2026-05/。"""
         rec_dir = self._setup(
             tmp_project_dir,
-            {"recording_archive_threshold": 5, "recording_retention_days": 1},
+            {"recording_file_limit": 5, "recording_keep_days": 1},
         )
         # 创建 6 个文件（超过 threshold=5）
         for i in range(6):
@@ -188,7 +200,7 @@ class TestArchiveRecordingsMove:
         """两轮规则验证：先移超龄，再按 mtime 从旧到新继续移直到 < threshold。"""
         rec_dir = self._setup(
             tmp_project_dir,
-            {"recording_archive_threshold": 5, "recording_retention_days": 30},
+            {"recording_file_limit": 5, "recording_keep_days": 30},
         )
 
         # 创建 10 个文件，均未超龄（mtime 很近），但总数 > threshold
@@ -217,11 +229,11 @@ class TestIdempotent:
         """连续两次 run，第二次 tasks_archived=0。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 3,
-            "recording_archive_threshold": 50,
-            "recording_retention_days": 30,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_limit = 3\n'
+            'recording_file_limit = 50\n'
+            'recording_keep_days = 30\n'
+        )
         (diwu / "dtask.json").write_text(json.dumps({
             "tasks": [
                 {"id": 1, "title": "t1", "status": "Done"},
@@ -246,11 +258,11 @@ class TestIdempotent:
         """文件已移动后再次运行不报错。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 999,
-            "recording_archive_threshold": 2,
-            "recording_retention_days": 1,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_limit = 999\n'
+            'recording_file_limit = 2\n'
+            'recording_keep_days = 1\n'
+        )
 
         rec_dir = diwu / "recording"
         rec_dir.mkdir(exist_ok=True)
@@ -285,11 +297,11 @@ class TestNoArchiveNeeded:
         """只有 InSpec/InProgress 任务时不触发 task 归档。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 3,
-            "recording_archive_threshold": 50,
-            "recording_retention_days": 30,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_limit = 3\n'
+            'recording_file_limit = 50\n'
+            'recording_keep_days = 30\n'
+        )
         (diwu / "dtask.json").write_text(json.dumps({
             "tasks": [
                 {"id": 1, "title": "t1", "status": "InSpec"},
@@ -314,11 +326,11 @@ class TestAggregatePitfalls:
         """moved file 含踩坑数据时正确聚合到 project-pitfalls.md。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 999,
-            "recording_archive_threshold": 2,
-            "recording_retention_days": 1,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_limit = 999\n'
+            'recording_file_limit = 2\n'
+            'recording_keep_days = 1\n'
+        )
 
         rec_dir = diwu / "recording"
         rec_dir.mkdir(exist_ok=True)
@@ -352,11 +364,11 @@ class TestAggregatePitfalls:
         """session 文件无踩坑数据（最低合法答案）时跳过聚合。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 999,
-            "recording_archive_threshold": 2,
-            "recording_retention_days": 1,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_limit = 999\n'
+            'recording_file_limit = 2\n'
+            'recording_keep_days = 1\n'
+        )
 
         rec_dir = diwu / "recording"
         rec_dir.mkdir(exist_ok=True)
