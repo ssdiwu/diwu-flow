@@ -32,9 +32,9 @@
     "cron_job_id": "30643dcf"
   },
   "pending_recording": {
-    "task_id": 132,
+    "task_id": 134,
     "target_status": "Done",
-    "released_at": "2026-05-10T11:15:51.835224+00:00",
+    "released_at": "2026-05-10T11:27:22.736817+00:00",
     "session_id": "16522414-189a-4eda-bec9-e26491dab753"
   }
 }
