@@ -122,6 +122,16 @@
 - **时间戳**：写 Session 标题前先跑 `date '+%Y-%m-%d %H:%M:%S'`，禁止手写
 - **`.diwu/` 提交**：origin/main 持续追踪 `.diwu/`（含 `.claude/`）；公开仓库由 `drelease.sh` worktree 隔离发布 clean 版
 
+### Skill 写作原则
+
+- **启发式 > SOP**：SKILL.md 是能力描述 + 视角启发，不是执行 SOP。AI 读完后应知道"这个视角看什么、问什么"，而不是"按这几步执行"
+- **章节量级**：每个 skill 模式/章节理想量级 20-50 行；>80 行应拆分或外移
+- **细节分层归属**：
+  - SKILL.md → 为什么用 + 关键提问 + 红旗信号 + 模式间关系（启发层）
+  - agents/*.md → 公共协议 + 执行流程 + 输出格式（结构化层，agent 定义允许）
+  - 运行时注入 → 完整 prompt 细节由 Main AI 从上述来源组装，不预写在 SKILL.md
+- **反模式**：在 SKILL.md 写完整流程图 + 步骤编号 + 分支判断 + 注入 prompt 全文
+
 ### 质量门控
 
 - **Push 前必跑**：`pytest tests/` 全量回归通过后才可 commit & push
