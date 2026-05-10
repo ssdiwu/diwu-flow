@@ -14,7 +14,7 @@
 ├── recording/                     # Session 进度记录目录
 │   └── session-YYYY-MM-DD-HHMMSS.md
 ├── decisions.md                   # 设计决策记录（可选）
-├── ideas/                        # 想法容器（每个 idea 一个 .md 文件，YAML frontmatter + markdown 正文）
+├── ideas/                        # 想法容器
 ├── archive/                       # 归档目录
 │   ├── task_archive_YYYY-MM.json
 │   ├── recording_YYYY-MM-DD.md
@@ -23,22 +23,10 @@
 │   ├── smoke.sh
 │   └── task_<id>_verify.sh
 ├── init.sh                        # 环境初始化脚本（可选）
-└── rules/                         # 工作流规则（由初始化命令同步而来）
-    ├── README.md                  # 规则导航页
-    ├── mindset.md                 # 上位心智层（独立注入，非自动加载）
-    ├── handoff.md                 # 子代理交接协议
-    ├── testing.md                 # 测试分层策略
-    ├── task.md                    # 任务状态机、acceptance、dtask 结构
-    ├── session.md                 # Session 结束规范、3-Strike、Checkpoint
-    ├── verification.md            # 证据优先级体系（L1-L5）
-    ├── pitfalls.md                # 误判防护：项目高频表 / 接口预留
-    ├── exceptions.md              # 异常处理与 BLOCKED 判定
-    ├── templates.md               # 格式模板
-    ├── constraints.md             # 架构约束（含命名约束）
-    └── file-layout.md             # 本文件：目录结构与归档规则
+└── rules/                         # 工作流规则（由初始化命令同步而来，详见 rules/README.md）
 ```
 
-> 规则文件通过项目配置的注入机制加载到 Agent 上下文。具体注入方式因项目而异（hook、手动复制、或工具链集成）。
+> 规则文件通过项目配置的注入机制加载到 Agent 上下文。具体注入方式因项目而异。
 
 ## tests/ 目录结构（测试资产）
 
