@@ -2,7 +2,7 @@
 """TaskCompleted: lightweight reminder after a task is marked Done.
 
 Fires when task.json transitions to Done.
-Checks recording_reminder.enabled (default true) in dsettings.json.
+Checks recording_reminder.enabled (default true) in settings dsettings.toml.
 Non-blocking: always exit(0), outputs reminder via additionalSystemPrompt.
 
 Does NOT write files — recording is handled by Stop hook.

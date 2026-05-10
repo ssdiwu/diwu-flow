@@ -9,7 +9,7 @@ RUNTIME_FILES = [
     "dtask.json",
     "recording",
     "decisions.md",
-    "dsettings.json",
+    "dsettings.toml",
     "archive",
     # continue-here.md 是可选的临时文件，不强制要求
     # "continue-here.md",

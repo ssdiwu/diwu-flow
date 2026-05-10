@@ -87,7 +87,7 @@ Commit message 格式和 category 前缀映射详见 `rules/task.md` §提交规
 
 ## 归档聚合
 
-自动调用 `scripts/drec_archive.py run` 执行双轨归档（Task 轨道 + Recording 轨道）。阈值配置来自 `.diwu/dsettings.json`。归档完成后自动执行踩坑聚合（扫描本次移动文件中的 `### 本次踩坑/经验` 段落，按六类聚类追加到 project-pitfalls.md）。
+自动调用 `scripts/drec_archive.py run` 执行双轨归档（Task 轨道 + Recording 轨道）。阈值配置来自 `.diwu/dsettings.toml`。归档完成后自动执行踩坑聚合（扫描本次移动文件中的 `### 本次踩坑/经验` 段落，按六类聚类追加到 project-pitfalls.md）。
 
 > 双轨归档详细规则和触发参数见 `scripts/drec_archive.py` 和 `rules/file-layout.md` §归档触发条件。
 
