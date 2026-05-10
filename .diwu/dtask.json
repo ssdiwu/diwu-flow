@@ -608,7 +608,7 @@
       ],
       "category": "refactor",
       "blocked_by": [],
-      "status": "InProgress"
+      "status": "Done"
     },
     {
       "id": 124,
@@ -643,7 +643,7 @@
       "blocked_by": [
         123
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 125,
@@ -668,7 +668,7 @@
       ],
       "category": "infra",
       "blocked_by": [],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 126,
@@ -695,7 +695,7 @@
       "blocked_by": [
         123
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 127,
@@ -726,7 +726,7 @@
       ],
       "category": "refactor",
       "blocked_by": [],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 128,
@@ -750,7 +750,7 @@
       "blocked_by": [
         123
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 129,
@@ -781,7 +781,7 @@
       "blocked_by": [
         123
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 130,
@@ -810,7 +810,7 @@
       "blocked_by": [
         123
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 131,
@@ -856,7 +856,7 @@
         128,
         130
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 132,
@@ -890,7 +890,7 @@
       "blocked_by": [
         131
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 133,
@@ -924,7 +924,7 @@
       "blocked_by": [
         127
       ],
-      "status": "InSpec"
+      "status": "Done"
     },
     {
       "id": 134,
