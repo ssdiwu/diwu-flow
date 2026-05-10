@@ -74,5 +74,22 @@
 ---
 
 > Agent 设计约束见 `rules/handoff.md` §六（能力驱动/不强塞职责/负面清单优先/新 agent 门槛/故障隔离）。
-> 命名规范见 `rules/constraints.md` §命名约束（Command/Skill 名称 ≤5 字符）。
 > Plan→Dtask 门控见 `rules/handoff.md` §七（Plan 非契约/大计划落 dtask/小改动直做/双守卫分层）。
+
+---
+
+## 用户意图→Skill 路由表
+
+| 意图关键词 | Skill | 一句话定位 |
+|-----------|-------|-----------|
+| 记录想法、挂住灵感、快速记 | didea | 想法容器：零摩擦挂住临时想法，YAML frontmatter + markdown |
+| 深度思考、捋清思路、判断方向 | dpth | 思考收束：现象→判断→动作三段式，辅助方向判断 |
+| 查资料、收集参考、调研 | dref | 素材收集：结构化获取外部参考信息，支撑后续决策 |
+| 写 PRD、需求文档、产品方案 | dprd | 需求细化：业务视角输出 PRD，含序号层级和验收标准 |
+| 写产品文档、用户手册、说明 | ddoc | 产品文档：Diátaxis 分层输出，面向用户的文档生成 |
+| 任务规划、拆分、排依赖 | dtask | 任务编排：起草/锁定/修改 dtask 条目，管理状态机与依赖图 |
+| 开始干活、执行任务、实施 | drun | 执行引擎：claim→实施→验证→release，连续或单次执行闭环 |
+| 记录进度、写 session、归档 | drec | 进度记录：Session recording + decisions.md 写入 + 全量 commit |
+| 纠偏、跑偏了、恢复方向 | dcorr | 纠偏观察：六类泛化误判模式 + 项目高频表，辅助撤回和止损 |
+| 看状态、当前进度、任务列表 | dstat | 状态阅览：展示 dtask/dloop/recording/rules 当前快照 |
+| 持续运行、自动循环、无人值守 | dloop | 连续执行：drun 循环驱动 + 自动续跑 + PENDING REVIEW 等门控 |
