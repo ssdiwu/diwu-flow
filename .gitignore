@@ -18,7 +18,7 @@ __pycache__/
 .opencode/
 
 # diwu-flow 运行时缓存（不跟踪，运行时数据本身在 .diwu/ 中追踪）
-.diwu/.context_monitor_cache.json
+.diwu/.context_monitor_cache*.json
 .diwu/logs/
 .diwu/__pycache__/
 

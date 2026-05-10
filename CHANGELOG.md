@@ -1,4 +1,15 @@
-## [v0.1.1] - 2026-05-10
+## [v0.1.1] - 2026-05-11
+
+### Changed — dtask.json / dtask-state.json → TOML 迁移（Issue #48）
+
+- **数据文件格式统一 TOML**：`dtask.json` → `dtask.toml`，`dtask-state.json` → `dtask-state.toml`，与 `dsettings.toml` 对齐
+- **基础设施层**（`scripts/common.py` + `hooks/scripts/_shared.py` + `scripts/dtask_state.py`）：路径常量、TOML 读写、`_remove_none()` null 值过滤
+- **Python 消费者**（6 文件）：`dtask_transition.py` / `dloop.py` / `dstat.py` / `drec_archive.py` / `dinit.py` 全部切换为 TOML 读写
+- **Hook 脚本**（7 文件）：`session_start.py` / `task_completed.py` / `task_created_validate.py` / `stop_decision.py` / `task_entry_guard.py` / `stop_archive.py` / `_fs_snapshot.py`
+- **测试夹具**（~17 文件）：conftest fixture 全量迁移为 TOML 格式
+- **文档/规则/命令/模板**（~20 文件）：`.json` 引用全部替换为 `.toml`
+- **migrate-legacy 兼容**：`_convert_dtask_json_to_toml()` + `_convert_dtask_state_json_to_toml()` 自动检测并转换旧 JSON 文件
+- **测试回归**：389/389 PASS
 
 ### Fixed — 零 git 子进程迁移（Issue #47）
 
