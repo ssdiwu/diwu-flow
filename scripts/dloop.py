@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import DIWU_DIR, DTASK_JSON, DSETTINGS_JSON, load_json_or_empty, save_json  # noqa: E402
+from common import DIWU_DIR, DTASK_JSON, DSETTINGS_TOML, load_toml_or_empty, save_json  # noqa: E402
 from dloop_state import classify, cleanup_state, get_active_tasks, get_done_ids, get_executable_tasks  # noqa: E402
 from dtask_state import clear_loop_state, loop_state, runtime_state_path, save_runtime_state, set_loop_state, sync_runtime_state  # noqa: E402
 
@@ -42,7 +42,7 @@ def cmd_start(cwd: Path, max_tasks: int = None, interval: str = None,
     state_path = runtime_state_path(cwd)
     dtask_payload = _task_payload(cwd)
     tasks = [task for task in dtask_payload.get("tasks", []) if isinstance(task, dict)]
-    settings = load_json_or_empty(cwd / DSETTINGS_JSON)
+    settings = load_toml_or_empty(cwd / DSETTINGS_TOML)
 
     # Stale-state 兜底（#23）：检查已有 state 文件是否为 terminal_stale
     stale_cleanup_reason = None
@@ -152,7 +152,7 @@ def cmd_status(cwd: Path) -> dict:
 
     # Stale-state 兜底（#23）：与 cmd_start 相同的三分类判定
     dtask_for_classify = _task_payload(cwd)
-    settings = load_json_or_empty(cwd / DSETTINGS_JSON)
+    settings = load_toml_or_empty(cwd / DSETTINGS_TOML)
     classification = classify(cwd, dtask_data=dtask_for_classify, settings=settings)
     if classification.is_stale:
         reason = classification.reason or "terminal_stale"

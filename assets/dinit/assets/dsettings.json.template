@@ -1,1 +1,0 @@
-{"task_archive_threshold": 20, "recording_archive_threshold": 30, "recording_retention_days": 30, "review_limit": 5, "context_monitor_warning": 30, "context_monitor_critical": 50, "context_monitor_delay": 10, "drift_detection": {"enabled": true}, "recording_reminder": {"enabled": true}}

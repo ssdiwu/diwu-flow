@@ -34,9 +34,15 @@ class TestArchiveTasks:
         }
         if overrides:
             settings.update(overrides)
-        (diwu / "dsettings.json").write_text(
-            json.dumps(settings, ensure_ascii=False, indent=2)
-        )
+        lines = []
+        for k, v in settings.items():
+            if isinstance(v, bool):
+                lines.append(f"{k} = {'true' if v else 'false'}")
+            elif isinstance(v, str):
+                lines.append(f'{k} = "{v}"')
+            else:
+                lines.append(f"{k} = {v}")
+        (diwu / "dsettings.toml").write_text("\n".join(lines) + "\n")
 
     def test_archive_tasks_basic(self, tmp_project_dir):
         """25 个 Done 任务 → 归档到 task_archive_YYYY-MM.json，dtask.json 清空。"""
@@ -137,9 +143,15 @@ class TestArchiveRecordingsMove:
         }
         if settings_overrides:
             settings.update(settings_overrides)
-        (diwu / "dsettings.json").write_text(
-            json.dumps(settings, ensure_ascii=False, indent=2)
-        )
+        lines = []
+        for k, v in settings.items():
+            if isinstance(v, bool):
+                lines.append(f"{k} = {'true' if v else 'false'}")
+            elif isinstance(v, str):
+                lines.append(f'{k} = "{v}"')
+            else:
+                lines.append(f"{k} = {v}")
+        (diwu / "dsettings.toml").write_text("\n".join(lines) + "\n")
         return rec_dir
 
     def test_recording_move_by_month(self, tmp_project_dir):
@@ -217,11 +229,11 @@ class TestIdempotent:
         """连续两次 run，第二次 tasks_archived=0。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 3,
-            "recording_archive_threshold": 50,
-            "recording_retention_days": 30,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_threshold = 3\n'
+            'recording_archive_threshold = 50\n'
+            'recording_retention_days = 30\n'
+        )
         (diwu / "dtask.json").write_text(json.dumps({
             "tasks": [
                 {"id": 1, "title": "t1", "status": "Done"},
@@ -246,11 +258,11 @@ class TestIdempotent:
         """文件已移动后再次运行不报错。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 999,
-            "recording_archive_threshold": 2,
-            "recording_retention_days": 1,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_threshold = 999\n'
+            'recording_archive_threshold = 2\n'
+            'recording_retention_days = 1\n'
+        )
 
         rec_dir = diwu / "recording"
         rec_dir.mkdir(exist_ok=True)
@@ -285,11 +297,11 @@ class TestNoArchiveNeeded:
         """只有 InSpec/InProgress 任务时不触发 task 归档。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 3,
-            "recording_archive_threshold": 50,
-            "recording_retention_days": 30,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_threshold = 3\n'
+            'recording_archive_threshold = 50\n'
+            'recording_retention_days = 30\n'
+        )
         (diwu / "dtask.json").write_text(json.dumps({
             "tasks": [
                 {"id": 1, "title": "t1", "status": "InSpec"},
@@ -314,11 +326,11 @@ class TestAggregatePitfalls:
         """moved file 含踩坑数据时正确聚合到 project-pitfalls.md。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 999,
-            "recording_archive_threshold": 2,
-            "recording_retention_days": 1,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_threshold = 999\n'
+            'recording_archive_threshold = 2\n'
+            'recording_retention_days = 1\n'
+        )
 
         rec_dir = diwu / "recording"
         rec_dir.mkdir(exist_ok=True)
@@ -352,11 +364,11 @@ class TestAggregatePitfalls:
         """session 文件无踩坑数据（最低合法答案）时跳过聚合。"""
         diwu = tmp_project_dir / ".diwu"
         diwu.mkdir(exist_ok=True)
-        (diwu / "dsettings.json").write_text(json.dumps({
-            "task_archive_threshold": 999,
-            "recording_archive_threshold": 2,
-            "recording_retention_days": 1,
-        }, ensure_ascii=False, indent=2))
+        (diwu / "dsettings.toml").write_text(
+            'task_archive_threshold = 999\n'
+            'recording_archive_threshold = 2\n'
+            'recording_retention_days = 1\n'
+        )
 
         rec_dir = diwu / "recording"
         rec_dir.mkdir(exist_ok=True)

@@ -111,7 +111,7 @@ def get_terminal_stop_reason(
         return f"达到任务上限 (max_tasks={max_tasks})"
 
     if check_task_state:
-        review_limit = settings.get("review_limit", 5)
+        review_limit = settings.get("dloop_review_cap") or settings.get("review_limit", 5)
         if not _is_non_negative_int(review_limit):
             review_limit = 5
         review_used = data.get("review_used", 0)

@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import DIWU_DIR, ARCHIVE_DIR, DTASK_JSON, DSETTINGS_JSON, PITFALLS_FILE, RECORDING_DIR, save_json  # noqa: E402
+from common import DIWU_DIR, ARCHIVE_DIR, DTASK_JSON, DSETTINGS_TOML, RECORDING_DIR, PITFALLS_FILE, load_toml_optional, save_json  # noqa: E402
 
 # ── 本文件特有常量（不在 common.py 中） ──────────
 LAST_SUMMARY = ".last_archive_summary.json"
@@ -46,9 +46,9 @@ def _load_json(path: Path):
 
 
 def _load_settings(cwd: Path) -> dict:
-    """加载 dsettings.json，缺失字段用默认值补全。"""
-    settings_path = _p(cwd, DSETTINGS_JSON)
-    raw = _load_json(settings_path)
+    """加载 dsettings.toml，缺失字段用默认值补全。"""
+    settings_path = _p(cwd, DSETTINGS_TOML)
+    raw = load_toml_optional(settings_path)
     result = dict(DEFAULTS)
     if raw and isinstance(raw, dict):
         for k in DEFAULTS:
