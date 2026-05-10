@@ -371,9 +371,9 @@ def cmd_create_config(cwd: Path, project_info_file: str | None = None,
         else:
             _record(str(rp.relative_to(cwd)), "SKIPPED")
 
-    # 4.7 dsettings.json
-    dsettings = diwu_dir / "dsettings.json"
-    ds_template = ASSETS_DIR / "dsettings.json.template"
+    # 4.7 dsettings.toml
+    dsettings = diwu_dir / "dsettings.toml"
+    ds_template = ASSETS_DIR / "dsettings.toml.template"
     if not dsettings.exists() and ds_template.exists():
         shutil.copy2(str(ds_template), str(dsettings))
         _record(str(dsettings.relative_to(cwd)), "CREATED")
@@ -426,7 +426,7 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
     old_runtime_patterns = [
         (cwd / ".claude" / "recording", cwd / ".diwu" / "recording"),
         (cwd / ".claude" / "decisions.md", cwd / ".diwu" / "decisions.md"),
-        (cwd / ".claude" / "dsettings.json", cwd / ".diwu" / "dsettings.json"),
+        (cwd / ".claude" / "dsettings.json", cwd / ".diwu" / "dsettings.toml"),
         (cwd / ".claude" / "project-pitfalls.md", cwd / ".diwu" / "project-pitfalls.md"),
         (cwd / ".claude" / "archive", cwd / ".diwu" / "archive"),
         (cwd / ".claude" / "continue-here.md", cwd / ".diwu" / "continue-here.md"),
