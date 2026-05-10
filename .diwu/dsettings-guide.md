@@ -15,7 +15,7 @@ Done/Cancelled 任务数达到此值时触发归档（写入 `.diwu/archive/task
 
 Session 记录文件数达到此值时触发归档（写入 `.diwu/archive/recording_YYYY-MM-DD.md`）。
 
-### `recording_retention_days`（数字，默认 `30`）
+### `recording_keep_days`（数字，默认 `30`）
 
 归档时保留最近 N 天的 recording 文件，超出范围的清理。
 
@@ -35,15 +35,15 @@ Session 记录文件数达到此值时触发归档（写入 `.diwu/archive/recor
 
 这三个参数控制**写工具调用密度检测**，防止长 session 中 context window 过度膨胀而不自知。
 
-### `ctxmon_warning_threshold`（数字，默认 `30`）
+### `ctxmon_warn_at`（数字，默认 `30`）
 
 写工具（Edit/Write/Bash）调用次数达到此值时发出**警告提醒**。
 
-### `ctxmon_critical_threshold`（数字，默认 `50`）
+### `ctxmon_checkpoint_at`（数字，默认 `50`）
 
 写工具调用次数达到此值时触发**自动 checkpoint**（写入 `.diwu/recording/checkpoint-*.md`），记录当前进度以便 context 压缩后恢复断点。
 
-### `ctxmon_check_interval`（数字，默认 `10`）
+### `ctxmon_checkpoint_delay`（数字，默认 `10`）
 
 在 critical 阈值之上额外容忍的调用次数。实际触发 checkpoint = critical + check_interval = **60 次**。
 
@@ -87,6 +87,6 @@ Session 结束前是否提醒写入 recording 文件。
 
 | 场景 | 改什么 | 改成什么 |
 |------|--------|---------|
-| 任务多怕 context 爆 | `ctxmon_critical_threshold` | `30`（更早 checkpoint） |
+| 任务多怕 context 爆 | `ctxmon_checkpoint_at` | `30`（更早 checkpoint） |
 | 不想看退化提醒 | `drift_enabled` | `false` |
 | 不需要 3-Strike 重试机制 | `error_tracking_enabled` | `false` |

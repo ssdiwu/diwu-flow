@@ -27,9 +27,9 @@ DEFAULTS = {
 
 # TOML key mapping (Issue #31 alignment)
 _TOML_KEYS = {
-    "warning": "ctxmon_warning_threshold",
-    "critical": "ctxmon_critical_threshold",
-    "delay": "ctxmon_check_interval",
+    "warning": "ctxmon_warn_at",
+    "critical": "ctxmon_checkpoint_at",
+    "delay": "ctxmon_checkpoint_delay",
 }
 
 # Tool classification sets

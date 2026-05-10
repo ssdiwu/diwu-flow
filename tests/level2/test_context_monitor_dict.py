@@ -44,9 +44,9 @@ class TestCfgDefaults(unittest.TestCase):
         tmpdir = tempfile.mkdtemp()
         settings_path = os.path.join(tmpdir, 'dsettings.toml')
         with open(settings_path, 'w') as f:
-            f.write('ctxmon_warning_threshold = 20\n'
-                    'ctxmon_critical_threshold = 40\n'
-                    'ctxmon_check_interval = 5\n')
+            f.write('ctxmon_warn_at = 20\n'
+                    'ctxmon_checkpoint_at = 40\n'
+                    'ctxmon_checkpoint_delay = 5\n')
 
         orig_settings = cm.SETTINGS
         cm.SETTINGS = settings_path

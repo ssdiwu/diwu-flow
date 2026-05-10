@@ -30,7 +30,7 @@ class TestArchiveTasks:
         settings = {
             "task_archive_limit": 20,
             "recording_file_limit": 50,
-            "recording_retention_days": 30,
+            "recording_keep_days": 30,
         }
         if overrides:
             settings.update(overrides)
@@ -139,7 +139,7 @@ class TestArchiveRecordingsMove:
         settings = {
             "task_archive_limit": 20,
             "recording_file_limit": 50,
-            "recording_retention_days": 30,
+            "recording_keep_days": 30,
         }
         if settings_overrides:
             settings.update(settings_overrides)
@@ -158,7 +158,7 @@ class TestArchiveRecordingsMove:
         """月份分片验收：session-2026-04-* 进 2026-04/，session-2026-05-* 进 2026-05/。"""
         rec_dir = self._setup(
             tmp_project_dir,
-            {"recording_file_limit": 5, "recording_retention_days": 1},
+            {"recording_file_limit": 5, "recording_keep_days": 1},
         )
         # 创建 6 个文件（超过 threshold=5）
         for i in range(6):
@@ -200,7 +200,7 @@ class TestArchiveRecordingsMove:
         """两轮规则验证：先移超龄，再按 mtime 从旧到新继续移直到 < threshold。"""
         rec_dir = self._setup(
             tmp_project_dir,
-            {"recording_file_limit": 5, "recording_retention_days": 30},
+            {"recording_file_limit": 5, "recording_keep_days": 30},
         )
 
         # 创建 10 个文件，均未超龄（mtime 很近），但总数 > threshold
@@ -232,7 +232,7 @@ class TestIdempotent:
         (diwu / "dsettings.toml").write_text(
             'task_archive_limit = 3\n'
             'recording_file_limit = 50\n'
-            'recording_retention_days = 30\n'
+            'recording_keep_days = 30\n'
         )
         (diwu / "dtask.json").write_text(json.dumps({
             "tasks": [
@@ -261,7 +261,7 @@ class TestIdempotent:
         (diwu / "dsettings.toml").write_text(
             'task_archive_limit = 999\n'
             'recording_file_limit = 2\n'
-            'recording_retention_days = 1\n'
+            'recording_keep_days = 1\n'
         )
 
         rec_dir = diwu / "recording"
@@ -300,7 +300,7 @@ class TestNoArchiveNeeded:
         (diwu / "dsettings.toml").write_text(
             'task_archive_limit = 3\n'
             'recording_file_limit = 50\n'
-            'recording_retention_days = 30\n'
+            'recording_keep_days = 30\n'
         )
         (diwu / "dtask.json").write_text(json.dumps({
             "tasks": [
@@ -329,7 +329,7 @@ class TestAggregatePitfalls:
         (diwu / "dsettings.toml").write_text(
             'task_archive_limit = 999\n'
             'recording_file_limit = 2\n'
-            'recording_retention_days = 1\n'
+            'recording_keep_days = 1\n'
         )
 
         rec_dir = diwu / "recording"
@@ -367,7 +367,7 @@ class TestAggregatePitfalls:
         (diwu / "dsettings.toml").write_text(
             'task_archive_limit = 999\n'
             'recording_file_limit = 2\n'
-            'recording_retention_days = 1\n'
+            'recording_keep_days = 1\n'
         )
 
         rec_dir = diwu / "recording"

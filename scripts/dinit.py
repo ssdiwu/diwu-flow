@@ -432,12 +432,12 @@ def _convert_dsettings_json_to_toml(json_path: Path, toml_path: Path) -> dict:
         "task_archive_threshold": "task_archive_limit",
         "recording_archive_threshold": "recording_file_limit",
         "review_limit": "dloop_review_cap",
-        "context_monitor_warning": "ctxmon_warning_threshold",
-        "context_monitor_critical": "ctxmon_critical_threshold",
-        "context_monitor_delay": "ctxmon_check_interval",
+        "context_monitor_warning": "ctxmon_warn_at",
+        "context_monitor_critical": "ctxmon_checkpoint_at",
+        "context_monitor_delay": "ctxmon_checkpoint_delay",
     }
     passthrough = {
-        "recording_retention_days", "dloop_max_consecutive",
+        "recording_keep_days", "dloop_max_consecutive",
         "error_tracking_enabled",
     }
     for old_key, new_key in key_map.items():

@@ -26,7 +26,7 @@ LAST_SUMMARY = ".last_archive_summary.json"
 DEFAULTS = {
     "task_archive_limit": 20,
     "recording_file_limit": 30,
-    "recording_retention_days": 30,
+    "recording_keep_days": 30,
 }
 
 # ─── 工具函数 ──────────────────────────────────────────
@@ -173,7 +173,7 @@ def archive_recordings(cwd: Path, settings: dict) -> list:
         return []
 
     ct = settings.get("recording_file_limit", DEFAULTS["recording_file_limit"])
-    rd = settings.get("recording_retention_days", DEFAULTS["recording_retention_days"])
+    rd = settings.get("recording_keep_days", DEFAULTS["recording_keep_days"])
 
     now = time.time()
     cutoff = now - (rd * 86400)

@@ -76,7 +76,7 @@ Stop hook 验证 `### 本次踩坑/经验` 字段是否存在：
 
 - **状态持久化**：临时文件（需确保可清理）
 - **冷却窗口**：默认 60 秒
-- **开关**：`dsettings.json → error_tracking_enabled`（默认 true）
+- **开关**：`dsettings.toml → error_tracking_enabled`（默认 true）
 
 ---
 

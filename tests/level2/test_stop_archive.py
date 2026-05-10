@@ -38,7 +38,7 @@ class TestLoadSettings:
         s = _load_settings()
         assert s["task_archive_limit"] == 20
         assert s["recording_file_limit"] == 30
-        assert s["recording_retention_days"] == 30
+        assert s["recording_keep_days"] == 30
 
     def test_custom_values(self, tmp_path, monkeypatch):
         """Reads custom values from dsettings.toml."""
@@ -47,7 +47,7 @@ class TestLoadSettings:
         (ds / "dsettings.toml").write_text(
             'task_archive_limit = 10\n'
             'recording_file_limit = 20\n'
-            'recording_retention_days = 7\n'
+            'recording_keep_days = 7\n'
         )
         monkeypatch.chdir(tmp_path)
         from hooks.scripts.stop_archive import _load_settings
@@ -55,7 +55,7 @@ class TestLoadSettings:
         s = _load_settings()
         assert s["task_archive_limit"] == 10
         assert s["recording_file_limit"] == 20
-        assert s["recording_retention_days"] == 7
+        assert s["recording_keep_days"] == 7
 
     def test_corrupted_toml_fallback(self, tmp_path, monkeypatch):
         """Falls back to defaults on corrupted TOML."""
@@ -163,7 +163,7 @@ class TestRecordingArchive:
         from hooks.scripts.stop_archive import check_recording_archive
 
         needs, total, old, ct, dt, msg = check_recording_archive(
-            {"recording_file_limit": 50, "recording_retention_days": 30}
+            {"recording_file_limit": 50, "recording_keep_days": 30}
         )
         assert needs is True
         assert total == 55
@@ -184,7 +184,7 @@ class TestRecordingArchive:
         from hooks.scripts.stop_archive import check_recording_archive
 
         needs, total, old, ct, dt, msg = check_recording_archive(
-            {"recording_file_limit": 50, "recording_retention_days": 30}
+            {"recording_file_limit": 50, "recording_keep_days": 30}
         )
         assert needs is True
         assert old >= 1
@@ -201,7 +201,7 @@ class TestRecordingArchive:
         from hooks.scripts.stop_archive import check_recording_archive
 
         needs, total, old, ct, dt, msg = check_recording_archive(
-            {"recording_file_limit": 50, "recording_retention_days": 30}
+            {"recording_file_limit": 50, "recording_keep_days": 30}
         )
         assert needs is False
         assert msg == ""
@@ -220,7 +220,7 @@ class TestRecordingArchive:
         from hooks.scripts.stop_archive import check_recording_archive
 
         needs, total, old, ct, dt, msg = check_recording_archive(
-            {"recording_file_limit": 50, "recording_retention_days": 30}
+            {"recording_file_limit": 50, "recording_keep_days": 30}
         )
         assert needs is False
         assert total == 2  # only .md files counted
@@ -277,7 +277,7 @@ class TestIntegration:
         settings = {
             "task_archive_limit": 5,
             "recording_file_limit": 99999,
-            "recording_retention_days": 99999,
+            "recording_keep_days": 99999,
         }
         tasks = [{"id": i, "status": "Done"} for i in range(10)]
 

@@ -31,7 +31,7 @@ RECORDING_DIR = ".diwu/recording"
 DEFAULTS = {
     "task_archive_limit": 20,
     "recording_file_limit": 30,
-    "recording_retention_days": 30,
+    "recording_keep_days": 30,
 }
 
 _CWD: str = "."
@@ -101,7 +101,7 @@ def check_recording_archive(settings):
         "recording_file_limit", DEFAULTS["recording_file_limit"]
     )
     dt = settings.get(
-        "recording_retention_days", DEFAULTS["recording_retention_days"]
+        "recording_keep_days", DEFAULTS["recording_keep_days"]
     )
 
     rec_dir = _resolve(RECORDING_DIR)
