@@ -1,3 +1,22 @@
+## [v0.1.3] - 2026-05-12
+
+### Changed — SOP 式 Skill 段落级恢复（Issue #53）
+
+- **drec Skill v2.0**（`skills/drec/SKILL.md`）：98 行 → 264 行，恢复 R1 文件操作安全/R2 commit 职责/R3 Session 模板/R4 踩坑四段式/R5 归档聚合/R6 3-Strike/R7 错误追踪表/R8 Checkpoint/R9 CONTINUOUS_MODE_COMPLETE/R10 Amend 去git化/R11 标记清除语义/R12 脚本驱动调用契约
+- **drec_write.py 脚本化**（`scripts/drec_write.py`）：新增 ~360 行 closeout 脚本，读取 draft → 写 recording → 归档 → git commit/amend → 清理，stdout JSON 契约输出
+- **commands/drec.md 改写**：从手动 git/date 步骤列表改为"生成 draft → 调 drec_write.py run → 解析 JSON"
+- **drun Skill v2.0**（`skills/drun/SKILL.md`）：120 行 → 265 行，恢复 R1 启动上下文恢复顺序/R2 归档检查时机/R3 任务选择 P0P1 策略/R4 claim-release 命令示例/R5 Verifier 三分支协议/R6 运行态验证4方法/R7 子代理决策矩阵/R8 三阶段 I/O 契约/R9 退化路径(debugger优先)/R10 并行规则
+- **dloop Skill v2.0**（`skills/dloop/SKILL.md`）：85 行 → 214 行，恢复 R1 生命周期4阶段/R2 状态文件6字段语义表/R3 Agent行为规范/R4 Session ID绑定4场景/R5 completed_task_ids读写协议/R6 Session隔离/R7 自动阶段报告/R8 结束检查清单/R9 dummy SID窗口/R10 stale-state自动清理
+- **ddoc Skill 增强**（`skills/ddoc/SKILL.md`）：新增 R1 最小完整输出示范(消息通知域4层结构)/R2 输出结构决策树(领域驱动vs分层)/R4 两层完整性检查(结构+深度)/R5 高频误用5模式
+- **dcorr Skill 增强**（`skills/dcorr/SKILL.md`）：新增 R1 回主线前停止项检查(6信号表)
+- **L2 集成测试**（`tests/level2_scripts/test_drec_write.py`）：7 passed + 2 skipped，覆盖 normal commit/amend/no changes/missing draft/amend timeout fallback/amend failure fallback/archive triggered
+
+### Fixed — drec_write.py 缺少 import argparse
+
+- 新增 `import argparse` 到 imports 块
+
+---
+
 ## [v0.1.2] - 2026-05-11
 
 ### Changed — dinit 三层架构重构（Issue #51）
