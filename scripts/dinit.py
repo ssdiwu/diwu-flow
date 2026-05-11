@@ -16,6 +16,7 @@ import sys
 import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 from common import ensure_dir, load_json_or_empty, plugin_root, load_toml_or_empty, load_toml_optional, save_json, save_toml  # noqa: E402
@@ -459,7 +460,33 @@ def _convert_dsettings_json_to_toml(json_path: Path, toml_path: Path) -> dict:
         return {"ok": False, "reason": "no_mappable_keys"}
 
     save_toml(result, toml_path)
+
+    if not _verify_roundtrip(result, toml_path):
+        toml_path.unlink(missing_ok=True)
+        return {"ok": False, "reason": "roundtrip_mismatch"}
+
     return {"ok": True}
+
+
+def _verify_roundtrip(original: Any, toml_path: Path) -> bool:
+    """写入 TOML 后回读，与原始数据深度比对。"""
+    from common import load_toml_or_empty
+
+    reloaded = load_toml_or_empty(toml_path)
+    return _deep_equal(original, reloaded)
+
+
+def _deep_equal(a: Any, b: Any) -> bool:
+    """递归深度比对，兼容 dict/list/scalar。"""
+    if isinstance(a, dict) and isinstance(b, dict):
+        if set(a.keys()) != set(b.keys()):
+            return False
+        return all(_deep_equal(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return False
+        return all(_deep_equal(x, y) for x, y in zip(a, b))
+    return a == b
 
 
 def _convert_dtask_json_to_toml(json_path: Path, toml_path: Path) -> dict:
@@ -467,6 +494,7 @@ def _convert_dtask_json_to_toml(json_path: Path, toml_path: Path) -> dict:
 
     JSON schema: {"tasks": [...]} → TOML [[tasks]].
     无需键名映射，结构完全兼容。
+    写入后回读 TOML 与原始 JSON 做 round-trip 比对，不一致则删除 TOML 并返回失败。
     """
     try:
         data = json.loads(json_path.read_text(encoding="utf-8"))
@@ -477,6 +505,11 @@ def _convert_dtask_json_to_toml(json_path: Path, toml_path: Path) -> dict:
         return {"ok": False, "reason": "invalid_schema"}
 
     save_toml(data, toml_path)
+
+    if not _verify_roundtrip(data, toml_path):
+        toml_path.unlink(missing_ok=True)
+        return {"ok": False, "reason": "roundtrip_mismatch"}
+
     return {"ok": True}
 
 
@@ -484,6 +517,7 @@ def _convert_dtask_state_json_to_toml(json_path: Path, toml_path: Path) -> dict:
     """将旧 dtask-state.json 转换为 dtask-state.toml。
 
     清除 None 值（tomli_w 不支持），其余结构不变。
+    写入后回读 TOML 与清除 None 后的数据做 round-trip 比对。
     """
     try:
         data = json.loads(json_path.read_text(encoding="utf-8"))
@@ -500,7 +534,13 @@ def _convert_dtask_state_json_to_toml(json_path: Path, toml_path: Path) -> dict:
             return [_remove_none(v) for v in obj if v is not None]
         return obj
 
-    save_toml(_remove_none(data), toml_path)
+    cleaned = _remove_none(data)
+    save_toml(cleaned, toml_path)
+
+    if not _verify_roundtrip(cleaned, toml_path):
+        toml_path.unlink(missing_ok=True)
+        return {"ok": False, "reason": "roundtrip_mismatch"}
+
     return {"ok": True}
 
 

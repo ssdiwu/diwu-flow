@@ -163,6 +163,122 @@ class TestDinitCreateConfig:
         assert data["ok"] is True
 
 
+class TestDinitRoundtrip:
+    """JSON→TOML 迁移的 round-trip 校验测试。"""
+
+    def test_dtask_roundtrip_preserves_content(self, tmp_project_dir):
+        """正常 dtask.json 迁移后内容应与原始 JSON 完全一致。"""
+        import sys, tomllib
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+        from dinit import _convert_dtask_json_to_toml
+
+        json_path = tmp_project_dir / "dtask.json"
+        toml_path = tmp_project_dir / "dtask.toml"
+
+        tasks_data = {
+            "tasks": [
+                {
+                    "id": 1,
+                    "title": "测试任务",
+                    "description": "描述",
+                    "acceptance": ["Given X When Y Then Z"],
+                    "steps": ["步骤一"],
+                    "files_modified": [],
+                    "category": "functional",
+                    "blocked_by": [],
+                    "status": "InProgress",
+                },
+                {
+                    "id": 2,
+                    "title": "第二个任务",
+                    "description": "描述二",
+                    "acceptance": [],
+                    "steps": [],
+                    "files_modified": [],
+                    "category": "infra",
+                    "blocked_by": [1],
+                    "status": "InDraft",
+                },
+            ]
+        }
+        json_path.write_text(json.dumps(tasks_data, ensure_ascii=False), encoding="utf-8")
+
+        result = _convert_dtask_json_to_toml(json_path, toml_path)
+        assert result["ok"] is True
+        assert toml_path.exists()
+
+        reloaded = tomllib.loads(toml_path.read_bytes().decode())
+        assert len(reloaded["tasks"]) == 2
+        assert reloaded["tasks"][0]["title"] == "测试任务"
+        assert reloaded["tasks"][1]["blocked_by"] == [1]
+
+    def test_dtask_empty_tasks_list_roundtrip(self, tmp_project_dir):
+        """空 tasks 列表迁移应成功（合法数据），但 round-trip 一致。"""
+        import sys, tomllib
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+        from dinit import _convert_dtask_json_to_toml
+
+        json_path = tmp_project_dir / "dtask.json"
+        toml_path = tmp_project_dir / "dtask.toml"
+
+        json_path.write_text('{"tasks": []}', encoding="utf-8")
+
+        result = _convert_dtask_json_to_toml(json_path, toml_path)
+        assert result["ok"] is True
+
+        reloaded = tomllib.loads(toml_path.read_bytes().decode())
+        assert reloaded["tasks"] == []
+
+    def test_dtask_state_roundtrip_preserves_content(self, tmp_project_dir):
+        """dtask-state.json 迁移后清除 None 的数据应 round-trip 一致。"""
+        import sys, tomllib
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+        from dinit import _convert_dtask_state_json_to_toml
+
+        json_path = tmp_project_dir / "dtask-state.json"
+        toml_path = tmp_project_dir / "dtask-state.toml"
+
+        state_data = {
+            "runtime": {
+                "owner": {"task_id": 1, "session": "abc"},
+                "dloop": None,
+            }
+        }
+        json_path.write_text(json.dumps(state_data), encoding="utf-8")
+
+        result = _convert_dtask_state_json_to_toml(json_path, toml_path)
+        assert result["ok"] is True
+
+        reloaded = tomllib.loads(toml_path.read_bytes().decode())
+        assert reloaded["runtime"]["owner"]["task_id"] == 1
+        assert "dloop" not in reloaded["runtime"]
+
+    def test_dsettings_roundtrip_preserves_content(self, tmp_project_dir):
+        """dsettings.json 迁移后含键名映射的数据应 round-trip 一致。"""
+        import sys, tomllib
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+        from dinit import _convert_dsettings_json_to_toml
+
+        json_path = tmp_project_dir / "dsettings.json"
+        toml_path = tmp_project_dir / "dsettings.toml"
+
+        settings_data = {
+            "task_archive_threshold": 20,
+            "recording_archive_threshold": 30,
+            "review_limit": 5,
+            "recording_keep_days": 30,
+        }
+        json_path.write_text(json.dumps(settings_data), encoding="utf-8")
+
+        result = _convert_dsettings_json_to_toml(json_path, toml_path)
+        assert result["ok"] is True
+
+        reloaded = tomllib.loads(toml_path.read_bytes().decode())
+        assert reloaded["task_archive_limit"] == 20
+        assert reloaded["recording_file_limit"] == 30
+        assert reloaded["dloop_review_cap"] == 5
+
+
 class TestDinitMigrateLegacy:
     def test_no_legacy_clean_project(self, tmp_project_dir):
         """干净项目应返回 no_migration_needed。"""
