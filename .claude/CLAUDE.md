@@ -1,6 +1,6 @@
 # diwu-flow
 
-**插件版本：0.1.1** | Claude Code Plugin 项目
+**插件版本：0.1.2** | Claude Code Plugin 项目
 
 **读者**：改 diwu-flow 源码的 AI。目标项目的 AI 读 `rules/`，不读此文件。
 

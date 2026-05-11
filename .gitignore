@@ -23,5 +23,8 @@ __pycache__/
 .diwu/.context_monitor_cache*.json
 .diwu/archive/*.backup
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # sync-skills 本地产物（含机器特定绝对路径 symlink，不可迁移）
 .agents/skills/

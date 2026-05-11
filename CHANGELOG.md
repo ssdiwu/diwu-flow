@@ -1,3 +1,35 @@
+## [v0.1.2] - 2026-05-11
+
+### Changed — dinit 三层架构重构（Issue #51）
+
+- **Command 削薄**（`commands/dinit.md`）：94 行 → 22 行纯触发器，删除子命令表/Step SOP/`refresh` 参数，用户只需输入 `/dinit`
+- **Skill 新建**（`scripts/dinit/SKILL.md`）：85 行启发式风格——判断视角/红旗信号/陷阱提示，无 Step 编号
+- **脚本自动编排入口**（`scripts/dinit.py` `cmd_run()`）：新增 `run` 子命令，AI 调一个入口自动完成模式检测→迁移→同步→验证
+- **设计原则落地**："Skills 为底、Commands 为壳"——Command 是门铃，Skill 是说明书，脚本是工具箱
+
+### Changed — 归档文件 TOML 迁移（Issue #51）
+
+- **输出格式统一**：`task_archive_YYYY-MM.json` → `.toml`，`.last_archive_summary.json` → `.toml`
+- **读取兼容**：`_load_archive()` 自动检测 `.toml`/`.json` 双格式（新旧并存期安全）
+- **迁移路径**：`migrate-legacy` 自动检测并转换已有 JSON 归档（备份→转换→删除）
+- **消费者修复**：`dstat.py` + `common.py max_task_id()` 已适配读取 TOML 归档
+- **文档三副本同步**：`rules/file-layout.md` + `assets/.../file-layout.md` + `.claude/rules/file-layout.md`
+
+### Fixed — context_monitor 缓存污染工作区（Issue #49）
+
+- **缓存路径迁移**：`.diwu/.context_monitor_cache_{uuid}.json` → `tempfile.gettempdir()/diwu_ctxmon_{sid}.json`
+- **输出格式改为 `additionalContext`**：AI + 用户均可见 `/drec` 提醒
+- **砍掉 checkpoint 逻辑**：无消费者的 checkpoint 文件写入已移除
+- **stale cleanup**：1 小时过期自动清理 temp cache
+- **`.gitignore` 补充**：`context_monitor_cache*.json` + `archive/*.backup` 防残留
+
+### Changed — dtask.toml 模板中文注释
+
+- **模板增强**（`assets/dinit/assets/task.toml.template`）：顶部加中文示例 task + 字段说明
+- **运行时同步**：`.diwu/dtask.toml` 同步更新
+
+---
+
 ## [v0.1.1] - 2026-05-11
 
 ### Changed — dtask.json / dtask-state.json → TOML 迁移（Issue #48）

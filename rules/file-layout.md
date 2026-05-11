@@ -16,9 +16,9 @@
 ├── decisions.md                   # 设计决策记录（可选）
 ├── ideas/                        # 想法容器
 ├── archive/                       # 归档目录
-│   ├── task_archive_YYYY-MM.json
+│   ├── task_archive_YYYY-MM.toml
 │   ├── recording_YYYY-MM-DD.md
-│   └── .last_archive_summary.json
+│   └── .last_archive_summary.toml
 ├── checks/                        # 验证脚本目录
 │   ├── smoke.sh
 │   └── task_<id>_verify.sh
@@ -61,7 +61,7 @@ tests/
 
 | 归档目标 | 触发条件 | 阈值来源 |
 |---------|---------|---------|
-| task_archive_YYYY-MM.json | Done/Cancelled 任务数超阈值 | dsettings.toml `task_archive_limit`（默认 20）|
+| task_archive_YYYY-MM.toml | Done/Cancelled 任务数超阈值 | dsettings.toml `task_archive_limit`（默认 20）|
 | recording_YYYY-MM-DD.md | session 文件数超阈值 | dsettings.toml `recording_file_limit`（默认 30）|
 
 ## 数据所有权

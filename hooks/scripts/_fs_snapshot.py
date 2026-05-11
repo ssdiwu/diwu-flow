@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import os
 import struct
 import zlib
@@ -172,10 +173,56 @@ def _mark_diu(rel: str, diu_dirty: list[str]) -> None:
         diu_dirty.append(rel)
 
 
+def _load_gitignore_patterns(cwd: Path) -> list[tuple[str, bool]]:
+    """Parse .gitignore into (pattern, is_dir_only) list.
+
+    Handles: wildcards (*, ?), comments (#), blank lines, negation (!).
+    Does NOT handle: ** (globstar), escape sequences, full regex.
+    """
+    gi_path = cwd / ".gitignore"
+    patterns: list[tuple[str, bool]] = []
+    if not gi_path.exists():
+        return patterns
+    try:
+        for line in gi_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            is_dir = stripped.endswith("/")
+            pat = stripped.rstrip("/")
+            # Convert gitignore wildcards to fnmatch
+            # "foo*" → "foo*" (fnmatch handles this)
+            # "*.pyc" → "*.pyc"
+            patterns.append((pat, is_dir))
+    except OSError:
+        pass
+    return patterns
+
+
+def _is_gitignored(rel: str, is_dir: bool, ignore_patterns: list[tuple[str, bool]]) -> bool:
+    """Check if a relative path matches any .gitignore pattern."""
+    for pat, pat_is_dir in ignore_patterns:
+        if pat_is_dir and not is_dir:
+            continue
+        # Match against each path component for dir patterns, or basename for file patterns
+        if pat_is_dir:
+            if rel.startswith(pat) or rel == pat.rstrip("/"):
+                return True
+        else:
+            # fnmatch on basename for simple patterns, full path for others
+            if "/" in pat:
+                if fnmatch.fnmatch(rel, pat):
+                    return True
+            elif fnmatch.fnmatch(rel.split("/")[-1], pat):
+                return True
+    return False
+
+
 def get_worktree_changes(cwd: str | Path = ".") -> WorktreeChanges:
     cwd = Path(cwd)
     git_dir = _resolve_git_dir(cwd)
     index_entries = _parse_git_index(git_dir / "index") if git_dir else {}
+    ignore_patterns = _load_gitignore_patterns(cwd)
 
     modified: list[str] = []
     untracked: list[str] = []
@@ -183,13 +230,15 @@ def get_worktree_changes(cwd: str | Path = ".") -> WorktreeChanges:
     seen: set[str] = set()
 
     for root, dirs, files in os.walk(cwd):
-        dirs[:] = [d for d in dirs if d not in _IGNORE_DIRS]
+        dirs[:] = [d for d in dirs if d not in _IGNORE_DIRS and not _is_gitignored(d + "/", True, ignore_patterns)]
 
         for fname in files:
             if fname in _IGNORE_FILES:
                 continue
             fpath = Path(root) / fname
             rel = _normalize_rel(os.path.relpath(fpath, cwd))
+            if _is_gitignored(rel, False, ignore_patterns):
+                continue
             seen.add(rel)
 
             entry = index_entries.get(rel)
