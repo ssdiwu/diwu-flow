@@ -18,7 +18,8 @@
     "./skills/dstat",
     "./skills/dloop",
     "./skills/dref",
-    "./skills/didea"
+    "./skills/didea",
+    "./skills/dinit"
   ],
   "commands": [
     "./commands/drun.md",

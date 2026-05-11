@@ -30,21 +30,29 @@ def test_dinit_has_script_entry_point():
 
 
 def test_dinit_preserves_ai_steps():
-    """AI 交互步骤必须保留（模式检测、信息收集、迁移决策、架构约束、git、验证）。"""
-    text = COMMAND_PATH.read_text(encoding="utf-8")
-    # 关键 AI 步骤章节应存在（允许措辞变化，中英文均可）
-    ai_step_keywords = [
-        ("Step 0", "模式检测"),
-        ("Step 1", "信息收集"),
-        ("Step 2", "迁移"),
-        ("Step 5", "架构约束"),
-        ("Step 6", "git"),
-        ("验证", "validate"),  # 任一命中即可
+    """AI 交互步骤必须保留在 Skill 文件中（模式检测、信息收集、迁移决策等）。
+
+    重构后：commands/dinit.md 是触发器（不含 SOP），AI 步骤细节在 skills/dinit/SKILL.md。
+    """
+    skill_path = PROJECT_ROOT / "skills" / "dinit" / "SKILL.md"
+    assert skill_path.exists(), "skills/dinit/SKILL.md 应存在（重构后 AI 步骤在此）"
+    text = skill_path.read_text(encoding="utf-8")
+    # 关键 AI 判断视角应存在（启发式风格，不再用 Step 编号）
+    ai_perspectives = [
+        ("初始化", "刷新"),       # 双模式判断
+        ("模式检测", "初始化 vs"),  # 模式识别
+        ("信息收集", "扫描"),       # 信息收集
+        ("迁移", "旧版", "legacy"), # 迁移行为
+        ("验证", "validate"),      # 验证收尾
+        ("红旗", "陷阱", "信号"),   # 红旗信号
     ]
-    for primary, fallback in ai_step_keywords:
-        assert primary in text or fallback in text, (
-            f"dinit.md 应保留 AI 步骤关键词: {primary} 或 {fallback}"
-        )
+    matched = 0
+    for keywords in ai_perspectives:
+        if any(kw in text for kw in keywords):
+            matched += 1
+    assert matched >= len(ai_perspectives) - 1, (
+        f"SKILL.md 应包含大部分 AI 判断视角关键词，当前匹配 {matched}/{len(ai_perspectives)}"
+    )
 
 
 def test_dinit_references_migrate_legacy():

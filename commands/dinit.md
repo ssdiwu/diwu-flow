@@ -1,93 +1,22 @@
 ---
 name: dinit
-description: 初始化项目的 Claude Code Agent 工作流结构——编排器模式
-argument-hint: "[项目描述（可选）] [refresh]"
+description: 初始化项目的 Claude Code Agent 工作流结构
+argument-hint: "[项目描述（可选）]"
 context: fork
 agent: general-purpose
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 effort: high
 ---
 
-# /dinit — 项目初始化
+# /dinit
 
-> 脚本：`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dinit.py <子命令> --cwd <项目根目录>`
+用户输入 `/dinit` 即可。AI 调用 **skills/dinit** 获取执行指引。
 
-## 核心原则
+脚本入口: `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dinit.py run --cwd <项目根目录>`
 
-- **Source of Truth 是文件系统**：`rules-manifest.json` 决定 rules 列表，agents 由默认路径自动发现
-- **刷新优先于重建**：增量更新不破坏用户自定义内容
-- **幂等性**：重复执行不产生副作用
+## 行为契约
 
-## 子命令
-
-| 命令 | 说明 |
-|------|------|
-| `scan-repo` | 扫描目录结构/技术栈/关键文件 → 输出 JSON |
-| `sync-rules` | 按 manifest 同步 rules 到 `.claude/rules/` |
-| `sync-skills` | 创建 `.agents/skills/` 下 symlink 指向 skills/ |
-| `create-config [--project-info-file X] [--scan-result-file Y]` | 创建 CLAUDE.md/dtask.toml/runtime dirs |
-| `migrate-legacy` | 检测旧版 v0.x 并迁移运行时文件 |
-| `validate` | 运行验证清单 → PASS/FAIL 报告 |
-
-## AI 保留步骤（脚本不覆盖）
-
-### Step 0：模式检测
-
-检查 `.claude/CLAUDE.md` 是否已存在：
-- **已存在** → 刷新模式：依次执行 `sync-rules` → `sync-skills` → `validate`
-- **不存在** → 初始化模式：执行 Step 1 → 8
-
-### Step 1：信息收集
-
-询问用户项目名称、描述、技术栈、常用命令、关键目录。
-
-> **文件操作安全（R1）**：修改已有文件前先 Read 当前内容；整文件重写先 Read 完整文件；新建确认不存在后再 Write。
-> **JSON 格式（R2）**：写入 .json 必须 indent=2, ensure_ascii=False
-
-### Step 1.5：代码库扫描
-
-执行 `scan-repo`，结果存入 `.diwu/.dinit/scan-result.json`，供 create-config 使用。
-
-### Step 2：旧版迁移检测
-
-执行 `migrate-legacy`，自动检测 states.md 旧标志和旧运行时文件位置。
-
-### Step 3：资产同步（子代理并行）
-
-- Rules 同步：执行 `sync-rules`
-- Skills Symlink：执行 `sync-skills`
-
-### Step 4：配置文件创建
-
-执行 `create-config --project-info-file <info> --scan-result-file <scan>`。
-
-### Step 5-7：架构约束 / Git / 验证
-
-- Step 5：询问是否需要 constraints.md（可选）
-- Step 6：非 git 目录则初始化仓库
-- Step 7：执行 `validate` 验证全部产出
-
-### Step 8：文档生成提示
-
-基于 Step 1.5 的 `scan-repo` 扫描结果判断项目规模，输出对应提示（不自动触发 `/ddoc`）：
-
-**正常项目（≥ 500 行代码）**：
-
-```
-💡 下一步建议：运行 /ddoc reverse 基于已扫描的项目结构自动生成产品文档到 .doc/ 目录。
-   跳过此步骤不会影响工作流功能，后续也可随时手动执行。
-```
-
-**极简项目或空项目（< 500 行）**：提示跳过，说明逆向模式适用门槛：
-
-```
-💡 项目代码较少（< 500 行），逆向模式不适用。后续补充代码后可运行 /ddoc reverse 生成文档，
-   或在设计阶段使用 /ddoc forward 从需求生成产品文档。
-```
-
-## 刷新模式快捷流程
-
-```
-/dinit refresh
-→ migrate-legacy → sync-rules → sync-skills → validate
-```
+- AI 自动检测模式（刷新/新建），不询问用户选择
+- 全自动迁移旧版格式，不报告细节除非出错
+- 幂等安全，重复执行无副作用
+- 首次初始化时需收集项目信息（名称/描述/技术栈）

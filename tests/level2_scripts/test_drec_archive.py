@@ -41,7 +41,8 @@ class TestArchiveTasks:
         (diwu / "dsettings.toml").write_text("\n".join(lines) + "\n")
 
     def test_archive_tasks_basic(self, tmp_project_dir):
-        """25 个 Done 任务 → 归档到 task_archive_YYYY-MM.json，dtask.toml 清空。"""
+        """25 个 Done 任务 → 归档到 task_archive_YYYY-MM.toml，dtask.toml 清空。"""
+        import tomllib
         self._write_settings(tmp_project_dir, {"task_archive_limit": 20})
         tasks = [
             {"id": i, "title": f"task-{i}", "status": "Done", "description": f"desc {i}"}
@@ -55,11 +56,12 @@ class TestArchiveTasks:
         assert data["ok"] is True
         assert data["tasks_archived"] == 25
 
-        # 验证 archive 文件存在且包含 25 个任务（标准 dict 格式）
+        # 验证 archive 文件存在且包含 25 个任务（TOML 格式）
         archive_dir = tmp_project_dir / ".diwu" / "archive"
-        archive_files = list(archive_dir.glob("task_archive_*.json"))
+        archive_files = list(archive_dir.glob("task_archive_*.toml"))
         assert len(archive_files) >= 1
-        archived_raw = json.loads(archive_files[0].read_text())
+        with open(archive_files[0], "rb") as f:
+            archived_raw = tomllib.load(f)
         # 兼容 dict（标准格式）和 list（旧格式）
         archived_tasks = archived_raw.get("tasks", []) if isinstance(archived_raw, dict) else archived_raw
         assert len(archived_tasks) == 25
@@ -101,9 +103,11 @@ class TestArchiveTasks:
         # 只有 id=4,5 是新的，id=1 应被去重
         assert data2["tasks_archived"] == 2
 
-        # 验证 archive 文件无重复 id（兼容 dict/list 格式）
-        archive_file = list((tmp_project_dir / ".diwu" / "archive").glob("task_archive_*.json"))[0]
-        archived_raw = json.loads(archive_file.read_text())
+        # 验证 archive 文件无重复 id（兼容 dict/list 格式，TOML 输出）
+        import tomllib
+        archive_file = list((tmp_project_dir / ".diwu" / "archive").glob("task_archive_*.toml"))[0]
+        with open(archive_file, "rb") as f:
+            archived_raw = tomllib.load(f)
         archived_tasks = archived_raw.get("tasks", []) if isinstance(archived_raw, dict) else archived_raw
         archived_ids = [t["id"] for t in archived_tasks]
         assert len(archived_ids) == len(set(archived_ids))  # 无重复

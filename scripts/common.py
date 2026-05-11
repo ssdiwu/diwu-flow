@@ -280,8 +280,17 @@ def max_task_id(cwd: Path) -> dict:
 
     # 2. 扫描归档
     if archive_dir.is_dir():
-        for f in archive_dir.glob("task_archive_*.json"):
-            adata, aerr = _read_json(f)
+        for f in archive_dir.glob("task_archive_*.*"):
+            if f.suffix.lower() == ".toml":
+                try:
+                    import tomllib
+                    with open(f, "rb") as tf:
+                        adata = tomllib.load(tf)
+                    aerr = None
+                except Exception:
+                    adata, aerr = None, "toml_parse_error"
+            else:
+                adata, aerr = _read_json(f)
             if aerr:
                 continue
             if adata and isinstance(adata, dict):

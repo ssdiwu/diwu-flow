@@ -27,6 +27,14 @@ RULES_SRC = ASSETS_DIR / "rules"
 MANIFEST_PATH = ASSETS_DIR / "rules-manifest.json"
 
 
+def _load_json(path: Path):
+    """加载 JSON，不存在返回 None，损坏抛异常。"""
+    if not path.exists():
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def _copy_file(src: Path, dst: Path) -> str:
     """复制文件，返回状态字符串（NEW/SAME/UPDATED）。"""
     if not src.exists():
@@ -603,6 +611,40 @@ def cmd_migrate_legacy(cwd: Path) -> dict:
     if ideas_migrated:
         actions.insert(0, f"ideas 归档迁移: {ideas_migrated} 个文件（status: archived → 物理移动）")
 
+    # 归档文件 JSON→TOML 迁移
+    archive_dir = cwd / ".diwu" / "archive"
+    if archive_dir.is_dir():
+        for json_file in sorted(archive_dir.glob("task_archive_*.json")):
+            toml_file = json_file.with_suffix(".toml")
+            if not toml_file.exists():
+                try:
+                    raw = _load_json(json_file)
+                    if raw is not None:
+                        save_toml(raw, toml_file)
+                        backup_path = json_file.with_suffix(".json.backup")
+                        if not backup_path.exists():
+                            shutil.copy2(str(json_file), str(backup_path))
+                        json_file.unlink()
+                        actions.append(f"归档格式转换: {json_file.name} → .toml")
+                except Exception as e:
+                    actions.append(f"归档转换失败 ({e}): {json_file.name}")
+
+        # summary 文件同理
+        summary_json = archive_dir / ".last_archive_summary.json"
+        summary_toml = archive_dir / ".last_archive_summary.toml"
+        if summary_json.exists() and not summary_toml.exists():
+            try:
+                raw = _load_json(summary_json)
+                if raw is not None:
+                    save_toml(raw, summary_toml)
+                    backup_path = summary_json.with_suffix(".json.backup")
+                    if not backup_path.exists():
+                        shutil.copy2(str(summary_json), str(backup_path))
+                    summary_json.unlink()
+                    actions.append(f"summary 格式转换: .last_archive_summary.json → .toml")
+            except Exception as e:
+                actions.append(f"summary 转换失败 ({e})")
+
     if not is_legacy and not has_old_runtime and not actions:
         return {
             "ok": True,
@@ -808,6 +850,59 @@ def cmd_validate(cwd: Path) -> dict:
     }
 
 
+def cmd_run(cwd: Path) -> dict:
+    """自动编排入口：检测模式并执行所需步骤。
+
+    AI/用户只需调用此入口，脚本自动完成可自动化部分。
+    返回结果包含 mode 和每步执行状态，AI 据此决定是否需要交互式操作。
+    """
+    root = cwd.resolve()
+    task_md = root / ".claude" / "rules" / "task.md"
+    is_init_mode = not task_md.exists()
+
+    results = {
+        "ok": True,
+        "mode": "init" if is_init_mode else "refresh",
+        "steps": [],
+    }
+
+    def _step(name, fn):
+        """执行一步并记录结果。"""
+        try:
+            r = fn(root)
+            status = "ok" if r.get("ok") else "fail"
+        except Exception as e:
+            r = {"ok": False, "error": str(e)}
+            status = "error"
+        results["steps"].append({"name": name, "status": status, "detail": r})
+        return r
+
+    # Step A: 迁移（始终执行，幂等）
+    _step("migrate-legacy", lambda c: cmd_migrate_legacy(c))
+
+    # Step B: 资产同步（始终执行）
+    _step("sync-rules", lambda c: cmd_sync_rules(c))
+    _step("sync-skills", lambda c: cmd_sync_skills(c))
+
+    if is_init_mode:
+        # 初始化模式：扫描 + 创建配置 + 验证
+        _step("scan-repo", lambda c: cmd_scan_repo(c))
+        # create-config 需要 project-info 和 scan-result，这里先跳过
+        # 由 AI 在拿到 scan 结果后自行调用 create-config
+        results["next_actions"] = [
+            "collect_project_info",  # AI 需要问用户
+            "create_config",         # AI 调 create-config --project-info-file ... --scan-result-file ...
+        ]
+    else:
+        # 刷新模式：直接验证
+        results["next_actions"] = []
+
+    # 最后验证
+    _step("validate", lambda c: cmd_validate(c))
+
+    return results
+
+
 def _is_valid_json(path: Path) -> bool:
     """检查是否为合法 JSON。"""
     if not path.exists():
@@ -834,6 +929,10 @@ def _is_valid_toml(path: Path) -> bool:
 def main():
     parser = argparse.ArgumentParser(description="diwu-flow 项目初始化")
     sub = parser.add_subparsers(dest="command")
+
+    # run (auto orchestration)
+    p_run = sub.add_parser("run", help="自动编排入口：检测模式并执行初始化/刷新")
+    p_run.add_argument("--cwd", type=str, default=".")
 
     # scan-repo
     p_scan = sub.add_parser("scan-repo", help="扫描项目目录结构和技术栈")
@@ -865,6 +964,7 @@ def main():
     cwd = Path(args.cwd).resolve()
 
     commands_map = {
+        "run": lambda: cmd_run(cwd),
         "scan-repo": lambda: cmd_scan_repo(cwd),
         "sync-rules": lambda: cmd_sync_rules(cwd),
         "sync-skills": lambda: cmd_sync_skills(cwd),

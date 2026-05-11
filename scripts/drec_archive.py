@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from common import DIWU_DIR, ARCHIVE_DIR, DTASK_TOML, DSETTINGS_TOML, RECORDING_DIR, PITFALLS_FILE, load_toml_optional, load_toml_or_empty, save_json, save_toml  # noqa: E402
 
 # ── 本文件特有常量（不在 common.py 中） ──────────
-LAST_SUMMARY = ".last_archive_summary.json"
+LAST_SUMMARY = ".last_archive_summary.toml"
 
 DEFAULTS = {
     "task_archive_limit": 20,
@@ -43,6 +43,22 @@ def _load_json(path: Path):
         return None
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _load_archive(path: Path):
+    """加载归档文件，兼容 TOML 和 JSON 两种格式。"""
+    if not path.exists():
+        return None
+    suffix = path.suffix.lower()
+    if suffix == ".toml":
+        try:
+            import tomllib as _tomllib
+            with open(path, "rb") as f:
+                return _tomllib.load(f)
+        except Exception:
+            pass
+    # fallback: JSON
+    return _load_json(path)
 
 
 def _load_settings(cwd: Path) -> dict:
@@ -95,14 +111,14 @@ def archive_tasks(cwd: Path, tasks: list, settings: dict) -> int:
     archive_dir.mkdir(parents=True, exist_ok=True)
 
     month = _current_month()
-    archive_file = archive_dir / f"task_archive_{month}.json"
+    archive_file = archive_dir / f"task_archive_{month}.toml"
 
     # 读取已有归档（按 id 去重）
-    # 兼容旧格式（dict 含 tasks 键）和新格式（纯 list）
+    # 兼容旧格式（dict 含 tasks 键）和新格式（纯 list），以及 JSON/TOML 两种文件格式
     existing = []
     existing_ids = set()
     if archive_file.exists():
-        raw = _load_json(archive_file)
+        raw = _load_archive(archive_file)
         if isinstance(raw, dict):
             existing = raw.get("tasks", []) or []
         elif isinstance(raw, list):
@@ -124,7 +140,7 @@ def archive_tasks(cwd: Path, tasks: list, settings: dict) -> int:
         "tasks": merged,
         "count": len(merged),
     }
-    save_json(archive_payload, archive_file)
+    save_toml(archive_payload, archive_file)
 
     # 从 dtask.toml 移除已归档任务
     task_path = _p(cwd, DTASK_TOML)
@@ -360,7 +376,7 @@ def update_summary(
     rec_count: int,
     files: list,
 ) -> None:
-    """写入/更新 .diwu/archive/.last_archive_summary.json。"""
+    """写入/更新 .diwu/archive/.last_archive_summary.toml。"""
     summary_path = _p(cwd, ARCHIVE_DIR, LAST_SUMMARY)
     summary = {
         "archived_at": _now_iso(),
@@ -368,7 +384,7 @@ def update_summary(
         "recordings_moved": rec_count,
         "files": files,
     }
-    save_json(summary, summary_path)
+    save_toml(summary, summary_path)
 
 
 # ─── 主入口 ────────────────────────────────────────────
@@ -405,7 +421,7 @@ def run(cwd: str = ".") -> dict:
     results["tasks_archived"] = task_count
     if task_count > 0:
         month = _current_month()
-        results["files"].append(f"{DIWU_DIR}/{ARCHIVE_DIR}/task_archive_{month}.json")
+        results["files"].append(f"{DIWU_DIR}/{ARCHIVE_DIR}/task_archive_{month}.toml")
 
     # Recording 轨道归档
     moved = archive_recordings(root, settings)

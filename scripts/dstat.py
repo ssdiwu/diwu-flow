@@ -127,7 +127,7 @@ def get_archive_status(archive_dir: Path) -> dict:
     """归档状态统计。"""
     if not archive_dir.is_dir():
         return {"last_archive": None, "task_archives": 0, "recording_archives": 0}
-    task_archives = list(archive_dir.glob("task_archive_*.json"))
+    task_archives = list(archive_dir.glob("task_archive_*.*"))
     rec_archives = list((archive_dir / "recording").glob("**/*.md"))
     last = None
     if task_archives or rec_archives:
