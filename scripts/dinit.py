@@ -866,27 +866,27 @@ def cmd_run(cwd: Path) -> dict:
         "steps": [],
     }
 
-    def _step(name, fn):
-        """执行一步并记录结果。"""
+    def _step(label, fn):
+        """执行一步并记录结果。label 是面向用户的友好名称，不暴露内部子命令名。"""
         try:
             r = fn(root)
             status = "ok" if r.get("ok") else "fail"
         except Exception as e:
             r = {"ok": False, "error": str(e)}
             status = "error"
-        results["steps"].append({"name": name, "status": status, "detail": r})
+        results["steps"].append({"label": label, "status": status, "detail": r})
         return r
 
     # Step A: 迁移（始终执行，幂等）
-    _step("migrate-legacy", lambda c: cmd_migrate_legacy(c))
+    _step("旧版格式迁移", lambda c: cmd_migrate_legacy(c))
 
     # Step B: 资产同步（始终执行）
-    _step("sync-rules", lambda c: cmd_sync_rules(c))
-    _step("sync-skills", lambda c: cmd_sync_skills(c))
+    _step("规则文件同步", lambda c: cmd_sync_rules(c))
+    _step("技能链接同步", lambda c: cmd_sync_skills(c))
 
     if is_init_mode:
         # 初始化模式：扫描 + 创建配置 + 验证
-        _step("scan-repo", lambda c: cmd_scan_repo(c))
+        _step("项目结构扫描", lambda c: cmd_scan_repo(c))
         # create-config 需要 project-info 和 scan-result，这里先跳过
         # 由 AI 在拿到 scan 结果后自行调用 create-config
         results["next_actions"] = [
@@ -898,7 +898,7 @@ def cmd_run(cwd: Path) -> dict:
         results["next_actions"] = []
 
     # 最后验证
-    _step("validate", lambda c: cmd_validate(c))
+    _step("配置验证", lambda c: cmd_validate(c))
 
     return results
 
