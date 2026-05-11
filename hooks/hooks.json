@@ -27,10 +27,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event 'PreToolUse(Bash)' --script drift_detect_pre.py --mode tolerant"
-          },
-          {
-            "type": "command",
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event 'PreToolUse(Bash)' --script context_monitor.py --mode tolerant"
           }
         ]

@@ -18,8 +18,7 @@ RUNTIME_TARGETS = [
 EXPECTED_DIWU_FILES = {
     # hooks.json 直接注册的入口脚本
     "task_completed.py": [".diwu/dsettings.toml", ".diwu/dtask.toml", ".diwu/recording/", ".diwu/decisions.md"],
-    "drift_detect_pre.py": [".diwu/dsettings.toml"],
-    "context_monitor.py": [".diwu/dsettings.toml", ".diwu/.context_monitor_cache"],
+    "context_monitor.py": [".diwu/dsettings.toml"],
     "plan_exit_hint.py": [],
     "task_entry_guard.py": [".diwu/dtask.toml", ".diwu/dtask-state.toml", ".diwu/recording", ".diwu/decisions.md"],
     "stop_decision.py": [".diwu/dtask.toml", ".diwu/dsettings.toml"],

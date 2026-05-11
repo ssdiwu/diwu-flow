@@ -73,47 +73,6 @@ class TestDictMappingStructure(unittest.TestCase):
             self.assertIsInstance(v, int, f'{k} should be int, got {type(v)}')
 
 
-class TestCheckpointFunction(unittest.TestCase):
-    """Test checkpoint() writes session file correctly (no task association)."""
-
-    def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-        self.orig_cwd = os.getcwd()
-        os.chdir(self.tmpdir)
-        os.makedirs('.diwu/recording', exist_ok=True)
-
-    def tearDown(self):
-        os.chdir(self.orig_cwd)
-        import shutil
-        shutil.rmtree(self.tmpdir, ignore_errors=True)
-
-    def test_checkpoint_creates_checkpoint_file(self):
-        cm.checkpoint(cwd='.')
-        checkpoints = [f for f in os.listdir('.diwu/recording')
-                       if f.startswith('checkpoint-') and f.endswith('.md')]
-        self.assertTrue(len(checkpoints) > 0)
-        with open(os.path.join('.diwu/recording', checkpoints[0])) as f:
-            content = f.read()
-        self.assertIn('[Auto Checkpoint]', content)
-
-    def test_checkpoint_no_task_reference(self):
-        """checkpoint 内容不包含 Task# 引用。"""
-        cm.checkpoint(cwd='.')
-        checkpoints = [f for f in os.listdir('.diwu/recording')
-                       if f.startswith('checkpoint-') and f.endswith('.md')]
-        self.assertTrue(len(checkpoints) > 0)
-        with open(os.path.join('.diwu/recording', checkpoints[0])) as f:
-            content = f.read()
-        self.assertNotIn('Task#', content)
-
-    def test_checkpoint_always_succeeds(self):
-        """checkpoint() always creates file regardless of task state."""
-        cm.checkpoint(cwd='.')
-        checkpoints = [f for f in os.listdir('.diwu/recording')
-                       if f.startswith('checkpoint-') and f.endswith('.md')]
-        self.assertTrue(len(checkpoints) > 0)
-
-
 class TestReadonlyToolSets(unittest.TestCase):
     """Verify RD_TOOLS and WR_TOOLS sets are non-empty and disjoint."""
 
@@ -128,33 +87,36 @@ class TestReadonlyToolSets(unittest.TestCase):
         self.assertEqual(overlap, set(), f'RD and WR tools should be disjoint, got: {overlap}')
 
 
-class TestCwdScopedPaths(unittest.TestCase):
-    def test_cache_path_roots_at_project_cwd(self):
-        tmpdir = tempfile.mkdtemp()
-        try:
-            cp = cm._cache_path('sess-123', tmpdir)
-            self.assertTrue(cp.startswith(tmpdir))
-            self.assertTrue(cp.endswith('.diwu/.context_monitor_cache_sess-123.json'))
-        finally:
-            import shutil
-            shutil.rmtree(tmpdir, ignore_errors=True)
+class TestTempDirCachePaths(unittest.TestCase):
+    """Cache files go to tempdir (cross-platform), not to project directory."""
 
-    def test_save_cache_does_not_write_under_process_cwd(self):
+    def test_cache_path_uses_tempdir(self):
+        cp = cm._cache_path('sess-123')
+        temp_root = tempfile.gettempdir()
+        self.assertTrue(cp.startswith(temp_root))
+        self.assertTrue(cp.endswith('diwu_ctxmon_sess-123.json'))
+
+    def test_save_cache_writes_to_tempdir_not_project_dir(self):
+        sid = 'test-sess-x'
         project_root = tempfile.mkdtemp()
-        rogue_cwd = tempfile.mkdtemp()
-        orig_cwd = os.getcwd()
         try:
-            os.chdir(rogue_cwd)
-            cm._save_cache({'rd_count': 1, 'wr_count': 2, 'checkpoint_written': False}, 'sess-x', project_root)
-            expected = os.path.join(project_root, '.diwu', '.context_monitor_cache_sess-x.json')
-            misplaced = os.path.join(rogue_cwd, '.diwu', '.context_monitor_cache_sess-x.json')
+            cm._save_cache({'rd_count': 1, 'wr_count': 2}, sid, project_root)
+            expected = cm._cache_path(sid)
             self.assertTrue(os.path.exists(expected))
-            self.assertFalse(os.path.exists(misplaced))
+            # 确认没有写到项目目录下
+            project_cache = os.path.join(project_root, '.diwu')
+            if os.path.exists(project_cache):
+                caches = [f for f in os.listdir(project_cache) if f.startswith('.context_monitor')]
+                self.assertEqual(caches, [], f'不应在项目目录生成缓存文件: {caches}')
         finally:
-            os.chdir(orig_cwd)
             import shutil
             shutil.rmtree(project_root, ignore_errors=True)
-            shutil.rmtree(rogue_cwd, ignore_errors=True)
+
+    def test_load_cache_returns_defaults_when_missing(self):
+        sid = 'nonexistent-session'
+        cache = cm._load_cache(sid)
+        self.assertEqual(cache['rd_count'], 0)
+        self.assertEqual(cache['wr_count'], 0)
 
 
 if __name__ == '__main__':

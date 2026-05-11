@@ -1,1 +1,35 @@
+# dtask.toml — 任务列表（状态真相源）
+#
+# 本文件由 /dinit 初始化创建，由 /dtask 管理。
+# 格式：TOML，顶层 tasks 为数组表 [[tasks]]。
+#
+# 示例任务：
+#   [[tasks]]
+#   id = 1
+#   title = "实现用户登录功能"
+#   description = "包含邮箱/密码登录、记住我选项"
+#   acceptance = [
+#       "Given 用户输入正确密码 When 点击登录 Then 跳转到首页",
+#       "Given 密码错误 When 点击登录 Then 显示错误提示",
+#   ]
+#   steps = [
+#       "[锁定] 创建 src/auth/login.ts",
+#       "[建议] 添加单元测试覆盖正常和异常路径",
+#   ]
+#   files_modified = []
+#   category = "functional"
+#   blocked_by = []
+#   status = "InSpec"
+#
+# 字段说明：
+#   id           — 从 1 递增，永不复用
+#   title        — 一句话描述（动词开头）
+#   description  — 背景 + 关键约束
+#   acceptance   — GWT 验收场景数组
+#   steps        — 实施步骤（绝对路径），[锁定]=技术选型，[建议]=实现细节
+#   files_modified — 并行冲突检测（可选）
+#   category     — functional/ui/bugfix/refactor/infra
+#   blocked_by   — 前置任务 ID 数组（可选）
+#   status       — InDraft/InSpec/InProgress/InReview/Done/Cancelled
+
 tasks = []
