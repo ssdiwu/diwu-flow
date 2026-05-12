@@ -1,6 +1,6 @@
 # Hooks 导航
 
-> diwu-flow 的 11 个 hook 脚本，按事件触发时机组织。
+> diwu-flow 的 10 个 hook 脚本，按事件触发时机组织。
 > 回答：**什么事件 → 触发哪个 hook → 它访问什么数据**。
 > 完整注册以 `hooks/hooks.json` 为真值来源。设计原则见 `.doc/架构规范.md` Part C。
 
@@ -14,8 +14,7 @@
 | PreToolUse | context_monitor.py | 上下文量监控 + checkpoint 触发 | L0(目标) |
 | PreToolUse | drift_detect_pre.py | 上下文漂移检测 | L0(目标) |
 | ExitPlanMode | plan_exit_hint.py | Plan→Dtask 强提示 + marker 写入 | L0 |
-| PreCompact | pre_compact.py | 压缩前 checkpoint 写入 | L0(目标) |
-| Stop | stop_decision.py | 录用提醒 + decisions 提醒 + dirty 检测 | L0(目标) |
+| Stop | stop_decision.py | 录用提醒 + decisions 提醒 + dirty 检查 | L0(目标) |
 | Stop | stop_archive.py | 归档阈值检测（task + recording） | L1(read) |
 | TaskCompleted | task_completed.py | clear_owner + loop 追踪 + reminder | L2(write) |
 
@@ -33,7 +32,6 @@
 | plan_exit_hint.py | Plan 退出强提示 |
 | drift_detect_pre.py | 上下文漂移检测 |
 | context_monitor.py | 上下文量监控 |
-| pre_compact.py | 压缩前 checkpoint |
 
 ### L1 — 项目只读
 
@@ -58,7 +56,7 @@
 
 统一采用 `{event}_{action}.py` 模式：
 
-- **event** = Claude Code hook 事件名（SessionStart / Stop / TaskCompleted / PreToolUse / ExitPlanMode / PreCompact）
+- **event** = Claude Code hook 事件名（SessionStart / Stop / TaskCompleted / PreToolUse / ExitPlanMode）
 - **action** = 该 hook 在此事件中的核心动作
 
 例外：

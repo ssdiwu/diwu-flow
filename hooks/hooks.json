@@ -60,16 +60,6 @@
         ]
       }
     ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run_hook.py --event PreCompact --script pre_compact.py --mode tolerant"
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [

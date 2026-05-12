@@ -15,6 +15,13 @@
 
 - 新增 `import argparse` 到 imports 块
 
+### Removed — PreCompaction hook（空壳 recording 文件）
+
+- **删除 `hooks/scripts/pre_compact.py`**：PreCompact hook 仅能获取 cwd/session_id，写入的 `[auto-compact]` 快照文件无正文内容且不会被二次编辑，属于无用噪音
+- **清理 `hooks/hooks.json`**：移除 PreCompact 事件注册条目
+- **更新 `hooks/README.md`**：移除 PreCompact 相关行（事件映射表、L0 分组、命名约定），hook 数量 11→10
+- **同步插件缓存**：`.claude/plugins/cache/ssdiwu/diwu-flow/0.1.3/` 已同步清理
+
 ---
 
 ## [v0.1.2] - 2026-05-11
