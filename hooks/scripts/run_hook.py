@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -108,9 +109,28 @@ def _append_log(cwd: str, text: str) -> None:
         pass
 
 
+def _read_stdin_safe(timeout_sec: float = 3.0) -> str:
+    """Read stdin with timeout to avoid hanging on Windows where pipe EOF may never arrive."""
+    result = [""]
+
+    def _reader():
+        try:
+            result[0] = sys.stdin.read()
+        except (OSError, ValueError):
+            pass
+
+    t = threading.Thread(target=_reader, daemon=True)
+    t.start()
+    t.join(timeout=timeout_sec)
+
+    if t.is_alive():
+        return ""
+    return result[0]
+
+
 def main() -> int:
     args = _parse_args()
-    raw_stdin = sys.stdin.read()
+    raw_stdin = _read_stdin_safe()
     cwd = _event_cwd(raw_stdin)
     script_dir = Path(__file__).resolve().parent
     script_path = script_dir / args.script
