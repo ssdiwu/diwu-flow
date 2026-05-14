@@ -254,3 +254,43 @@ class TestCommitFailure:
 
         # 清理 hook
         pre_commit.unlink()
+
+
+class TestCommitPrefix:
+    """前缀读取：AI 写入 Category，脚本只读。"""
+
+    @staticmethod
+    def _import_func():
+        from scripts.drec_write import _read_commit_prefix
+        return _read_commit_prefix
+
+    def test_read_category_refactor(self, tmp_git_repo):
+        rec = tmp_git_repo / ".diwu" / "recording" / "session-test.md"
+        rec.parent.mkdir(parents=True, exist_ok=True)
+        rec.write_text("## Session\n**Category**: refactor\n", encoding="utf-8")
+        assert self._import_func()(rec) == "[重构]"
+
+    def test_read_category_bugfix(self, tmp_git_repo):
+        rec = tmp_git_repo / ".diwu" / "recording" / "session-test.md"
+        rec.parent.mkdir(parents=True, exist_ok=True)
+        rec.write_text("## Session\n**Category**: bugfix\n", encoding="utf-8")
+        assert self._import_func()(rec) == "[修复]"
+
+    def test_read_category_infra(self, tmp_git_repo):
+        rec = tmp_git_repo / ".diwu" / "recording" / "session-test.md"
+        rec.parent.mkdir(parents=True, exist_ok=True)
+        rec.write_text("## Session\n**Category**: infra\n", encoding="utf-8")
+        assert self._import_func()(rec) == "[基建]"
+
+    def test_no_recording_fallback(self, tmp_git_repo):
+        assert self._import_func()(None) == "[记录]"
+
+    def test_missing_file_fallback(self, tmp_git_repo):
+        from pathlib import Path
+        assert self._import_func()(Path("/nonexistent")) == "[记录]"
+
+    def test_no_category_line_fallback(self, tmp_git_repo):
+        rec = tmp_git_repo / ".diwu" / "recording" / "session-test.md"
+        rec.parent.mkdir(parents=True, exist_ok=True)
+        rec.write_text("## Session\nno category here\n", encoding="utf-8")
+        assert self._import_func()(rec) == "[记录]"
