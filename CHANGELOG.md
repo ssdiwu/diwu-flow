@@ -1,3 +1,22 @@
+## [v0.1.4] - 2026-05-14
+
+### Fixed — Windows hook 永久挂起（Issue #63）
+
+- **run_hook.py**：`sys.stdin.read()` 替换为 `_read_stdin_safe()` 线程超时读取（3s timeout），解决 Windows 上管道 EOF 不传递导致 Stop hook 永久阻塞
+- **_shared.py**：`load_stdin_event()` 同样添加 `_read_stdin_with_timeout()` 防御性修复
+- **plan_exit_hint.py / task_entry_guard.py / stop_archive.py**：内联 fallback 副本同步更新
+
+### Fixed — Commit message 前缀硬编码回归（Issue #65）
+
+- **drec_write.py**：删除硬编码 `RECORDING_PREFIX = "[recording]"`，新增 `_read_commit_prefix()` 从 recording 的 `**Category**` 行读取 AI 判断的中文前缀（Task#96 约定）
+- **Gap 检测（G1/G2/G3）**：closeout 时自动检查 rules/skills vs .doc/ 同步、dfeat doc_scope 要求、版本号 vs CHANGELOG——不阻塞 closeout，仅 advisory 输出
+- **远程集成（fire-and-forget）**：gap 评论推送、closeout 摘要评论、Done 阶段 Issue 自动关闭
+- **dfeat_remote.py**：新增 GitHub Issue/PR 操作辅助脚本
+- **skills/drec/SKILL.md**：R2 新增 Commit 前缀段落 + R13 Gap 检测完整文档
+- **测试**：TestCommitPrefix 6 用例覆盖 category 映射 / fallback 路径
+
+---
+
 ## [v0.1.3] - 2026-05-12
 
 ### Changed — SOP 式 Skill 段落级恢复（Issue #53）
