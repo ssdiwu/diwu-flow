@@ -239,12 +239,15 @@ def _read_commit_prefix(rec_path: Path | None) -> str:
     try:
         text = rec_path.read_text(encoding="utf-8")
         for line in text.splitlines():
-            if "**Category**" not in line:
+            if "category" not in line.lower():
                 continue
-            # 用 re.escape 避免特定 Python 版本的 regex 引擎问题
-            m = re.search(re.escape("**Category**") + r":\s*(\S+)", line, re.IGNORECASE)
-            if m:
-                cat = m.group(1).lower().rstrip(",")
+            # 用 rsplit 取冒号后的值（兼容 **Category:** / **Category** : 等格式）
+            parts = line.rsplit(":", 1)
+            if len(parts) < 2:
+                continue
+            raw = parts[1].strip().strip("*").strip()
+            cat = raw.split()[0].lower().rstrip(",") if raw else ""
+            if cat:
                 return _CATEGORY_PREFIX_MAP.get(cat, "[记录]")
     except Exception:
         pass
