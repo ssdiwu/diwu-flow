@@ -19,7 +19,9 @@
     "./skills/dloop",
     "./skills/dref",
     "./skills/didea",
-    "./skills/dinit"
+    "./skills/dinit",
+    "./skills/dfeat",
+    "./skills/dgate"
   ],
   "commands": [
     "./commands/drun.md",
@@ -34,6 +36,8 @@
     "./commands/dloop.md",
     "./commands/dstop.md",
     "./commands/didea.md",
-    "./commands/dpth.md"
+    "./commands/dpth.md",
+    "./commands/dfeat.md",
+    "./commands/dgate.md"
   ]
 }
