@@ -9,11 +9,25 @@ import sys
 try:
     from _shared import load_stdin_event  # noqa: E402
 except (ImportError, ModuleNotFoundError):
+    import threading
+
+    def _read_stdin_with_timeout(timeout_sec=3.0):
+        result = [""]
+        def _reader():
+            try:
+                result[0] = sys.stdin.read()
+            except (OSError, ValueError):
+                pass
+        t = threading.Thread(target=_reader, daemon=True)
+        t.start()
+        t.join(timeout=timeout_sec)
+        return "" if t.is_alive() else result[0]
+
     def load_stdin_event(*, check_tty=False):
         try:
             if check_tty and sys.stdin.isatty():
                 return {}
-            raw = sys.stdin.read()
+            raw = _read_stdin_with_timeout()
             if not raw.strip():
                 return {}
             return json.loads(raw)

@@ -9,6 +9,7 @@ Provides:
 import json
 import os
 import sys
+import threading
 
 
 def ensure_shared_dir():
@@ -38,6 +39,25 @@ def load_json_fallback(path):
         return {}
 
 
+def _read_stdin_with_timeout(timeout_sec: float = 3.0) -> str:
+    """Read stdin with timeout to avoid hanging on Windows where pipe EOF may never arrive."""
+    result = [""]
+
+    def _reader():
+        try:
+            result[0] = sys.stdin.read()
+        except (OSError, ValueError):
+            pass
+
+    t = threading.Thread(target=_reader, daemon=True)
+    t.start()
+    t.join(timeout=timeout_sec)
+
+    if t.is_alive():
+        return ""
+    return result[0]
+
+
 def load_stdin_event(*, check_tty=False):
     """Read hook event JSON from stdin. Returns {} on any error or empty input.
 
@@ -47,7 +67,7 @@ def load_stdin_event(*, check_tty=False):
     try:
         if check_tty and sys.stdin.isatty():
             return {}
-        raw = sys.stdin.read()
+        raw = _read_stdin_with_timeout()
         if not raw.strip():
             return {}
         return json.loads(raw)
